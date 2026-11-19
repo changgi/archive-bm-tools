@@ -11,15 +11,15 @@
 ```mermaid
 flowchart TB
     R["👤 담당자 요청"] --> L1
-    subgraph L1["1겹 · 작업 원칙 CLAUDE.md"]
+    subgraph L1["1겹 · CLAUDE.md"]
         A["원본은 읽기만<br/>결과는 산출/에<br/>비밀은 열지 않음"]
     end
     L1 --> L2
-    subgraph L2["2겹 · 보호 훅 (플러그인)"]
+    subgraph L2["2겹 · 보호 훅"]
         B["도구 실행 직전<br/>검사 → 차단"]
     end
     L2 --> L3
-    subgraph L3["3겹 · 거부 규칙 settings.json"]
+    subgraph L3["3겹 · settings.json"]
         C["Claude Code가<br/>스스로 거부"]
     end
     L3 --> OK["⚙️ 실행"]
