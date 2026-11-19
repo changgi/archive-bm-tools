@@ -134,6 +134,8 @@ gh auth login
 
 `/plugin` → **Tab**으로 **Installed** 탭 → `records-skills` 선택 → Enter → **Configure options**
 
+또는 명령 한 줄로: `/plugin configure records-skills@changgi-archive-bm-tools`
+
 | 항목 | 기본값 | 뜻 |
 |---|---|---|
 | 비밀기록물 폴더 이름 | `비밀,secret,classified` | 이 낱말이 들어간 경로는 **읽기부터** 막음 |

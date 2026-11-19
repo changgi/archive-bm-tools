@@ -72,7 +72,7 @@ flowchart LR
 
 설치 범위는 **Install for you (user scope)** 를 고릅니다. `/`를 눌러 `/records-skills:…`가 보이면 끝입니다.
 
-**기관 폴더 이름 맞추기**(선택): `/plugin` → **Installed** → `records-skills` → **Configure options**. 비워 두면 비밀 폴더 `비밀,secret,classified`, 원본 폴더 `원본,보존,originals,preserved`를 씁니다.
+**기관 폴더 이름 맞추기**(선택): `/plugin configure records-skills@changgi-archive-bm-tools` (또는 `/plugin` → **Installed** → `records-skills` → **Configure options**). 비워 두면 비밀 폴더 `비밀,secret,classified`, 원본 폴더 `원본,보존,originals,preserved`를 씁니다.
 
 **새 버전 받기**: `/plugin` → **Marketplaces** → `changgi-archive-bm-tools` → **Update marketplace** (또는 `claude plugin update records-skills@changgi-archive-bm-tools`)
 
