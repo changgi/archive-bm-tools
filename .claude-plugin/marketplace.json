@@ -1,0 +1,16 @@
+{
+  "name": "changgi-archive-bm-tools",
+  "description": "공공기관 기록관리 담당자용 Claude 플러그인",
+  "owner": {
+    "name": "Song Chang-gi",
+    "email": "chgsong@naver.com"
+  },
+  "plugins": [
+    {
+      "name": "records-skills",
+      "source": "./plugins/records-skills",
+      "description": "기록관리 담당자용 스킬 28종(이관 대조·보존기간 점검·재분류 후보·개인정보 후보·PDF/A 변환·메타데이터 후보·정보공개 기한·생산현황·정리 점검·기준표 점검·정수점검·HWPX 보고서·평가 준비·데이터세트 관리기준표·회의록·시청각 점검 등)과 비밀·원본 폴더 보호 훅",
+      "version": "2.12.1"
+    }
+  ]
+}
