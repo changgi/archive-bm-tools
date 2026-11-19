@@ -1,0 +1,27 @@
+name: ⚖️ 법령·지침 변경 알림
+description: 시행령·시행규칙·지침·NAK 표준이 바뀌어 스킬을 고쳐야 할 때
+labels: ["법령 변경"]
+body:
+  - type: input
+    id: source
+    attributes:
+      label: 바뀐 근거
+      placeholder: "예: 공공기록물법 시행령 제40조, 2027년 기록물관리 지침, NAK 39:2027"
+    validations:
+      required: true
+  - type: input
+    id: url
+    attributes:
+      label: 원문 주소
+      placeholder: law.go.kr 또는 archives.go.kr 주소
+  - type: textarea
+    id: diff
+    attributes:
+      label: 무엇이 바뀌었나요
+      placeholder: 개정 전 → 개정 후, 시행일
+    validations:
+      required: true
+  - type: textarea
+    id: skills
+    attributes:
+      label: 영향을 받을 스킬(아는 만큼)

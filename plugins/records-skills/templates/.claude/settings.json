@@ -1,0 +1,21 @@
+{
+  "permissions": {
+    "deny": [
+      "Read(./비밀/**)",
+      "Edit(./비밀/**)",
+      "Write(./비밀/**)",
+      "Edit(./원본/**)",
+      "Write(./원본/**)",
+      "Edit(./보존/**)",
+      "Write(./보존/**)",
+      "Bash(rm:*)",
+      "Bash(curl:*)",
+      "Bash(wget:*)",
+      "Bash(git push:*)"
+    ],
+    "ask": [
+      "Bash(python3 *make_bag.py:*)",
+      "Bash(python *make_bag.py:*)"
+    ]
+  }
+}

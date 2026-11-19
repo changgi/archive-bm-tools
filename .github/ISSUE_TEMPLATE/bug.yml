@@ -1,0 +1,63 @@
+name: 🐞 오류 제보
+description: 스크립트가 멈추거나 결과가 틀렸을 때
+labels: ["오류"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        **비밀기록물, 개인정보가 든 실제 목록은 올리지 마세요.** 열 이름(머리글)과 가짜 값 몇 줄이면 충분합니다.
+  - type: dropdown
+    id: skill
+    attributes:
+      label: 스킬
+      options:
+        - production-status-report
+        - records-register-audit
+        - records-qa-gate
+        - metadata-autofill
+        - docno-extract
+        - task-suggest
+        - records-schedule-check
+        - typed-records-check
+        - publications-check
+        - admin-artifacts-check
+        - transfer-reconcile
+        - transfer-triage
+        - format-identify
+        - preservation-convert
+        - preservation-inspection
+        - fixity-check
+        - scan-qc
+        - access-request
+        - disclosure-reclass
+        - pii-redact
+        - retention-review
+        - disposal-dossier
+        - email-appraisal
+        - web-records-check
+        - dataset-schedule
+        - classified-records-check
+        - evaluation-readiness
+        - hwpx-report
+        - 훅(비밀·원본 보호)
+        - 잘 모름
+    validations:
+      required: true
+  - type: textarea
+    id: what
+    attributes:
+      label: 무슨 일이 있었나요
+      placeholder: Claude에게 한 말, 나온 결과, 기대한 결과
+    validations:
+      required: true
+  - type: textarea
+    id: headers
+    attributes:
+      label: 입력 파일의 열 이름
+      description: "`python plugins/records-skills/skills/records-qa-gate/scripts/header_check.py 파일.xlsx` 결과를 붙여 주면 가장 빠릅니다."
+      render: text
+  - type: input
+    id: env
+    attributes:
+      label: 환경
+      placeholder: "예: Windows 11, Python 3.12, records-skills 2.12.1"

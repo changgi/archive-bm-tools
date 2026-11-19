@@ -1,0 +1,32 @@
+{
+  "name": "records-skills",
+  "version": "2.12.2",
+  "description": "기록관리 담당자용 스킬 28종(이관 대조·보존기간 점검·재분류 후보·개인정보 후보·PDF/A 변환·메타데이터 후보·정보공개 기한·생산현황·정리 점검·기준표 점검·정수점검·HWPX 보고서·평가 준비·데이터세트 관리기준표·회의록·시청각 점검 등)과 비밀·원본 폴더 보호 훅",
+  "author": {
+    "name": "Song Chang-gi",
+    "email": "chgsong@naver.com",
+    "url": "https://github.com/changgi"
+  },
+  "homepage": "https://github.com/changgi/archive-tools",
+  "repository": "https://github.com/changgi/archive-tools",
+  "license": "MIT",
+  "keywords": [
+    "records-management",
+    "archives",
+    "기록관리",
+    "공공기록물",
+    "NAK"
+  ],
+  "userConfig": {
+    "secret_folders": {
+      "type": "string",
+      "title": "비밀기록물 폴더 이름",
+      "description": "쉼표로 구분. 이 이름이 들어간 경로는 읽기부터 막는다. 기본: 비밀,secret,classified"
+    },
+    "protected_folders": {
+      "type": "string",
+      "title": "원본·보존 폴더 이름",
+      "description": "쉼표로 구분. 쓰기·수정을 막는다. 기본: 원본,보존,originals,preserved"
+    }
+  }
+}
