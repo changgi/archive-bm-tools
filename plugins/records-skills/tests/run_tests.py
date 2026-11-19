@@ -816,6 +816,34 @@ def main():
     check("2026 지침: 1호 비공개는 법령 조항 필요·이관 전 재분류(최근 5년 생략 가능)·평가심의서 '의견 작성 안내'",
           r1 == 0 and defect == ["A-1"] and pre["A-2"] == "이관 전 재분류 필요" and pre["A-1"].startswith("생략 가능") and guide_ok, or1 + str(defect) + str(pre) + str(gw))
 
+    # 플러그인 훅 명령: Windows(Git Bash)처럼 python3가 없거나 가짜일 때도 보호가 꺼지지 않는지
+    hj = os.path.join(ROOT, "hooks", "hooks.json")
+    bash = shutil.which("bash")
+    if os.path.exists(hj) and bash and os.name != "nt":
+        hk = json.load(open(hj, encoding="utf-8"))["hooks"]
+        guard, logc = hk["PreToolUse"][0]["hooks"][0]["command"], hk["PostToolUse"][0]["hooks"][0]["command"]
+        sec = json.dumps({"tool_name": "Read", "tool_input": {"file_path": f"{t}/비밀/목록.xlsx"}, "cwd": t})
+        pub = json.dumps({"tool_name": "Read", "tool_input": {"file_path": f"{t}/공개/목록.xlsx"}, "cwd": t})
+        real = os.path.realpath(sys.executable)
+        envs = {}
+        for name_, files in (("store", {"python3": None, "python": real}), ("py", {"py": real}), ("none", {})):
+            d = os.path.join(t, "fakebin_" + name_)
+            os.makedirs(d, exist_ok=True)
+            for fn, target in files.items():
+                p_ = os.path.join(d, fn)
+                if target:
+                    os.symlink(target, p_)
+                else:
+                    with open(p_, "w") as fh:
+                        fh.write("#!/bin/sh\necho 'Python was not found' >&2\nexit 9\n")
+                    os.chmod(p_, 0o755)
+            envs[name_] = dict(os.environ, PATH=d, CLAUDE_PLUGIN_ROOT=ROOT)
+        hr = lambda cmd, inp, env: subprocess.run([bash, "-c", cmd], input=inp, text=True, capture_output=True, env=env, cwd=t).returncode
+        got = {k: (hr(guard, sec, e), hr(guard, pub, e)) for k, e in envs.items() if k != "none"}
+        none_guard, none_log = hr(guard, pub, envs["none"]), hr(logc, pub, envs["none"])
+        check("훅 명령: python3 가짜(Store)·py만 있어도 비밀 차단(2)·공개 통과(0), Python 없으면 보호 훅은 막고 기록 훅은 통과",
+              got == {"store": (2, 0), "py": (2, 0)} and none_guard == 2 and none_log == 0, str(got) + f" none={none_guard},{none_log}")
+
     ok = sum(r[1] for r in results)
     for name, passed, detail in results:
         print(f"{'통과' if passed else '실패'}  {name}" + ("" if passed else f"  — {detail}"))

@@ -7,15 +7,15 @@
 생산현황 통보부터 이관·보존·공개·평가·폐기까지 —<br>
 반복되는 점검과 서식 작성은 스크립트가, 판단과 제출은 사람이.
 
-![version](https://img.shields.io/badge/records--skills-v2.12.1-1f6feb)
+![version](https://img.shields.io/badge/records--skills-v2.12.2-1f6feb)
 ![skills](https://img.shields.io/badge/스킬-28종-2da44e)
-![tests](https://img.shields.io/badge/시험-48%2F48%20통과-2da44e)
+![tests](https://img.shields.io/badge/시험-49%2F49%20통과-2da44e)
 ![python](https://img.shields.io/badge/Python-3.10%2B-3776ab?logo=python&logoColor=white)
 ![law](https://img.shields.io/badge/근거-시행령%202026.8.25.-8250df)
 ![license](https://img.shields.io/badge/코드-MIT-lightgrey)
 ![docs](https://img.shields.io/badge/문서-CC%20BY%204.0-lightgrey)
 
-[빠른 시작](#-빠른-시작) · [스킬 28종](#-스킬-28종) · [안전장치](#-안전장치) · [근거](#-근거-법령과-자료) · [시험](#-시험)
+**[📖 사용 안내](docs/README.md)** · [🚀 처음 시작하기](docs/getting-started.md) · [🧰 스킬 사용법](docs/skills.md) · [📅 업무 달력](docs/calendar.md) · [❓ FAQ](docs/faq.md)
 
 </div>
 
@@ -52,41 +52,44 @@ flowchart LR
 
 ## 🚀 빠른 시작
 
-> 비공개 저장소입니다. 이 저장소에 접근할 수 있는 GitHub 계정으로 로그인해 있어야 합니다.
+> 처음이라면 **[처음 시작하기](docs/getting-started.md)** 를 따라 하세요. Python·Claude Code 설치부터 첫 결과까지 그림과 함께 차례로 안내합니다(30분).
 
-**1. 설치** (Claude Code 안에서)
+| 단계 | 할 일 | 자세히 |
+|---|---|---|
+| ① | **Python 3.10+** 설치 (Windows는 **Git for Windows**도) + `python -m pip install openpyxl pypdf pikepdf pillow numpy python-docx python-hwpx holidays` | [1단계](docs/getting-started.md#1단계-python-설치-스크립트를-돌리는-엔진) |
+| ② | **Claude Code** 설치·로그인 — Windows `irm https://claude.ai/install.ps1 \| iex` · macOS `curl -fsSL https://claude.ai/install.sh \| bash` | [2단계](docs/getting-started.md#2단계-claude-code-설치와-로그인) |
+| ③ | 비공개 저장소 **접근 권한** 받기 + `gh auth login` | [3단계](docs/getting-started.md#3단계-저장소-접근-권한) |
+| ④ | 플러그인 설치 (아래) | [4단계](docs/getting-started.md#4단계-플러그인-설치) |
+| ⑤ | 작업 폴더에 [`templates/`](plugins/records-skills/templates)의 `CLAUDE.md`·`.claude/settings.json` 복사 | [5단계](docs/getting-started.md#5단계-작업-폴더-준비-한-번만) |
+| ⑥ | `비밀/시험.txt 읽어줘` → **차단되면 정상** | [7단계](docs/getting-started.md#7단계-보호-장치가-켜졌는지-꼭-확인하기) |
+
+**플러그인 설치** (Claude Code 안에서)
 
 ```text
 /plugin marketplace add changgi/archive-bm-tools
 /plugin install records-skills@changgi-archive-bm-tools
 ```
 
-**2. 기관 폴더 이름 맞추기** (선택)
+설치 범위는 **Install for you (user scope)** 를 고릅니다. `/`를 눌러 `/records-skills:…`가 보이면 끝입니다.
+
+**기관 폴더 이름 맞추기**(선택): `/plugin` → **Installed** → `records-skills` → **Configure options**. 비워 두면 비밀 폴더 `비밀,secret,classified`, 원본 폴더 `원본,보존,originals,preserved`를 씁니다.
+
+**새 버전 받기**: `/plugin` → **Marketplaces** → `changgi-archive-bm-tools` → **Update marketplace** (또는 `claude plugin update records-skills@changgi-archive-bm-tools`)
+
+**말로 시작하기** — 가상 자료 [`examples/입력/`](examples/입력)로 바로 연습할 수 있습니다([결과 미리 보기](examples/결과예시)).
 
 ```text
-/plugin configure records-skills@changgi-archive-bm-tools
-```
-
-비워 두면 기본값을 씁니다 — 비밀 폴더 `비밀,secret,classified`, 원본 폴더 `원본,보존,originals,preserved`.
-
-**3. 작업 폴더 준비** (한 번만)
-
-`plugins/records-skills/templates/CLAUDE.md`와 `templates/.claude/settings.json`을 기관 작업 폴더에 복사합니다. 플러그인은 거부 규칙(permissions)을 대신 걸 수 없어서 이 복사가 필요합니다.
-
-**4. 말로 시작하기**
-
-```text
-입력 폴더에 등록정보 목록이랑 회의록 넣어 놨어. 올해 생산현황 통보서 만들어줘.
-이관 목록.xlsx랑 상자 목록 대조해서 빠진 거 찾아줘.
+입력 폴더 자료로 2025년 생산분 생산현황 통보서 만들어줘.
+이관 목록.xlsx랑 이관파일 폴더 대조해서 빠진 거 찾아줘.
 비공개 기록물 목록에서 올해 재분류 심의 대상 뽑아줘.
-이 폴더 문서들 PDF/A로 바꾸고 veraPDF로 확인해줘.
+보존대상 폴더 문서들 PDF/A로 바꾸고 veraPDF로 확인해줘.
 ```
-
-**업데이트:** `/plugin marketplace update changgi-archive-bm-tools`
 
 ---
 
 ## 🧰 스킬 28종
+
+> 스킬마다 준비할 파일·말하는 법·받는 결과·주의할 점은 **[스킬 28종 사용법](docs/skills.md)**, 언제 무엇을 쓰는지는 **[연간 업무 달력](docs/calendar.md)** 에 있습니다.
 
 <details open>
 <summary><b>📝 생산·등록 (10)</b></summary>
@@ -176,6 +179,8 @@ flowchart LR
 
 ## 🔒 안전장치
 
+> 세 겹의 잠금, 막는 명령 전체, 보안 담당자 검토용 요약은 **[안전장치](docs/safety.md)** 에 있습니다.
+
 ```mermaid
 flowchart LR
     U["👤 담당자 요청"] --> C["🤖 Claude"]
@@ -214,7 +219,7 @@ flowchart LR
 python plugins/records-skills/tests/run_tests.py
 ```
 
-48개(veraPDF가 PATH에 있으면 49개). 필요 패키지: `openpyxl` `pypdf` `pikepdf` `pillow` `numpy` (선택: `python-docx` `python-hwpx` `holidays`, LibreOffice). Python 3.11·3.12·3.13에서 확인했고, [GitHub Actions](.github/workflows/test.yml)로 3.10~3.13을 돌립니다.
+49개(veraPDF가 PATH에 있으면 50개) — 스킬 28종의 주요 계산과, 보호 훅이 Windows처럼 `python3`가 없거나 가짜일 때도 꺼지지 않는지까지 확인합니다. 필요 패키지: `openpyxl` `pypdf` `pikepdf` `pillow` `numpy` (선택: `python-docx` `python-hwpx` `holidays`, LibreOffice). Python 3.11·3.12·3.13에서 확인했고, [GitHub Actions](.github/workflows/test.yml)로 3.10~3.13을 돌립니다.
 
 ---
 

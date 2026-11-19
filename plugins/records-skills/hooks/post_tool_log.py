@@ -4,6 +4,8 @@
 이 로그가 '처리 이력 → 지식 노트'의 원천이자, 무엇을 언제 바꿨는지 보여 주는 감사 기록이다.
 로그 위치는 RECORDS_LOG (기본 logs/processing_log.jsonl).
 """
+from __future__ import annotations
+
 import datetime as dt
 import hashlib
 import json
@@ -51,4 +53,9 @@ def main() -> None:
 
 
 if __name__ == "__main__":
-    main()
+    try:
+        main()
+    except SystemExit:
+        raise
+    except Exception:  # 기록 실패가 작업을 막지는 않는다
+        sys.exit(0)

@@ -5,6 +5,8 @@ Claude Code는 도구 실행 직전 이 스크립트에 JSON(stdin)을 넘긴다
 종료 코드 2 = 차단(stderr 내용이 Claude에게 전달됨), 0 = 통과.
 보호 폴더는 환경변수 RECORDS_PROTECTED (쉼표 구분)로 바꿀 수 있다.
 """
+from __future__ import annotations
+
 import json
 import os
 import re
@@ -71,4 +73,9 @@ def main() -> None:
 
 
 if __name__ == "__main__":
-    main()
+    try:
+        main()
+    except SystemExit:
+        raise
+    except Exception as e:  # 훅이 깨지면 보호가 꺼지지 않도록 막는다
+        block(f"보호 훅 오류로 이 작업을 막았습니다({type(e).__name__}). 담당자에게 알리세요.")
