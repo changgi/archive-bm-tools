@@ -11,7 +11,7 @@ description: 기록물 산출 목록·메타데이터·이관 패키지를 내�
 3. 종료 코드 0(통과)일 때만 사람에게 넘긴다. 1(실패)이면 검수결과.md의 실패 항목을 고친 뒤 다시 실행한다.
 4. '건너뛴 점검'이 있으면 사용자에게 그대로 알린다. 건너뛴 점검을 통과로 말하지 않는다.
 
-판정 기준은 references/four-properties.md.
+판정 기준은 references/four-properties.md. 근거 자료 목록: references/archives-go-kr-inventory-2026-11-20.md(업무안내·자료 전체), references/standards-menu-2026-11-21.md(표준·지침·매뉴얼 6개 탭), references/law-check-2026-11-20.md(법령).
 
 ## 열 맞춤 점검 (기관 시스템 내보내기 목록을 처음 쓸 때)
 `python "${CLAUDE_PLUGIN_ROOT}"/skills/records-qa-gate/scripts/header_check.py 내보낸목록.xlsx [--script production_status]`

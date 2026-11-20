@@ -375,6 +375,132 @@ def main():
     ok_em = len(msgs) == 3 and msgs[0][5] == 1 and "휴대전화" in (msgs[1][6] or "") and "비밀" in (msgs[2][7] or "") \
         and "검토 부탁드립니다" not in flat and "9876-5432" not in flat and wb["첨부 목록"].max_row == 2
     check("이메일: 3통 목록·첨부·개인정보·비밀 표시, 본문·원문 값 미포함", ok_em, out)
+    with open(f"{t}/주요직위.csv", "w", encoding="utf-8-sig") as fh:
+        fh.write("주소,직위,구분\npark@test.go.kr,차관,주요 직위\n")
+    code2, out2 = run([S("email-appraisal", "scripts", "email_report.py"), f"{t}/보관함.mbox", "--roles", f"{t}/주요직위.csv", "-o", f"{t}/산출/email_role.xlsx"])
+    wr = openpyxl.load_workbook(f"{t}/산출/email_role.xlsx")
+    rl = [r[9] for r in wr["메시지 목록"].iter_rows(min_row=2, values_only=True)]
+    sm = " ".join(str(c) for r in wr["요약"].iter_rows(values_only=True) for c in r if c)
+    check("이메일 역할기반(캡스톤) 후보: 주요 직위 계정 표시·일반 계정 구분·국내 법정 기준 아님 안내",
+          sum(1 for x in rl if str(x).startswith("역할기반")) == 1 and "차관" in str(rl[2]) and "일반 계정" in str(rl[0]) and "법정 기준이 아니며" in sm, out2 + str(rl))
+    # RAMP 일괄등록 파일(기록물통합서비스플랫폼 일괄등록 규격 2024)
+    _rf = openpyxl.load_workbook(S("listing-qa", "assets", "RAMP_일괄등록_서식_2024.xlsx"), read_only=True, data_only=True)
+    _hd = {sh: [c for c in list(_rf[sh].iter_rows(values_only=True))[2] if c] for sh in ("철 등록부", "기록물등록대장")}
+    _rw = openpyxl.Workbook(); _rw.remove(_rw.active)
+    def _sheet(name, rows):
+        w_ = _rw.create_sheet(name); w_.append([]); w_.append(["안내"]); w_.append(_hd[name])
+        for rr in rows:
+            w_.append([rr.get(str(h).replace("\n", "").lstrip("*").split("(YYYY")[0].split("[")[0].strip(), "") for h in _hd[name]])
+    _sheet("철 등록부", [dict(시스템구분="03", 처리과기관코드="1234567", **{"구기록물 철생산기관명": "가상시 가상과", "생산년도": "2025", "단위과제여부": "1",
+        "단위업무코드": "AB000012", "기록물철 등록일련번호": "1", "권호수": "1", "기록물철 제목": "가상 계획", "기록물형태": "1", "시작연도": "2025", "종료연도": "2025",
+        "보존기간": "영구", "보존방법": "3", "보존장소": "1", "기록물구분(신/구)": "1", "기록물등록건수": "2", "기록물쪽수": "10", "전자파일개수": "0", "열람조건": "01"})])
+    _base_d = {"시스템구분": "03", "처리과기관코드": "1234567", "구기록물 생산기관명": "가상시 가상과", "등록구분": "1", "생산(접수)등록일자": "202503020900",
+               "분리등록번호(첨부번호)": "0", "제목": "가상 보고", "쪽수": "6", "기안자(업무담당자)": "가상", "전자기록물여부": "2",
+               "분류번호": "1234567AB0000122025000001001", "특수기록물": "NNNNN", "공개여부": "1NNNNNNNN", "구기록물보존기간": "40",
+               "기록물구분(신/구)": "1", "건일련번호": "1", "열람조건": "01"}
+    _sheet("기록물등록대장", [dict(_base_d, **{"생산(접수)등록번호": "1234567000001"}), dict(_base_d, **{"생산(접수)등록번호": "1234567000002", "쪽수": "3", "건일련번호": "2", "공개여부": "3NNNNNNNN"})])
+    _rw.save(f"{t}/RAMP서식.xlsx")
+    crb, orb = run([S("listing-qa", "scripts", "ramp_batch.py"), f"{t}/RAMP서식.xlsx", "--registrar", "1234567,기록연구사,가상,gasang", "--date", "20261121090000",
+                    "-o", f"{t}/산출/RAMP"])
+    rbi = [r for r in openpyxl.load_workbook(f"{t}/산출/RAMP/일괄등록_점검.xlsx")["점검"].iter_rows(min_row=2, values_only=True)] if os.path.exists(f"{t}/산출/RAMP/일괄등록_점검.xlsx") else []
+    dl = open(f"{t}/산출/RAMP/DOCU.TXT", encoding="utf-8").read().split("\t") if os.path.exists(f"{t}/산출/RAMP/DOCU.TXT") else []
+    rbs = " ".join(str(c) for r in rbi for c in r)
+    check("RAMP 일괄등록: DOCU/DETAIL 43·53칸·보존기간 코드(영구→40)·일련번호 자리 맞춤·등록자 채움·보존장소·건수·쪽수·공개여부 점검",
+          crb == 1 and len(dl) == 43 and dl[14] == "40" and dl[7] == "000001" and dl[8] == "001" and dl[-1].strip() == "20261121090000" and dl[-3] == "가상"
+          and "보존장소" in rbs and "건 쪽수 합 9" in rbs and "모두 N" in rbs and "철 등록부에 없는 철" not in rbs, orb + rbs)
+
+    # 행정정보DB구축 기록물 일괄등록(행정정보DB구축 기록물의 기록관리시스템 규격 2023)
+    DBS = S("listing-qa", "scripts", "dbproject_batch.py")
+    run([DBS, "--template", f"{t}/행정DB서식.xlsx"])
+    _dw = openpyxl.load_workbook(f"{t}/행정DB서식.xlsx")
+    def _put(ws, **kw):
+        h = [str(c.value).lstrip("*") for c in ws[1]]
+        ws.delete_rows(2)
+        ws.append([kw.get(x, "") for x in h])
+    _cls = "1234567" + "99999999" + "1998" + "000001" + "001"
+    _put(_dw["기록물철등록부"], 처리과기관코드="1234567", 구기록물철생산기관명="가상부 가상과", 생산년도="1998", 기록물철등록일련번호="1", 기록물철제목="가상 접수철",
+         기록물형태="1", 시작년도="1998", 종료연도="1998", 보존기간="영구", 보존방법="3", 보존장소="2", 기록물등록건수="1", 기록물쪽수="5")
+    _put(_dw["기록물등록대장"], 처리과기관코드="1234567", 구기록물생산기관명="가상과", 등록구분="1", 제목="가상 보고", 쪽수="3", 분류번호=_cls,
+         구기록물보존기간="영구", 건일련번호="1", 공개여부="1NNNNNNNN", **{"생산(접수)등록일자": "199806041400", "생산(접수)등록번호": "1234567000001"})
+    _dw.remove(_dw["특수목록"])
+    _dw.save(f"{t}/행정DB목록.xlsx")
+    _ip = f"{t}/행정DB이미지/{_cls}/1998123456700000100"
+    os.makedirs(_ip, exist_ok=True)
+    open(f"{_ip}/00000001.TIF", "wb").write(b"II*")
+    open(f"{_ip}/00000003.TIF", "wb").write(b"")
+    cdb, odb = run([DBS, f"{t}/행정DB목록.xlsx", "--images", f"{t}/행정DB이미지", "-o", f"{t}/산출/행정DB"])
+    dbs = " ".join(str(c) for r in openpyxl.load_workbook(f"{t}/산출/행정DB/행정DB일괄등록_점검.xlsx")["점검"].iter_rows(values_only=True) for c in r) if os.path.exists(f"{t}/산출/행정DB/행정DB일괄등록_점검.xlsx") else ""
+    dd = open(f"{t}/산출/행정DB/DOCU.TXT", encoding="cp949").read().rstrip("\r\n").split("\t") if os.path.exists(f"{t}/산출/행정DB/DOCU.TXT") else []
+    check("행정정보DB구축 일괄등록: 철 31칸·고정값(99999999·000000)·영구→40·쪽수 합 불일치·이미지 0바이트·일련번호 빠짐 점검",
+          cdb == 1 and len(dd) == 31 and dd[2] == "99999999" and dd[12] == "40" and dd[23] == "000000" and "쪽수 합(3)" in dbs
+          and "크기가 '0'" in dbs and "일련번호들을 확인" in dbs and "기록물철에 기록물건이 존재하지 않습니다" not in dbs, odb + dbs)
+
+    # 재난 피해 행정박물 응급조치(2024. 12.)·보존 취약 종이기록물 예방조치(2024. 11.)
+    xlsx(f"{t}/피해박물.xlsx", [["관리번호", "명칭", "재질", "형태", "피해", "손상유형", "훼손도", "수량", "위치", "비고"],
+        ["P1", "가상 접시", "도자기", "식기", "화재", "B,D", "1", "3", "2층", ""], ["P2", "가상 제복", "직물", "의복", "수해", "A,E", "3", "2", "1층", "염색"],
+        ["P3", "가상 현판", "목재", "현판", "수해", "A", "2", "1", "1층", ""]])
+    cat, oat = run([S("disaster-recovery", "scripts", "artifact_triage.py"), f"{t}/피해박물.xlsx", "--found", "2026-07-15 09:00", "--now", "2026-07-17 12:00", "-o", f"{t}/산출/박물응급.xlsx"])
+    atr = [r for r in openpyxl.load_workbook(f"{t}/산출/박물응급.xlsx")["응급조치 순서"].iter_rows(min_row=2, values_only=True)] if os.path.exists(f"{t}/산출/박물응급.xlsx") else []
+    xlsx(f"{t}/보유박물.xlsx", [["관리번호", "명칭", "보존기간", "생산연도", "생산기관", "보존가치", "상징성"], ["Q1", "가", "영구", "1955", "외교부", "높음", "높음"],
+        ["Q2", "나", "준영구", "1975", "행정안전부", "보통", "보통"]])
+    cap, oap = run([S("disaster-recovery", "scripts", "artifact_triage.py"), f"{t}/보유박물.xlsx", "--prepare", "-o", f"{t}/산출/박물구조.xlsx"])
+    apr = [r for r in openpyxl.load_workbook(f"{t}/산출/박물구조.xlsx")["구조 우선순위"].iter_rows(min_row=2, values_only=True)] if os.path.exists(f"{t}/산출/박물구조.xlsx") else []
+    check("행정박물 응급조치: 직물 48시간 지남·염색 먼저·목재 24시간·도자기 후순위·화재 물 금지, 구조 우선순위 1·4등급",
+          cat == 0 and [r[1] for r in atr] == ["P2", "P3", "P1"] and "48시간 지남" in str(atr[0][12]) and atr[2][9] == "후순위" and "물·수분 절대" in str(atr[2][11])
+          and [r[8] for r in apr] == ["1", "4"], oat + oap + str(atr))
+    xlsx(f"{t}/예방목록.xlsx", [["관리번호", "철제목", "매수", "재질", "규격", "편철", "상태", "해당 면"], ["F1", "가상 팩스철", "80", "감열지", "A4", "클립", "", "3-5,8"],
+        ["F2", "가상 대장", "650", "일반", "A4", "", "", ""], ["F3", "가상 철", "60", "일반", "A4", "", "바스라짐", ""], ["F4", "가상 정상", "50", "일반", "A4", "", "", ""]])
+    cpc, opc = run([S("preservation-inspection", "scripts", "preventive_care.py"), f"{t}/예방목록.xlsx", "-o", f"{t}/산출/예방조치.xlsx"])
+    wpc = openpyxl.load_workbook(f"{t}/산출/예방조치.xlsx") if os.path.exists(f"{t}/산출/예방조치.xlsx") else None
+    pcr = [r for r in wpc["예방조치 계획"].iter_rows(min_row=2, values_only=True)] if wpc else []
+    pcs = {r[0]: r[1] for r in wpc["용품 준비"].iter_rows(min_row=2, values_only=True)} if wpc else {}
+    check("예방조치: 감열지 간지(면 4)·금속철 제거·거대 편철 500매 초과·훼손 심화 봉투+복원 연계·정상 철 제외",
+          cpc == 0 and {(r[0], r[4]) for r in pcr} == {("F1", "감열지"), ("F1", "금속철"), ("F2", "거대 편철"), ("F3", "훼손 심화")}
+          and pcs.get("간지") == 4 and any(r[10] for r in pcr if r[0] == "F3"), opc + str(pcr))
+
+    # 대학·의료기관 보존기간 가이드 대조
+    open(f"{t}/대학기준표.csv", "w", encoding="utf-8-sig").write("단위과제명,보존기간\n학생증발급,3년\n학사일정관리,10년\n자격증관리대장,10년\n")
+    csg, osg = run([S("retention-review", "scripts", "sector_guide_lookup.py"), f"{t}/대학기준표.csv", "--sector", "대학", "-o", f"{t}/산출/대학가이드.xlsx"])
+    sgr = [r for r in openpyxl.load_workbook(f"{t}/산출/대학가이드.xlsx")["대조"].iter_rows(min_row=2, values_only=True)] if os.path.exists(f"{t}/산출/대학가이드.xlsx") else []
+    cmd, omd = run([S("retention-review", "scripts", "sector_guide_lookup.py"), "--sector", "의료", "--find", "응급의료"])
+    check("대학·의료 가이드: 유사 단위과제로 맞춤(학생증발급→학생증관리 5년)·짧음 2건·의료 135과제 검색",
+          csg == 1 and len(sgr) == 3 and sgr[0][6] == "학생증관리" and sgr[0][8] == "5년" and sgr[2][8] == "준영구" and "/135과제" in omd, osg + omd)
+
+    # 청사 이전 대비 기록물 이송·재배치(국가기록원 청사 이전 매뉴얼 2014)
+    xlsx(f"{t}/보유현황.xlsx", [["부서", "기록물철 제목", "생산연도", "보존기간", "보관위치", "권수", "비밀구분"],
+        ["가과", "가상 계획", "2015", "5년", "사무실", "2", ""], ["가과", "가상 대장", "2010", "영구", "문서고", "1", ""],
+        ["가과", "가상 통계", "2024", "", "사무실", "1", ""], ["나과", "가상 보고", "2023", "3년", "사무실", "12", ""],
+        ["나과", "가상 비밀철", "2020", "30년", "문서고", "1", "Ⅲ급비밀"]])
+    crl, orl = run([S("office-relocation", "scripts", "relocation_plan.py"), f"{t}/보유현황.xlsx", "--year", "2026", "--per-box", "10", "-o", f"{t}/산출/청사이전.xlsx"])
+    wrl = openpyxl.load_workbook(f"{t}/산출/청사이전.xlsx") if os.path.exists(f"{t}/산출/청사이전.xlsx") else None
+    rlf = " ".join(str(c) for sh in wrl.worksheets for r in sh.iter_rows(values_only=True) for c in r if c) if wrl else ""
+    dzr = [r for r in wrl["평가·폐기 후보"].iter_rows(min_row=2, values_only=True)] if wrl else []
+    bxr = [r for r in wrl["이송 박스"].iter_rows(min_row=2, values_only=True)] if wrl else []
+    check("청사 이전: 보존기간 확인·평가폐기 후보(만료)·관리번호(부서→연도→보존기간)·이송 박스·비밀 제외·점검표",
+          crl == 0 and len(dzr) == 1 and dzr[0][2] == "가상 계획" and "보존기간 없음" in rlf and "비밀철" not in rlf and "1건 — 목록에서 뺐음" in rlf
+          and len({r[0] for r in bxr}) == 4 and "선탑" in rlf, orl + str(bxr))
+
+    # 사진 등록대상 선별(국가기록원 시청각기록물 관리지침 2024 3.2)
+    try:
+        import numpy as _np
+        from PIL import Image as _Im
+        os.makedirs(f"{t}/사진", exist_ok=True)
+        def _sv(nm, arr, tt):
+            im = _Im.fromarray(arr.astype("uint8")); ex = _Im.Exif(); ex[306] = tt; ex[36867] = tt
+            im.save(f"{t}/사진/{nm}", exif=ex.tobytes())
+        _rg = _np.random.default_rng(0)
+        _b = _rg.integers(40, 200, (1200, 1800, 3))
+        _sv("a1.jpg", _b, "2026:03:02 10:00:00"); _sv("a2.jpg", _np.clip(_b + 3, 0, 255), "2026:03:02 10:00:01")
+        _sv("b1.jpg", _rg.integers(0, 30, (1200, 1800, 3)), "2026:03:02 11:00:00")
+        _g = _rg.integers(50, 200, (1200, 1800, 1)); _sv("c1.jpg", _np.repeat(_g, 3, axis=2), "2026:03:02 12:00:00")
+        _sv("d1.jpg", _rg.integers(40, 200, (600, 800, 3)), "2026:03:02 13:00:00")
+        cps, ops = run([S("typed-records-check", "scripts", "photo_select.py"), f"{t}/사진", "-o", f"{t}/산출/사진선별.xlsx"])
+        sel = {r[0]: r[8] for r in openpyxl.load_workbook(f"{t}/산출/사진선별.xlsx")["선별"].iter_rows(min_row=2, values_only=True)}
+        ok_ps = (cps == 0 and "대표 후보" in str(sel.get("a2.jpg")) and "대표만" in str(sel.get("a1.jpg")) and "노출 부족" in str(sel.get("b1.jpg"))
+                 and "흑백" in str(sel.get("c1.jpg")) and "저해상도" in str(sel.get("d1.jpg")))
+    except ImportError:
+        ok_ps, ops, sel = True, "Pillow 없음 — 건너뜀", {}
+    check("사진 등록대상 선별: 연사 대표·노출 부족·흑백 변환·저해상도(시청각기록물 관리지침 2024)", ok_ps, ops + str(sel))
 
     import zipfile as _zf
     md = f"{t}/메타"
@@ -492,6 +618,13 @@ def main():
     check("정수점검·상태검사(별표 14): 등급별·매체별 주기와 지남·예정·확인 필요",
           sch["A1"][9] == 2025 and sch["A2"][6] == 2025 and sch["A2"][9] == 2020 and sch["A3"][9] == 2025 and sch["A5"][9] == 2026
           and "지남" in sch["A2"][10] and sorted(need) == ["A4", "A6"], f"{sch} {need}")
+    xlsx(f"{t}/보존현황2.xlsx", [["관리번호", "제목", "유형", "재질", "보존기간", "상태등급", "최근정수점검", "최근상태검사", "생산연도"],
+        ["P1", "가상 팩스 기록", "종이", "감열지", "영구", "", 2025, "", 1995], ["P2", "가상 문서", "종이", "", "10년", "", 2025, "", 2020],
+        ["P3", "가상 녹화", "비디오테이프", "", "준영구", "", 2025, "", 1985]])
+    run([S("preservation-inspection", "scripts", "inspection_schedule.py"), f"{t}/보존현황2.xlsx", "--year", "2026", "-o", f"{t}/산출/점검일정2.xlsx"])
+    pr = [r for r in openpyxl.load_workbook(f"{t}/산출/점검일정2.xlsx")["첫 상태검사 우선순위"].iter_rows(min_row=2, values_only=True) if r[0]]
+    check("첫 상태검사 우선순위(기록물 상태검사 지침 2025): 영구·준영구·오래된 것·취약 재질 먼저",
+          [r[2] for r in pr][:3] == ["P3", "P1", "P2"] and "감열" in str(pr[1][7]), str(pr))
 
     # 정리 점검(시행규칙 제14조)
     xlsx(f"{t}/정리등록.xlsx", [["철분류번호", "제목", "생산연도", "보존기간", "단위과제", "쪽수", "공개구분", "비공개사유", "접근권한", "비밀구분", "기록물형태"],
@@ -570,6 +703,14 @@ def main():
     pairs = {(r[0], r[3]): r[7] for r in simr if r[0]}
     check("기준표 유사·중복 단위과제(자치단체 기준표 빅데이터 연구): 보존기간 다른 유사 과제·중복 생성 의심", "보존기간 다름" in str(pairs.get(("V1", "V2")))
           and "중복" in str(pairs.get(("V3", "V4"))) and not any("V5" in k for k in pairs), os_ + str(pairs))
+    xlsx(f"{t}/기준표정비.xlsx", [["단위과제코드", "단위과제명", "처리과", "기능유형", "단위과제카드", "업무설명", "보존기간", "보존기간책정사유", "생산건수"],
+        ["T1", "업무계획및성과관리", "가과", "과단위공통", "정책 및 학술 연구과제 관리", "업무계획", "5년", "별표1", "12"],
+        ["T2", "서무", "가과", "과단위공통", "서무", "서무", "3년", "별표1", "0"],
+        ["T3", "지역발전 기본계획 수립", "나과", "기관고유", "지역발전 기본계획 수립", "지역발전 기본계획을 수립", "10년", "별표1", "3"]])
+    cfx, ofx = run([S("records-schedule-check", "scripts", "schedule_check.py"), f"{t}/기준표정비.xlsx", "-o", f"{t}/산출/기준표정비.xlsx"])
+    fxs = " ".join(str(c) for r in openpyxl.load_workbook(f"{t}/산출/기준표정비.xlsx")["정비 문제유형"].iter_rows(values_only=True) for c in r if c)
+    check("기준표 정비 문제유형(중앙 기준표 개선 지원 사업): ① 고유 과제 없음·①-1 카드 분리·③ 무기록·⑥ 과소 책정",
+          "① 고유업무 있으나" in fxs and "①-1" in fxs and "③ 무기록" in fxs and "⑥ 보존기간 과소" in fxs and "나과" not in fxs.split("⑥")[0].split("①")[0], ofx + fxs[:500])
 
     # 국가기록원 공식 생산현황 통보서식 채우기
     form = S("production-status-report", "assets", "2024년도기록물생산현황통보서식.xlsx")
@@ -634,7 +775,8 @@ def main():
     sel = " ".join(str(c) for r in wb["선택지표·원칙"].iter_rows(values_only=True) for c in r if c)
     check("평가 준비: 필수지표 연결·증빙 없음·평가기준일 밖·등록번호 없음·선택지표 5개 초과·배점 초과",
           ind["1-1"][4] == 1 and ind["1-2"][7] == "증빙 없음" and "평가기준일" in fm["기록물평가심의회 심의 결과 보고"]
-          and "등록번호 없음" in fm["직원 기록관리 교육 실시 결과"] and "최대 4개" in sel and "20점 이하" in sel, out)
+          and "등록번호 없음" in fm["직원 기록관리 교육 실시 결과"] and "최대 4개" in sel and "20점 이하" in sel
+          and ind["1-2"][8] == "78.4" and ind["3-8"][8] == "100.0", out)
 
     # 데이터세트 관리기준표 초안
     import sqlite3
@@ -696,6 +838,14 @@ def main():
                   "-o", f"{t}/산출/행정박물.xlsx"])
     aw = openpyxl.load_workbook(f"{t}/산출/행정박물.xlsx")
     aj = {r[1]: r[4] for r in aw["점검"].iter_rows(min_row=2, values_only=True)}
+    xlsx(f"{t}/행정박물2.xlsx", [["등록번호", "생산부서", "행정박물명", "생산일자", "종료일자", "유형", "재질", "크기", "수량", "내용요약", "관련번호"],
+        ["1234567-2025-000011", "가상과", "개청 기념 청동 메달", "20250301", "20250301", "", "", "5×5", "1", "기념 메달", "없음"],
+        ["1234567-2025-000012", "가상과", "구 청사 목재 현판", "20250301", "20250301", "", "", "100×30", "1", "현판", "없음"]])
+    run([S("admin-artifacts-check", "scripts", "artifacts_check.py"), f"{t}/행정박물2.xlsx", "--asof", "2025-12-31", "-o", f"{t}/산출/행정박물2.xlsx"])
+    aj2 = {r[1]: str(r[4]) for r in openpyxl.load_workbook(f"{t}/산출/행정박물2.xlsx")["점검"].iter_rows(min_row=2, values_only=True)}
+    check("행정박물 유형·재질 후보(국가기록원 행정박물 상태검사·점검 매뉴얼 형태·재질 분류)",
+          "유형 후보: 상장·상패류" in aj2.get("1234567-2025-000011", "") and "재질 후보: 금속" in aj2.get("1234567-2025-000011", "")
+          and "유형 후보: 상징류" in aj2.get("1234567-2025-000012", "") and "재질 후보: 목재" in aj2.get("1234567-2025-000012", ""), str(aj2))
     s5 = {r[0]: r[1] for r in aw["서식 5 수치"].iter_rows(min_row=2, values_only=True)}
     due = {r[0]: r[5] for r in aw["이관 기한"].iter_rows(min_row=2, values_only=True)}
     c3, o3 = run([S("production-status-report", "scripts", "fill_official_form.py"), f"{t}/생산등록.xlsx", "--form", form, "--year", "2025",
@@ -796,6 +946,14 @@ def main():
           and s9["P7"].value == 2 and s9["Q7"].value == 1 and s8["C8"].value == 2 and s8["C10"].value == 2
           and "정보공개법" in o9 and "서면 개최 1회에 회의록 0건" in o9 and "지정회의인데 속기록·녹음 1건" in o9 and "YYYY.MM.DD" in o9
           and "지방공무원법" not in o9, o9)
+    xlsx(f"{t}/회의체j.xlsx", [["회의체명", "속기록지정", "부서명", "회의호수", "근거구분", "근거명칭", "근거조항", "최초구성일"],
+        ["고용정책심의회", "", "고용정책과", "5", "법률", "고용정책 기본법", "제10조", "2005.03.19"]])
+    xlsx(f"{t}/회의j.xlsx", [["회의명", "회의종류", "개최방식", "회의록건수", "속기록건수"], ["고용정책심의회 제1차", "5", "대면", "1", "0"]])
+    cj9, oj9 = run([S("production-status-report", "scripts", "fill_official_form.py"), f"{t}/생산등록.xlsx", "--form", form, "--year", "2025",
+                    "--meetings", f"{t}/회의j.xlsx", "--bodies", f"{t}/회의체j.xlsx", "-o", f"{t}/산출/통보서식_지정.xlsx"])
+    sj9 = openpyxl.load_workbook(f"{t}/산출/통보서식_지정.xlsx")["서식 9"]
+    check("서식 9 지정회의 자동 표시: 국가기록원 속기록 생산의무 지정회의 현황('26. 4. 1., 97개)과 대조", "지정회의 현황" in oj9 and "고용노동부" in oj9
+          and "지정회의인데 속기록·녹음 0건" in oj9 and sj9["B5"].value == "지정회의", oj9)
 
     # 한 번에 돌리기(run_all.py): 입력 폴더 → 점검 → 서식 1~9 → 통보전_확인.md, 비밀 파일은 건너뜀
     ind = f"{t}/통보입력"
@@ -884,6 +1042,17 @@ def main():
     d1, od1 = run([S("dataset-schedule", "scripts", "dataset_screen.py"), f"{t}/시스템목록.xlsx", "--org", "가상기관", "-o", f"{t}/산출/데이터세트선정.xlsx"])
     dw = openpyxl.load_workbook(f"{t}/산출/데이터세트선정.xlsx")
     dt_ = {r[4]: (r[7], r[8]) for r in dw["선정 협의 서식"].iter_rows(min_row=3, values_only=True)}
+    # 국가기록원 '관리대상 선정협의 예시'(행정정보 데이터세트 게시판) 유형 21개 중 헷갈리기 쉬운 것
+    xlsx(f"{t}/선정예시.xlsx", [["시스템명", "시스템개요", "데이터세트 내용", "부서명"],
+        ["경영지원", "사업관리 업무를 지원하는 시스템", "운용관리, 결재관리, 감사지원, 사업모니터링 등", "재단"],
+        ["네트워크 관리 시스템(NMS)", "네트워크 구성/성능/장애/운영 관리 시스템", "네트워크 구성, 성능 정보", "재단"],
+        ["사내 메신저", "공사 내부 메신저", "사용자 정보, 송수신 쪽지 목록 등", "재단"], ["사내 웹메일 시스템", "웹메일 시스템", "송수신 메일 내용 등", "재단"],
+        ["재단 모바일앱", "홈페이지에서 제공되는 대고객 학자금 지원 업무 제공", "학자금대출, 장학금", "재단"], ["전자문서시스템", "전자문서 생산 시스템", "전자문서, 게시판 목록 등", "재단"],
+        ["웹필터링 시스템", "유해 웹사이트 차단", "차단 목록", "재단"]])
+    d2, od2 = run([S("dataset-schedule", "scripts", "dataset_screen.py"), f"{t}/선정예시.xlsx", "-o", f"{t}/산출/선정예시.xlsx"])
+    ex = {r[4]: str(r[7])[:1] for r in openpyxl.load_workbook(f"{t}/산출/선정예시.xlsx")["선정 협의 서식"].iter_rows(min_row=3, values_only=True)} if os.path.exists(f"{t}/산출/선정예시.xlsx") else {}
+    check("데이터세트 관리대상 유형: 국가기록원 선정협의 예시와 같은 판단(A 1·B 4·C 2)", ex == {"경영지원": "A", "네트워크 관리 시스템(NMS)": "B", "사내 메신저": "B",
+          "사내 웹메일 시스템": "B", "재단 모바일앱": "C", "전자문서시스템": "C", "웹필터링 시스템": "B"}, od2 + str(ex))
     xlsx(f"{t}/건목록.xlsx", [["철분류번호", "철제목", "생산연도", "등록번호", "등록일자", "건명", "형태", "보낸기관", "받은기관", "쪽수", "붙임", "분리등록", "비밀구분"],
         ["F1", "가상 계획철", "2014", "행정과-1", "2014-03-02", "가상 계획 보고", "전자", "", "", "", "1. 계획서 1부(별송)", "", ""],
         ["F1", "가상 계획철", "2014", "행정과-2", "2014-03-05", "가상 회신", "비전자", "가상청", "가상과", "4", "", "", ""],
@@ -1220,6 +1389,31 @@ def main():
                              ["가상위원회", "조사과", "조사 결과", "1", "2025", "영구", "문서", "비공개", "", ""],
                              ["가상위원회", "홍보과", "행사 사진", "120", "2025", "준영구", "사진", "공개", "", ""],
                              ["가상위원회", "총무과", "현판", "1", "2024", "", "행정박물", "", "", ""]])
+    xlsx(f"{t}/통합A.xlsx", [["부서명", "기능유형", "단위과제명", "단위과제설명", "보존기간", "단위과제카드", "업무담당자", "보존기간확정여부"],
+        ["감사담당관", "공통", "자체감사실시", "자체감사", "5년", "감사카드", "김", "Y"], ["기획과", "고유", "지역발전 기본계획 수립", "계획", "10년", "카드", "이", "Y"],
+        ["기획과", "고유", "지역발전 기본계획 수립", "계획", "10년", "카드", "이", "Y"], ["총무과", "공통", "청사관리", "청사", "10년", "", "", "N"]])
+    xlsx(f"{t}/통합B.xlsx", [["부서명", "기능유형", "단위과제명", "단위과제설명", "보존기간", "단위과제카드", "업무담당자", "보존기간확정여부"],
+        ["감사실", "공통", "자체 감사 실시", "감사", "10년", "c", "박", "Y"], ["정책과", "공통", "지역발전기본계획수립", "계획", "30년", "c", "최", "Y"],
+        ["교통과", "고유", "버스노선 조정", "노선", "10년", "c", "정", "Y"]])
+    cms, oms = run([S("agency-closure", "scripts", "merge_schedule.py"), f"{t}/통합A.xlsx", f"{t}/통합B.xlsx", "--names", "가시,나시", "--type", "지방자치단체", "-o", f"{t}/산출/통합기록관리표.xlsx"])
+    wm = openpyxl.load_workbook(f"{t}/산출/통합기록관리표.xlsx") if os.path.exists(f"{t}/산출/통합기록관리표.xlsx") else None
+    cmpr = {(r[1] or "") + "|" + (r[6] or ""): r for r in wm["단위과제비교표"].iter_rows(min_row=2, values_only=True)} if wm else {}
+    prer = " ".join(str(c) for r in wm["사전 정비 대상"].iter_rows(values_only=True) for c in r if c) if wm else ""
+    au = cmpr.get("자체감사실시|자체 감사 실시", [""] * 17)
+    check("기관 통폐합 통합 기록관리표: 사전 정비(중복·카드 없음·미확정)·③⑦⑥ 문제유형·준칙 준용·단독 업무",
+          cms == 1 and "③ 명칭" in str(au[13]) and "⑦" in str(au[13]) and "⑥ 가시(5년)" in str(au[13]) and au[16] == "10년" and "자체감사실시" in str(au[15])
+          and "같은 부서 안 중복" in prer and "단위과제카드 없음" in prer and "미확정" in prer
+          and any("나시에만" in str(r[13]) for r in cmpr.values()) and cmpr.get("지역발전 기본계획 수립|지역발전기본계획수립", [""] * 17)[16] == "30년", oms + str(au))
+    xlsx(f"{t}/통합C.xlsx", [["부서명", "기능유형", "단위과제명", "단위과제설명", "보존기간"], ["감사관", "공통", "자체감사 실시", "감사", "3년"], ["관광과", "고유", "축제 운영", "축제", "5년"]])
+    cm3, om3 = run([S("agency-closure", "scripts", "merge_schedule.py"), f"{t}/통합A.xlsx", f"{t}/통합B.xlsx", f"{t}/통합C.xlsx", "--names", "가시,나시,다군",
+                    "--type", "지방자치단체", "-o", f"{t}/산출/통합기록관리표3.xlsx"])
+    w3 = openpyxl.load_workbook(f"{t}/산출/통합기록관리표3.xlsx") if os.path.exists(f"{t}/산출/통합기록관리표3.xlsx") else None
+    r3 = [r for r in w3["단위과제비교표"].iter_rows(min_row=2, values_only=True)] if w3 else []
+    aud = next((r for r in r3 if r[1] == "자체감사실시"), [""] * 22)
+    check("기관 통폐합 3개 기관(행정통합): 같은 과제 한 줄로 묶음·세 기관 보존기간 비대칭·준칙 준용",
+          cm3 == 1 and aud[11] == "자체감사 실시" and "⑦ 보존기간 비대칭(5년/10년/3년)" in str(aud[18]) and aud[21] == "10년"
+          and any("다군에만" in str(r[18]) for r in r3), om3 + str(aud))
+
     cch, och = run([S("agency-closure", "scripts", "closure_handover.py"), f"{t}/폐지목록.xlsx", "--type", "폐지-승계없음", "--org", "가상위원회",
                     "--to", "가상기록원", "--done", "2026-12-15", "-o", f"{t}/산출/인계인수.xlsx"])
     ok_ch = False
@@ -1329,7 +1523,9 @@ def main():
         for k, ln in enumerate(["가상시 기록물분류기준표 보졲 기갂",
                                 "4200075 가상시 민원과 총무행정 행정관리 행정관리기타 ZA000017 관인관리 영구 원본 자료관",
                                 "4200075 가상시 민원과 지방자치 주민참여 읍면동주민자치 PA214533 젂세확정일자부여 10년 원본 자료관",
-                                "4200075 가상시 민원과 지방자치 지방산업 지역산업 PA001210 가스안젂관리 20 원본 기록관 없음"]):
+                                "4200075 가상시 민원과 지방자치 지방산업 지역산업 PA001210 가스안젂관리 20 원본 기록관 없음",
+                                "C185006 가상대학교 교육 학사행정 학사관리 HB000075 각종행사 5년 원본 기록관 없음",
+                                "1234567 가상청 A0000019 기획 B0000064 기획관리 C0000339 기획관리운영 AA007626 간부회의 1년 원본 자료관"]):
             cv.drawString(40, 800 - 14 * k, ln)
         cv.save()
         xlsx(f"{t}/분류목록.xlsx", [["단위업무코드", "단위업무명", "보존기간"], ["PA214533", "전세확정일자부여", "5년"], ["ZA000017", "관인관리", "영구"], ["PA999999", "가상", "3년"]])
@@ -1339,7 +1535,8 @@ def main():
         rd = {r[3]: r for r in wsp["분류기준표"].iter_rows(min_row=2, values_only=True)} if wsp else {}
         sp_pdf = (csp2 == 1 and "짧음" in str(dz.get("PA214533", [""] * 7)[6]) and dz.get("ZA000017", [""] * 7)[6] == "같음"
                   and "없음" in str(dz.get("PA999999", [""] * 7)[6]) and rd.get("PA214533", [""] * 7)[4] == "전세확정일자부여"
-                  and rd.get("PA001210", [""] * 7)[5] == "20년")
+                  and rd.get("PA001210", [""] * 7)[5] == "20년" and rd.get("HB000075", [""] * 7)[1] == "C185006"
+                  and rd.get("AA007626", [""] * 7)[4] == "간부회의" and "B0000064" in str(rd.get("AA007626", [""] * 7)[2]))
         osp += osp2 + str(dz) + str(rd)
     except ImportError:
         sp_pdf = True  # reportlab·pdfplumber 없으면 PDF 부분은 건너뜀
@@ -1355,6 +1552,11 @@ def main():
           and "PNG0001" in str(ch.get("(기관공통)감사결과처리", [""] * 12)[8]) and "가상 전혀 다른 과제" not in ch, och + str(ch))
 
     # 2026 지침 수행업무 리스트 점검표
+    ckp, okp = run([S("evaluation-readiness", "scripts", "task_checklist.py"), "--kind", "공공기관", "-o", f"{t}/산출/수행업무_공공.xlsx"])
+    cku, oku = run([S("evaluation-readiness", "scripts", "task_checklist.py"), "--kind", "대학", "--role", "기록관", "-o", f"{t}/산출/수행업무_대학.xlsx"])
+    tp = [r for r in openpyxl.load_workbook(f"{t}/산출/수행업무_공공.xlsx")["점검표"].iter_rows(min_row=3, values_only=True)]
+    check("수행업무 점검표 --kind: 2026 공공기관 지침(처리과 28·기록관 21, 책임자 지정 1-1)·대학 지침(기록관 18)",
+          ckp == 0 and cku == 0 and len(tp) == 49 and tp[0][3] == "처리과 기록물관리책임자가 지정되어 있는지?" and "기록관 18개" in oku, okp + oku)
     ctk, otk = run([S("evaluation-readiness", "scripts", "task_checklist.py"), "--role", "처리과", "-o", f"{t}/산출/수행업무.xlsx"])
     tk_ok = False
     if ctk == 0:
@@ -1573,6 +1775,12 @@ def main():
           and "1000" in bj(("B-1", "2026-10-01")) and "박엽지" in bj(("B-2", "2026-10-01")) and "육안" in bj(("B-3", "2026-10-01"))
           and ("B-4", "2026-10-01") not in bio and "부유세균" in bj(("1서고", "2026-10-01")) and "3배" in bj(("1서고", "2026-10-01"))
           and "부유곰팡이 600" in bj(("2서고", "2025-06-01")) and "1년 지남" in bj(("2서고", "2025-06-01")), obio + str(bio))
+    xlsx(f"{t}/트랩.xlsx", [["서고", "수거일", "트랩", "해충", "개체수"], ["1서고", "2026-09-01", "페로몬", "권연벌레", "2"], ["1서고", "2026-10-01", "페로몬", "권연벌레", "1"],
+                           ["2서고", "2026-10-01", "점착", "바퀴", "1"], ["3서고", "2026-10-01", "점착", "좀", "1"]])
+    ctr, otr = run([S("preservation-inspection", "scripts", "bio_check.py"), f"{t}/생물.xlsx", "--traps", f"{t}/트랩.xlsx", "--today", "2026-11-20", "-o", f"{t}/산출/생물2.xlsx"])
+    trp = [r for r in openpyxl.load_workbook(f"{t}/산출/생물2.xlsx")["해충 트랩"].iter_rows(min_row=2, values_only=True)]
+    check("해충 트랩(기록물 소독대상 선별 및 처리 매뉴얼 2022): 1등급 재포획 → 서고 전량 저산소 소독, 2등급 오염 해충",
+          "전량 저산소" in str(trp[1][7]) and "다시 잡히면" in str(trp[0][7]) and trp[2][6].startswith("2등급") and trp[3][6].startswith("1등급"), otr + str(trp))
     check("기록재료 별표 15: 용지·필기구·용기·pH 7.5·탄산칼슘 2%·내광성 4호, 30년 미만 제외", cm == 1
           and not any(r[1] in ("M-1", "M-3", "M-4") for r in mr) and all(k in m2 for k in ("재생지", "수성", "pH 6.2", "탄산칼슘 1", "내광성 3", "용기") if k != "용기")
           and any(r[1] == "M-2" and r[4] == "용기" for r in mr), om + str(mr))

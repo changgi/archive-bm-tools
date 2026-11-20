@@ -59,8 +59,24 @@ def body_text(msg):
 def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("src")
+    ap.add_argument("--roles", help="역할기반(캡스톤) 목록 csv/xlsx: 주소, 직위[, 구분] — 구분이 비면 '주요 직위'로 봄")
     ap.add_argument("-o", "--out", default="산출/이메일평가.xlsx")
     a = ap.parse_args()
+    roles = {}
+    if a.roles:
+        if a.roles.lower().endswith((".xlsx", ".xlsm")):
+            import openpyxl as _ox
+            rr = [["" if v is None else str(v).strip() for v in r] for r in _ox.load_workbook(a.roles, read_only=True, data_only=True).active.iter_rows(values_only=True)]
+        else:
+            import csv
+            rr = list(csv.reader(open(a.roles, encoding="utf-8-sig")))
+        h = [re.sub(r"\s", "", x) for x in rr[0]]
+        ai = next((h.index(x) for x in ("주소", "이메일", "메일주소", "email") if x in h), 0)
+        pi = next((h.index(x) for x in ("직위", "직급", "역할") if x in h), None)
+        gi = next((h.index(x) for x in ("구분", "분류") if x in h), None)
+        for r in rr[1:]:
+            if len(r) > ai and r[ai]:
+                roles[r[ai].strip().lower()] = ((r[pi] if pi is not None and pi < len(r) else ""), (r[gi] if gi is not None and gi < len(r) and r[gi] else "주요 직위"))
     rows, atts, people = [], [], collections.Counter()
     dates = []
     for where, msg in messages(a.src):
@@ -86,10 +102,17 @@ def main() -> int:
                 data = part.get_payload(decode=True) or b""
                 atts.append([where, subj[:60], fn, len(data), hashlib.sha256(data).hexdigest()])
                 n_att += 1
+        role = ""
+        if roles:
+            hit = [(addr.lower(), roles[addr.lower()]) for _, addr in frm + to if addr and addr.lower() in roles]
+            if hit:
+                role = f"역할기반 보존 후보 — {hit[0][1][0] or hit[0][0]}({hit[0][1][1]})" + (" 발신" if hit[0][0] in {x[1].lower() for x in frm} else " 수신")
+            else:
+                role = "일반 계정 — 기관 기준으로 판단"
         rows.append([where, d.isoformat(timespec="minutes") if d else "", ", ".join(x[1] for x in frm),
                      ", ".join(x[1] for x in to)[:200], subj, n_att,
                      ", ".join(sorted({h[0] for h in hits})), "비밀 표시 — 담당자 확인" if secret else "",
-                     str(msg.get("Message-ID", ""))])
+                     str(msg.get("Message-ID", ""))] + ([role] if roles else []))
     import openpyxl
     wb = openpyxl.Workbook()
     s = wb.active
@@ -102,8 +125,12 @@ def main() -> int:
     s.append(["비밀 표시 메시지", sum(1 for r in rows if r[7])])
     s.append([])
     s.append(["주의", "본문은 옮기지 않았습니다. 기록물 여부·보존 판단은 사람이 합니다."])
+    if roles:
+        s.append(["역할기반 보존 후보 메시지", sum(1 for r in rows if r[9].startswith("역할기반"))])
+        s.append(["역할기반(캡스톤) 참고", "미국 NARA GRS 6.1(이메일·전자메시지 역할기반 관리): 기관장·차관급 등 지정한 주요 직위 계정의 메일은 영구, 그 밖의 계정은 한시로 관리하는 방식. "
+                  "국내 법정 기준이 아니며 국가기록원 「전자기록 등 기타 특수유형 기록관리 체계 구축을 위한 국가기록원 기록물 평가정책 연구」(2024)가 소개한 참고 방식이다. 보존기간은 기관 기록관리표·평가 절차로 정한다."])
     m = wb.create_sheet("메시지 목록")
-    m.append(["위치", "날짜", "보낸 사람", "받는 사람(참조 포함)", "제목", "첨부 수", "개인정보 후보", "비밀", "Message-ID"])
+    m.append(["위치", "날짜", "보낸 사람", "받는 사람(참조 포함)", "제목", "첨부 수", "개인정보 후보", "비밀", "Message-ID"] + (["역할기반 구분"] if roles else []))
     for r in rows:
         m.append(r)
     p = wb.create_sheet("주고받은 상대")

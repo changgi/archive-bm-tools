@@ -1,0 +1,60 @@
+# 국가기록포털 표준·지침·매뉴얼 메뉴 전수 목록과 스킬 대응 (2026-11-21)
+
+경로: 업무안내·자료 > 기록관리 자료실 > 표준·지침·매뉴얼 (archives.go.kr/next/newdata/standardCondition.do). 6개 탭을 모두 열어 게시물·첨부를 모았다.
+
+| 탭 | 건수 | 비고 |
+|---|---|---|
+| 기록물관리 표준 | 33(현행, 폐지된 공공·원내표준 팝업 별도) | NAK 표준 — nak-standards-2026-11-20.md에 스킬별 대응 |
+| 지침 | 18 | 첨부 PDF 받음(비밀 관련 2건은 열지 않음) |
+| 매뉴얼 | 12 | 첨부 PDF 받음(비밀 재분류 매뉴얼 1건은 열지 않음) |
+| 규격·서식 | 5 | xlsx·hwpx·hwp 받음 |
+| 한국산업표준(KS) | 11 | 국가표준인증 통합정보시스템 링크만(원문 유료) — KS X ISO 15489-1·23081-1/2·30300/30301·TR 21946·TR 26122·TR 13028·16175-3·22310, KS X 6500 |
+| 해외표준 | 120 | 미국 36·호주 29·영국 22·국제기구 19·뉴질랜드 8·캐나다 6, PDF 64건 — 대부분 2000년대 번역본 |
+
+## 지침·매뉴얼·규격·서식 게시물별 대응
+
+| 탭 | 현행 | 제목 | 킷 반영 |
+|---|---|---|---|
+| 지침 | 2026 | 2026년 기록물관리 지침 | 킷 전반(2026 지침 근거), evaluation-readiness task_checklist(일반) |
+| 지침 | 2026 | 2026년 공공기관 기록물관리 지침 | evaluation-readiness task_checklist --kind 공공기관(처리과 28·기록관 21) |
+| 지침 | 2026 | 2026년 대학 기록물관리 지침 | evaluation-readiness task_checklist --kind 대학(처리과 27·기록관 18) |
+| 지침 | 2025 | 기록물 상태검사 지침(2025) | preservation-inspection 첫 상태검사 우선순위(2.3.2), 별표 3·14는 이미 반영 |
+| 지침 | 2025 | 영구기록물관리기관 비밀기록물 관리지침 | 열지 않음(비밀 관련 — 담당자 확인) |
+| 지침 | 2024 | 재난 피해 행정박물 응급조치 실무 지침 | disaster-recovery artifact_triage.py(재질 군·직물 48시간·수해/화재 요령, 참고 2~5) |
+| 지침 | 2024 | 보존 취약 종이기록물 예방조치 지침 | preservation-inspection preventive_care.py(취약 4유형·처리방향·용품 수량, 표 1·3·5·7·9) |
+| 지침 | 2024 | 시청각기록물 관리지침 | typed-records-check photo_select.py(3.2 등록대상 선정), 동영상 HD·MPEG-2/4 안내 |
+| 지침 | 2022 | 국가기록원 기록물 대여 지침 | 국가기록원 내부 — 스킬 대상 아님 |
+| 지침 | 2021 | 2021년 기록관리 중점 추진사항 | 옛 판 — 2026 지침이 대신 |
+| 지침 | 2021 | 2021년 공공기관 기록관리 중점 추진 사항 | 옛 판 — 2026 공공기관 지침이 대신 |
+| 지침 | 2021 | 행정박물 관리지침 | admin-artifacts-check(2026 지침 우선), 재질·형태는 상태검사 매뉴얼로 보완 |
+| 지침 | 2020 | 폐지(한시)기관 기록물 관리 지침 | agency-closure(NAK 15가 대신) |
+| 지침 | 2020 | 비밀기록물 관리 실무 지침 개정판 | 열지 않음(비밀 관련 — 담당자 확인) |
+| 지침 | 2020 | 국가기록원 시소러스 지침 | 영구기록물관리기관 기술 — archival-description 참고 |
+| 지침 | 2020 | 국가기록원 전거레코드 지침 | 영구기록물관리기관 기술 — archival-description 참고 |
+| 지침 | 2011 | 지방이전 정부기관 기록물 관리지침 | office-relocation(청사 이전 매뉴얼과 함께) |
+| 지침 | 2006 | 마이크로필름 지침 | records-forms microfilm(별지 제5호) — 신규 촬영 드묾 |
+| 매뉴얼 | 2025 | 재난 피해 종이기록물 응급복구 매뉴얼 | disaster-recovery |
+| 매뉴얼 | 2024 | 종이기록물 복원처리 매뉴얼 | 국가기록원 복원 — preservation-inspection restoration_plan 참고 |
+| 매뉴얼 | 2024 | 재난 피해 기록물 응급복구 가이드 라인(영문) | 이미지 PDF(본문 텍스트 없음) — disaster-recovery 참고 |
+| 매뉴얼 | 2023 | 중앙행정기관 단위과제정비 매뉴얼(2차 개정판) | records-schedule-check 정비 문제유형(8유형 15개선안), agency-closure merge_schedule |
+| 매뉴얼 | 2023 | 재난 피해 기록물 응급복구 가이드 라인 | 이미지 PDF — disaster-recovery 참고 |
+| 매뉴얼 | 2022 | 기록물 소독대상 선별 및 처리 매뉴얼 | preservation-inspection bio_check --traps(해충 1·2등급, 재포획 시 전량 저산소), ATP 1,000 RLU |
+| 매뉴얼 | 2021 | 2021년도 대학 기록물 보존기간 책정기준 가이드 | retention-review sector_guide_lookup.py --sector 대학(201과제) |
+| 매뉴얼 | 2016 | 의료기관 표준 기록관리기준표 운영 가이드 | retention-review sector_guide_lookup.py --sector 의료(135과제·공개여부·접근권한) |
+| 매뉴얼 | 2014 | 공공기관 청사 이전 대비 기록관리 업무 매뉴얼 | 새 스킬 office-relocation |
+| 매뉴얼 | 2010 | 30년경과 비공개기록물 공개재분류 가이드북(특수기록관 기록물) | 이미지 PDF — disclosure-reclass 참고 |
+| 매뉴얼 | 2010 | 비밀기록물 재분류 매뉴얼 | 열지 않음(비밀 관련 — 담당자 확인) |
+| 매뉴얼 | 2009 | 기록물 공개재분류 실용매뉴얼 : 기록관편 | 이미지 PDF — disclosure-reclass 참고 |
+| 규격·서식 | 2024 | 기록물 생산현황 통보서식 | production-status-report(서식 1~11) |
+| 규격·서식 | 2024 | 기록물통합서비스플랫폼 기록물 일괄등록 규격 | listing-qa ramp_batch.py |
+| 규격·서식 | 2024 | 기록물통합서비스플랫폼 기록물 일괄등록 서식 | listing-qa assets/RAMP_일괄등록_서식_2024.xlsx |
+| 규격·서식 | 2023 | 행정정보DB구축 기록물의 기록관리시스템 규격 | listing-qa dbproject_batch.py(철 31·건 42·특수목록 7항목, 이미지 폴더 점검) |
+| 규격·서식 | 2023 | [2023]행정정보DB구축 기록물의 기록관리시스템 규격 | listing-qa dbproject_batch.py(같은 규격의 hwp판) |
+
+## 해외표준에서 참고할 것(스킬 근거로는 국내 법령·NAK가 우선)
+- 미국 NARA: 확장된 이관요건 1~6(전자우편·스캔·PDF·디지털사진·지리공간·웹), 웹 기록 관리 가이던스, 전자서명 기록관리 → transfer-reconcile·web-records-check·email-appraisal 참고.
+- 영국 TNA: 기록관리 표준 4.1 중단·이전되는 기능 → agency-closure 참고, 처분일정 수립 → retention-review 참고.
+- 호주 NAA: 메시지 관리 가이드라인(공식·비공식 소통) → email-appraisal 참고, 기록의 폐기·처분승인 절차 → disposal-dossier 참고.
+- 국제기구: ISO 14721(OAIS), ISAD(G)·ISAAR, MoReq2, 재난계획 → 해당 스킬 references 배경.
+
+받은 파일은 작업 폴더에만 두고 킷에는 서식(RAMP 일괄등록 서식 xlsx)만 넣었다. 첨부 원문은 저작권·갱신 문제로 옮겨 싣지 않는다.
