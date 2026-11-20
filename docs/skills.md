@@ -469,6 +469,11 @@ python skills/fixity-check/scripts/fixity.py verify 보존 산출/기준선.csv 
 
 **직접 실행** `python skills/access-request/scripts/foi_deadlines.py 청구목록.xlsx --warn-days 3 -o 산출/정보공개기한.xlsx`
 
+
+🆕 **서식·통계(정보공개법 시행규칙)** `python skills/access-request/scripts/foi_forms.py 청구목록.xlsx --year 2026` — 별지 제4호 정보공개 처리대장(별표 수수료 계산 포함), 제11호 이의신청 처리대장, 제12호 운영실태(총괄·청구방법·공개/수령방법·결정기간·비공개 사유별), 제7호 결정 통지서 기재 점검. 청구인 이름은 옮기지 않습니다.
+```text
+올해 정보공개 청구 목록으로 처리대장이랑 운영실태 통계 만들어줘. 수수료도 계산해줘.
+```
 ---
 
 ## 19. disclosure-reclass — 공개 재분류 심의 대상

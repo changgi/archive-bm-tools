@@ -9,7 +9,7 @@
 
 ![version](https://img.shields.io/badge/records--skills-v2.13.0-1f6feb)
 ![skills](https://img.shields.io/badge/스킬-39종-2da44e)
-![tests](https://img.shields.io/badge/시험-71%2F71%20통과-2da44e)
+![tests](https://img.shields.io/badge/시험-72%2F72%20통과-2da44e)
 ![python](https://img.shields.io/badge/Python-3.10%2B-3776ab?logo=python&logoColor=white)
 ![law](https://img.shields.io/badge/근거-시행령%202026.8.25.-8250df)
 ![license](https://img.shields.io/badge/코드-MIT-lightgrey)
@@ -165,7 +165,7 @@ flowchart LR
 
 | 스킬 | 하는 일 |
 |---|---|
-| [access-request](plugins/records-skills/skills/access-request) | 정보공개 결정·연장·이의신청 기한(공휴일 반영) |
+| [access-request](plugins/records-skills/skills/access-request) | 정보공개 결정·연장·이의신청 기한(공휴일 반영), 🆕 처리대장·이의신청대장·운영실태(별지 4·11·12)·별표 수수료 계산 |
 | [disclosure-reclass](plugins/records-skills/skills/disclosure-reclass) | 공개 재분류 심의 대상, 비공개 사유 결함, 이관 전 재분류, 🆕 검토서(16칸)·기준서·체크리스트 — NAK 16-1 |
 | [pii-redact](plugins/records-skills/skills/pii-redact) | 주민등록번호·전화번호 등 개인정보 후보와 부분공개용 가림 목록 |
 
@@ -250,7 +250,7 @@ flowchart LR
 python plugins/records-skills/tests/run_tests.py
 ```
 
-71개(veraPDF가 PATH에 있으면 72개, ffmpeg가 없으면 1개 적음) — 스킬 39종의 주요 계산과, 보호 훅이 Windows처럼 `python3`가 없거나 가짜일 때도 꺼지지 않는지까지 확인합니다. 필요 패키지: `openpyxl` `pypdf` `pikepdf` `pillow` `numpy` (선택: `python-docx` `python-hwpx` `holidays`, LibreOffice). Python 3.11·3.12·3.13에서 확인했고, [GitHub Actions](.github/workflows/test.yml)로 3.10~3.13을 돌립니다.
+72개(veraPDF가 PATH에 있으면 73개, ffmpeg가 없으면 1개 적음) — 스킬 39종의 주요 계산과, 보호 훅이 Windows처럼 `python3`가 없거나 가짜일 때도 꺼지지 않는지까지 확인합니다. 필요 패키지: `openpyxl` `pypdf` `pikepdf` `pillow` `numpy` (선택: `python-docx` `python-hwpx` `holidays`, LibreOffice). Python 3.11·3.12·3.13에서 확인했고, [GitHub Actions](.github/workflows/test.yml)로 3.10~3.13을 돌립니다.
 
 ---
 
