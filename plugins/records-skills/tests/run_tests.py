@@ -180,20 +180,29 @@ def main():
         ["P3", "민원철", "A002", "5년", "2019"],     # 2024 만료 지남
         ["P4", "인사철", "A004", "30년", "2014"],    # 이관연도 2020(현행 5년)·2025(개정 전 10년) → 이관 대상
         ["P5", "기타", "Z999", "7년", "2022"],       # 허용 값 아님 + 기준표에 없음
-        ["P6", "계획서", "A003", "영구", "2020"],     # 이관연도 2026(현행) → 이관 대상, 개정 전 규정이면 2031
+        ["P6", "계획서", "A003", "영구", "2020"],     # 2026. 8. 25. 시행 당시 기산일+5년 경과 → 부칙 제17조① 종전 10년 → 2031(아직 아님)
+        ["P8", "계획서", "A003", "영구", "2021"],     # 이관연도 2027(현행 5년) → 아직
         ["P7", "민원철", "A002", "5년", "2022"]])    # 2027 내년 만료
     code, out = run([S("retention-review", "scripts", "check_retention.py"), f"{t}/보존목록.xlsx", "--criteria", crit, "--year", "2026", "-o", f"{t}/산출/ret.xlsx"])
     wb = openpyxl.load_workbook(f"{t}/산출/ret.xlsx")
     chk = {(r[0], r[5]) for r in wb["보존기간 점검"].iter_rows(min_row=2, values_only=True)}
     exp = {(r[0], r[6]) for r in wb["만료 예정"].iter_rows(min_row=2, values_only=True)}
     trn = [r[0] for r in wb["이관 대상"].iter_rows(min_row=2, values_only=True)]
+    trk = {r[0]: r[6] for r in wb["이관 대상"].iter_rows(min_row=2, values_only=True)}
     ok_ret = chk == {("P1", "기준표보다 짧음"), ("P5", "허용 값 아님"), ("P5", "기준표에 없음")} and \
-        {("P2", "올해 만료"), ("P3", "만료 지남"), ("P7", "내년 만료")} <= exp and sorted(trn) == ["P4", "P6"]
+        {("P2", "올해 만료"), ("P3", "만료 지남"), ("P7", "내년 만료")} <= exp and sorted(trn) == ["P4"] and trk["P4"] == "이관 대상(종전)"
+    xlsx(f"{t}/자체보존.xlsx", [["관리번호", "제목", "단위과제코드", "보존기간", "종료년도"],
+        ["Q1", "옛 준영구", "A001", "준영구", "1950"], ["Q2", "옛 영구", "A003", "영구", "1950"], ["Q3", "30년", "A004", "30년", "1990"]])
+    run([S("retention-review", "scripts", "check_retention.py"), f"{t}/자체보존.xlsx", "--criteria", crit, "--year", "2026", "--self-keep", "-o", f"{t}/산출/self26.xlsx"])
+    run([S("retention-review", "scripts", "check_retention.py"), f"{t}/자체보존.xlsx", "--criteria", crit, "--year", "2028", "--self-keep", "-o", f"{t}/산출/self28.xlsx"])
+    e26 = {(r[0], r[6]) for r in openpyxl.load_workbook(f"{t}/산출/self26.xlsx")["만료 예정"].iter_rows(min_row=2, values_only=True)}
+    e28 = {(r[0], r[6]) for r in openpyxl.load_workbook(f"{t}/산출/self28.xlsx")["만료 예정"].iter_rows(min_row=2, values_only=True)}
+    ok_ret = ok_ret and ("Q1", "70년 평가") in e26 and ("Q2", "70년 평가") not in e26 and ("Q2", "70년 평가") in e28 and ("Q3", "만료 지남") in e26
     run([S("retention-review", "scripts", "check_retention.py"), f"{t}/보존목록.xlsx", "--criteria", crit, "--year", "2026",
          "--transfer-years", "10", "-o", f"{t}/산출/ret10.xlsx"])
     trn10 = [r[0] for r in openpyxl.load_workbook(f"{t}/산출/ret10.xlsx")["이관 대상"].iter_rows(min_row=2, values_only=True)]
     ok_ret = ok_ret and trn10 == ["P4"]
-    check("보존기간: 기준표 대조·만료·이관 대상(시행령 제40조① 5년, 개정 전 10년 비교)", ok_ret, f"{chk} {exp} {trn} {trn10}")
+    check("보존기간: 기준표 대조·만료·이관 대상(제40조① 5년·부칙 제17조① 종전 10년), 자체 보존 70년 평가(2028 영구 포함)", ok_ret, f"{chk} {exp} {trn} {trn10}")
 
     # 12. 스캔 품질: 정상·기울어짐·빈 면·저해상도
     from PIL import Image, ImageDraw
@@ -822,7 +831,9 @@ def main():
                             ["A-2", "도면 철", "건축과", "6410005", 2024, 2024, "10년", "비전자", "", "", "", "", ""],
                             ["A-3", "비치 철", "민원과", "6410003", 2019, 2019, "영구", "전자", "비치", "2026-12-20", "", "", ""],
                             ["A-4", "옛 영구", "총무과", "6410001", 2020, 2020, "영구", "전자", "", "", "2021-03-01", "", ""],
-                            ["A-5", "연장 철", "총무과", "6410001", 2023, 2023, "5년", "비전자", "", "", "", "", "2028"]])
+                            ["A-5", "연장 철", "총무과", "6410001", 2023, 2023, "5년", "비전자", "", "", "", "", "2028"],
+                            ["A-6", "보관 중 비전자", "총무과", "6410001", 2025, 2025, "10년", "비전자", "", "", "", "", ""],
+                            ["A-7", "새 영구", "총무과", "6410001", 2021, 2021, "영구", "전자", "", "", "2022-03-01", "", ""]])
     c1, o1 = run([S("transfer-schedule", "scripts", "transfer_schedule.py"), f"{t}/철목록.xlsx", "--today", "2026-11-20", "-o", f"{t}/산출/이관_현행.xlsx"])
     c2, o2 = run([S("transfer-schedule", "scripts", "transfer_schedule.py"), f"{t}/철목록.xlsx", "--today", "2027-02-01", "--year", "2027", "-o", f"{t}/산출/이관_2027.xlsx"])
     ok_ts = False
@@ -834,9 +845,10 @@ def main():
         ext2 = [r[2] for r in w2["연장 목록(별지 1의2)"].iter_rows(min_row=4, values_only=True) if r[0] and str(r[0]).isdigit()]
         bichi1 = [r[6] for r in w1["비치기록물"].iter_rows(min_row=2, values_only=True)]
         ok_ts = (st1["A-1"][0] == "기한 지남" and st1["A-2"][0] == "2026년 이관" and st2["A-2"][0] == "기한 지남"
-                 and "경과규정" in (st2["A-2"][1] or "") and st1["A-4"][1] == 2026 and st1["A-3"][2].startswith("비치 중")
+                 and st2["A-6"][0] == "2027년 이관" and "부칙 제16조①" in (st2["A-6"][1] or "")
+                 and st1["A-4"][1] == 2031 and "부칙 제17조①" in (st1["A-4"][3] or "") and st1["A-7"][1] == 2027 and st1["A-3"][2].startswith("비치 중")
                  and st2["A-5"][0] == "연장 한도 넘음" and "A-2" in ext2 and bichi1 == ["연장 신청 기한 지남(종료 60일 전)"])
-    check("이관 시기: 현행·2027 규정, 비치 연장 신청 기한, 영구 이관 연도, 별지 1의2 목록", ok_ts, o1 + o2)
+    check("이관 시기: 현행·2027 규정, 경과조치(부칙 제16조·제17조), 비치 연장 신청 기한, 영구 이관 연도, 별지 1의2 목록", ok_ts, o1 + o2)
 
     # 암호화 기록물 목록(제31조의2)
     import pypdf

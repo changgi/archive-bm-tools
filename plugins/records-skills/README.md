@@ -24,6 +24,11 @@ v2.13.0 변경: 국가법령정보센터(시행령 별표 1~6, 시행규칙 별�
   - records-register-audit: 철당 100매(시행규칙 제9조③)와 등록정보 수정 이력(제6조·제8조②).
   - preservation-inspection: 시행령 별표 3 상태검사 등급 기준 시트.
   - classified-records-check: 별지 제12호 대응 안내.
+- 경과조치 반영(시행령 부칙 대통령령 제36607호):
+  - 제16조: 2027. 1. 1. 당시 2년 보관 중인 비전자기록물과 그 전 연장분은 종전 규정.
+  - 제17조①: 2026. 8. 25. 당시 기산일+5년이 지난 30년 이상 기록물은 종전 10년(→ 종료연도+11). transfer-schedule·retention-review에 반영.
+  - 제19조: 비밀기록물도 같음. classified-records-check에 반영.
+  - 제5조: 2028. 1. 1.부터 영구도 70년 평가. retention-review `--self-keep`, disposal-dossier 안내.
 - 시험 56개.
 
 v2.12.3 변경: 작업 폴더용 `templates/CLAUDE.md`에 '실행' 원칙 추가 — 스크립트는 `python`으로, 없으면 `python3`(macOS 기본), 그다음 `py`로 실행하고, 꾸러미 설치는 담당자 허락 뒤에 한다. macOS에서 `python` 없음 오류로 한 번 헛도는 일을 줄인다.

@@ -9,6 +9,8 @@
 계산 (references/retention-rules.md)
   기산일    종료(생산)연도 다음 해 1월 1일  → 만료연도 = 종료연도 + 보존연수
   이관 대상  보존기간 30년 이상은 기산일부터 5년이 지난 다음 연도 중 이관(시행령 제40조①, 2026. 8. 25. 개정)
+             단, 2026. 8. 25. 시행 당시 기산일부터 5년이 이미 지난 것(종료연도 2020년 이전)은 종전 규정 10년(부칙 제17조①)
+  70년 평가  --self-keep(자체 보존 공공기관): 준영구는 기산일부터 70년 경과 후 평가, 2028. 1. 1.부터 영구도(제43조②, 부칙 제5조)
              → 이관연도 = 종료연도 + 1 + N, N = --transfer-years(기본 5, 개정 전 규정은 10)
   허용 값    current: 영구·준영구·30년·10년·5년·3년·1년  /  draft: 입법예고안 5종(3·5·10·20년·영구)도 허용하고 표시 — 2026. 8. 25. 개정 시행령은 7종 유지(미채택)
 결과는 검토 목록일 뿐이다. 보존기간 변경·폐기는 기록물평가심의회를 거쳐 사람이 정한다.
@@ -40,6 +42,8 @@ BASIS = {
     "올해 만료": "기산일(종료연도 다음 해 1월 1일)부터 보존연수 경과",
     "내년 만료": "다음 해 평가 준비 대상",
     "이관 대상": "보존기간 30년 이상: 기산일부터 N년 경과한 다음 연도 중 영구기록물관리기관 이관(시행령 제40조①, 현행 N=5)",
+    "이관 대상(종전)": "개정 시행령(2026. 8. 25.) 시행 당시 기산일부터 5년이 이미 지난 30년 이상 기록물 — 종전 규정(기산일부터 10년 경과 다음 연도) 적용(부칙 제17조①). 시행 전 승인받은 연기는 그 일정(②)",
+    "70년 평가": "자체 보존 공공기관: 준영구는 기산일부터 70년(동종·대량·저가치는 50년) 경과 후 평가(시행령 제43조②). 2028. 1. 1.부터 영구도 같음(부칙 제1조제3호·제5조)",
 }
 
 
@@ -83,6 +87,7 @@ def main() -> int:
     ap.add_argument("--year", type=int, default=dt.datetime.now(KST).year)
     ap.add_argument("--scheme", choices=["current", "draft"], default="current")
     ap.add_argument("--transfer-years", type=int, default=5, help="30년 이상 기록물 이관: 기산일부터 경과 연수(현행 5, 개정 전 10)")
+    ap.add_argument("--self-keep", action="store_true", help="시행령 제3조 공공기관처럼 영구기록물관리기관으로 이관하지 않고 자체 보존(제40조④) — 이관 대신 30년 만료·70년 평가")
     ap.add_argument("-o", "--out", default="산출/보존기간_검토.xlsx")
     a = ap.parse_args()
 
@@ -145,10 +150,20 @@ def main() -> int:
         end = year_of(r.get(t_end, "")) if t_end else None
         if end is None:
             continue
-        if ret in ("영구", "준영구") or (ret in YEARS and YEARS[ret] >= 30):
-            ty = end + 1 + a.transfer_years   # 보존기간 30년 이상(영구·준영구 포함)
+        if a.self_keep and ret in ("영구", "준영구"):
+            ey = end + 1 + 70              # 기산일부터 70년 경과 후
+            if ret == "준영구" or a.year >= 2028:
+                if a.year >= ey:
+                    expiry.append([*ident, task, ret, end, f"{ey}-01-01 이후", "70년 평가", BASIS["70년 평가"]])
+                elif a.year >= ey - 20:
+                    expiry.append([*ident, task, ret, end, f"{ey}-01-01 이후", "70년 평가", "동종·대량·저가치면 50년 경과 후 평가 가능(시행령 제43조②) — 해당하는지 확인"])
+            continue
+        if not a.self_keep and (ret in ("영구", "준영구") or (ret in YEARS and YEARS[ret] >= 30)):
+            old = a.transfer_years == 5 and end + 1 + 5 <= 2026   # 2026. 8. 25. 시행 당시 기산일+5년 경과 → 부칙 제17조① 종전 규정
+            ty = end + 1 + (10 if old else a.transfer_years)
             if a.year >= ty:
-                transfer.append([*ident, task, ret, end, ty, "이관 대상", BASIS["이관 대상"]])
+                k = "이관 대상(종전)" if old else "이관 대상"
+                transfer.append([*ident, task, ret, end, ty, k, BASIS[k]])
             continue
         if ret not in YEARS:
             continue
