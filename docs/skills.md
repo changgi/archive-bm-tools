@@ -556,6 +556,8 @@ python skills/fixity-check/scripts/fixity.py verify 보존 산출/기준선.csv 
 **직접 실행** `python skills/retention-review/scripts/check_retention.py 기록물목록.xlsx --criteria 참조/기록관리기준표.xlsx --year 2026 -o 산출/보존기간검토.xlsx`
 
 ---
+- **중앙 고유업무 준칙 대조**(`unique_task_lookup.py`): 2021 준칙 44개 기관 4,128과제와 기준표 이름 대조, 더 짧은 보존기간 표시.
+- **과거 분류번호 보존기간**(`legacy_lookup.py`): 1985·1992·1997 공문서 분류번호 및 보존기간표로 생산 당시 기준 후보.
 
 ## 22. disposal-dossier — 평가심의서·의견조회표
 
