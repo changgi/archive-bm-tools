@@ -495,6 +495,7 @@ python skills/fixity-check/scripts/fixity.py verify 보존 산출/기준선.csv 
 올해 정보공개 청구 목록으로 처리대장이랑 운영실태 통계 만들어줘. 수수료도 계산해줘.
 ```
 ---
+- **연장 사유·심의회**: 선택 열로 시행령 제7조 연장 사유 4가지, 법 제18조② 이의신청 심의회 미개최 사유를 점검.
 
 ## 19. disclosure-reclass — 공개 재분류 심의 대상
 

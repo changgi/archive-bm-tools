@@ -8,6 +8,9 @@
 기한 근거(정보공개법):
   제11조① 청구를 받은 날부터 10일 이내 결정, ② 부득이하면 그 기간이 끝나는 날의 다음 날부터 10일 범위 연장(연장 사실·사유 문서 통지)
   제9조① 비공개 대상 1~8호, 제13조④ 비공개 결정 시 이유·불복방법 통지
+  시행령 제7조 연장 '부득이한 사유' 4가지: ①한꺼번에 많은 청구·복잡 ②생산기관·제3자 의견청취·정보공개심의회 ③전산정보의 부분공개 판단
+    ④천재지변·일시적 업무량 폭주 — 선택 열 '연장사유'가 있으면 비었는지·이 네 가지에 드는지 본다(law.go.kr 2026-11-20 확인, 시행 2026. 1. 2.)
+  제18조② 국가기관등은 이의신청이 있으면 심의회를 연다(예외: 이미 심의한 사항·단순 반복 청구·법령상 비밀 — 미개최 사유를 문서 통지). 선택 열 '심의회개최'·'미개최사유'
   제18조③ 이의신청은 받은 날부터 7일 이내 결정(부득이하면 7일 범위 연장)
   시행령 제12조① 공개 결정한 날부터 10일 이내 공개일시 통지(제3자 비공개 요청에도 공개 결정한 경우는 제외)
   제21조③ 제3자 비공개 요청에도 공개하면 공개 결정일과 공개 실시일 사이 최소 30일
@@ -24,6 +27,9 @@ import os
 import re
 import sys
 
+OPT = ["연장사유", "심의회개최", "미개최사유"]  # 선택 열
+EXT_REASON = [("대량·복잡", r"한꺼번에|대량|많은|복잡|방대"), ("의견청취·심의회", r"제3자|의견|생산.*기관|심의회"),
+              ("부분공개 판단(전산정보)", r"전산|부분\s*공개|분리"), ("천재지변·업무량 폭주", r"천재|재난|폭주|일시적|업무량")]
 COLS = ["접수번호", "청구일", "연장통지일", "결정일", "결정", "비공개사유", "제3자통지일", "제3자비공개요청", "공개일", "이의신청일", "이의연장통지일", "이의결정일"]
 REASON_RX = re.compile(r"([1-8])\s*호")
 
@@ -82,7 +88,7 @@ def read_rows(path):
         rows = [list(r) for r in ws.iter_rows(values_only=True)]
     hi = next((i for i, r in enumerate(rows[:10]) if sum(1 for c in r if str(c or "").strip() in COLS) >= 2), 0)
     head = [str(c or "").strip() for c in rows[hi]]
-    idx = {c: head.index(c) for c in COLS if c in head}
+    idx = {c: head.index(c) for c in COLS + OPT if c in head}
     out = []
     for r in rows[hi + 1:]:
         if not any(c not in (None, "") for c in r):
@@ -178,6 +184,13 @@ def main() -> int:
             chk(pst, "제21조③")
         if ext and ext > due:
             chk(f"연장 통지일({ext})이 원래 기한({due}) 뒤", "제11조② 기간 이내 연장·통지")
+        if ext:
+            why = str(r.get("연장사유") or "").strip()
+            if "연장사유" in r and not why:
+                chk("결정기간을 연장했는데 연장 사유가 비어 있음", "제11조② 연장 사유 통지, 시행령 제7조")
+            elif why and not any(__import__("re").search(rx, why) for _, rx in EXT_REASON):
+                chk(f"연장 사유 '{why[:30]}' — 시행령 제7조 네 가지(대량·복잡 / 제3자·생산기관 의견청취·심의회 / 전산정보 부분공개 판단 / 천재지변·업무량 폭주)에 해당하는지 확인",
+                    "시행령 제7조")
         if dec and dec > due and not ext:
             chk("기한을 넘겨 결정했는데 연장 통지 기록 없음", "제11조②")
         if kind in ("비공개", "부분공개"):
@@ -196,6 +209,14 @@ def main() -> int:
         if ob:
             od = parse_date(r.get("이의결정일"))
             odue = cal.add(ob, 7)
+            if "심의회개최" in r:
+                held = str(r.get("심의회개최") or "").strip().upper()
+                why = str(r.get("미개최사유") or "").strip()
+                if held in ("N", "아니오", "미개최", "X") and not why:
+                    chk("이의신청에 심의회를 열지 않았는데 미개최 사유가 없음(심의 거친 사항·단순 반복 청구·법령상 비밀 정보만 예외, 사유를 청구인에게 문서 통지)",
+                        "법 제18조② (국가기관등)")
+                elif held == "":
+                    chk("이의신청 심의회 개최 여부가 비어 있음", "법 제18조②")
             w3.append([no, ob.isoformat(), odue.isoformat(), cal.add(odue, 7).isoformat(),
                        od.isoformat() if od else "", state(od, odue, cal.add(odue, 7) if parse_date(r.get("이의연장통지일")) else None)])
 
