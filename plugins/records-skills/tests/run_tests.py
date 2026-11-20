@@ -383,6 +383,53 @@ def main():
     sm = " ".join(str(c) for r in wr["요약"].iter_rows(values_only=True) for c in r if c)
     check("이메일 역할기반(캡스톤) 후보: 주요 직위 계정 표시·일반 계정 구분·국내 법정 기준 아님 안내",
           sum(1 for x in rl if str(x).startswith("역할기반")) == 1 and "차관" in str(rl[2]) and "일반 계정" in str(rl[0]) and "법정 기준이 아니며" in sm, out2 + str(rl))
+    # RAMP 일괄등록 파일(기록물통합서비스플랫폼 일괄등록 규격 2024)
+    _rf = openpyxl.load_workbook(S("listing-qa", "assets", "RAMP_일괄등록_서식_2024.xlsx"), read_only=True, data_only=True)
+    _hd = {sh: [c for c in list(_rf[sh].iter_rows(values_only=True))[2] if c] for sh in ("철 등록부", "기록물등록대장")}
+    _rw = openpyxl.Workbook(); _rw.remove(_rw.active)
+    def _sheet(name, rows):
+        w_ = _rw.create_sheet(name); w_.append([]); w_.append(["안내"]); w_.append(_hd[name])
+        for rr in rows:
+            w_.append([rr.get(str(h).replace("\n", "").lstrip("*").split("(YYYY")[0].split("[")[0].strip(), "") for h in _hd[name]])
+    _sheet("철 등록부", [dict(시스템구분="03", 처리과기관코드="1234567", **{"구기록물 철생산기관명": "가상시 가상과", "생산년도": "2025", "단위과제여부": "1",
+        "단위업무코드": "AB000012", "기록물철 등록일련번호": "1", "권호수": "1", "기록물철 제목": "가상 계획", "기록물형태": "1", "시작연도": "2025", "종료연도": "2025",
+        "보존기간": "영구", "보존방법": "3", "보존장소": "1", "기록물구분(신/구)": "1", "기록물등록건수": "2", "기록물쪽수": "10", "전자파일개수": "0", "열람조건": "01"})])
+    _base_d = {"시스템구분": "03", "처리과기관코드": "1234567", "구기록물 생산기관명": "가상시 가상과", "등록구분": "1", "생산(접수)등록일자": "202503020900",
+               "분리등록번호(첨부번호)": "0", "제목": "가상 보고", "쪽수": "6", "기안자(업무담당자)": "가상", "전자기록물여부": "2",
+               "분류번호": "1234567AB0000122025000001001", "특수기록물": "NNNNN", "공개여부": "1NNNNNNNN", "구기록물보존기간": "40",
+               "기록물구분(신/구)": "1", "건일련번호": "1", "열람조건": "01"}
+    _sheet("기록물등록대장", [dict(_base_d, **{"생산(접수)등록번호": "1234567000001"}), dict(_base_d, **{"생산(접수)등록번호": "1234567000002", "쪽수": "3", "건일련번호": "2", "공개여부": "3NNNNNNNN"})])
+    _rw.save(f"{t}/RAMP서식.xlsx")
+    crb, orb = run([S("listing-qa", "scripts", "ramp_batch.py"), f"{t}/RAMP서식.xlsx", "--registrar", "1234567,기록연구사,가상,gasang", "--date", "20261121090000",
+                    "-o", f"{t}/산출/RAMP"])
+    rbi = [r for r in openpyxl.load_workbook(f"{t}/산출/RAMP/일괄등록_점검.xlsx")["점검"].iter_rows(min_row=2, values_only=True)] if os.path.exists(f"{t}/산출/RAMP/일괄등록_점검.xlsx") else []
+    dl = open(f"{t}/산출/RAMP/DOCU.TXT", encoding="utf-8").read().split("\t") if os.path.exists(f"{t}/산출/RAMP/DOCU.TXT") else []
+    rbs = " ".join(str(c) for r in rbi for c in r)
+    check("RAMP 일괄등록: DOCU/DETAIL 43·53칸·보존기간 코드(영구→40)·일련번호 자리 맞춤·등록자 채움·보존장소·건수·쪽수·공개여부 점검",
+          crb == 1 and len(dl) == 43 and dl[14] == "40" and dl[7] == "000001" and dl[8] == "001" and dl[-1].strip() == "20261121090000" and dl[-3] == "가상"
+          and "보존장소" in rbs and "건 쪽수 합 9" in rbs and "모두 N" in rbs and "철 등록부에 없는 철" not in rbs, orb + rbs)
+
+    # 사진 등록대상 선별(국가기록원 시청각기록물 관리지침 2024 3.2)
+    try:
+        import numpy as _np
+        from PIL import Image as _Im
+        os.makedirs(f"{t}/사진", exist_ok=True)
+        def _sv(nm, arr, tt):
+            im = _Im.fromarray(arr.astype("uint8")); ex = _Im.Exif(); ex[306] = tt; ex[36867] = tt
+            im.save(f"{t}/사진/{nm}", exif=ex.tobytes())
+        _rg = _np.random.default_rng(0)
+        _b = _rg.integers(40, 200, (1200, 1800, 3))
+        _sv("a1.jpg", _b, "2026:03:02 10:00:00"); _sv("a2.jpg", _np.clip(_b + 3, 0, 255), "2026:03:02 10:00:01")
+        _sv("b1.jpg", _rg.integers(0, 30, (1200, 1800, 3)), "2026:03:02 11:00:00")
+        _g = _rg.integers(50, 200, (1200, 1800, 1)); _sv("c1.jpg", _np.repeat(_g, 3, axis=2), "2026:03:02 12:00:00")
+        _sv("d1.jpg", _rg.integers(40, 200, (600, 800, 3)), "2026:03:02 13:00:00")
+        cps, ops = run([S("typed-records-check", "scripts", "photo_select.py"), f"{t}/사진", "-o", f"{t}/산출/사진선별.xlsx"])
+        sel = {r[0]: r[8] for r in openpyxl.load_workbook(f"{t}/산출/사진선별.xlsx")["선별"].iter_rows(min_row=2, values_only=True)}
+        ok_ps = (cps == 0 and "대표 후보" in str(sel.get("a2.jpg")) and "대표만" in str(sel.get("a1.jpg")) and "노출 부족" in str(sel.get("b1.jpg"))
+                 and "흑백" in str(sel.get("c1.jpg")) and "저해상도" in str(sel.get("d1.jpg")))
+    except ImportError:
+        ok_ps, ops, sel = True, "Pillow 없음 — 건너뜀", {}
+    check("사진 등록대상 선별: 연사 대표·노출 부족·흑백 변환·저해상도(시청각기록물 관리지침 2024)", ok_ps, ops + str(sel))
 
     import zipfile as _zf
     md = f"{t}/메타"
@@ -1427,6 +1474,11 @@ def main():
           and "PNG0001" in str(ch.get("(기관공통)감사결과처리", [""] * 12)[8]) and "가상 전혀 다른 과제" not in ch, och + str(ch))
 
     # 2026 지침 수행업무 리스트 점검표
+    ckp, okp = run([S("evaluation-readiness", "scripts", "task_checklist.py"), "--kind", "공공기관", "-o", f"{t}/산출/수행업무_공공.xlsx"])
+    cku, oku = run([S("evaluation-readiness", "scripts", "task_checklist.py"), "--kind", "대학", "--role", "기록관", "-o", f"{t}/산출/수행업무_대학.xlsx"])
+    tp = [r for r in openpyxl.load_workbook(f"{t}/산출/수행업무_공공.xlsx")["점검표"].iter_rows(min_row=3, values_only=True)]
+    check("수행업무 점검표 --kind: 2026 공공기관 지침(처리과 28·기록관 21, 책임자 지정 1-1)·대학 지침(기록관 18)",
+          ckp == 0 and cku == 0 and len(tp) == 49 and tp[0][3] == "처리과 기록물관리책임자가 지정되어 있는지?" and "기록관 18개" in oku, okp + oku)
     ctk, otk = run([S("evaluation-readiness", "scripts", "task_checklist.py"), "--role", "처리과", "-o", f"{t}/산출/수행업무.xlsx"])
     tk_ok = False
     if ctk == 0:
