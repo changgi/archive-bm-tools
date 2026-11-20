@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """기관 통폐합 때 두 기관의 기록관리표(단위과제 목록)를 맞대어 통합 기록관리표 초안을 만든다.
 
-  merge_schedule.py 기관A_단위과제.xlsx 기관B_단위과제.xlsx [--names 가청,나청] [--type 중앙행정기관] -o 산출/통합_기록관리표.xlsx
+  merge_schedule.py 기관A_단위과제.xlsx 기관B_단위과제.xlsx [기관C_단위과제.xlsx …] [--names 가청,나청,다청] [--type 중앙행정기관] -o 산출/통합_기록관리표.xlsx
 
 입력 열(머리글 이름으로 찾음, 없는 열은 비워 둠): 부서(부서명) · 대기능 · 중기능 · 소기능 · 기능유형 · 단위과제(명) · 단위과제ID ·
   단위과제설명 · 보존기간 · 보존기간책정사유 · 단위과제카드 · 업무담당자 · 보존기간확정여부 · 부서폐지여부
@@ -91,16 +91,18 @@ def precheck(name, rows, idx):
 
 def main() -> int:
     ap = argparse.ArgumentParser(description="기관 통폐합 단위과제비교표·통합 기록관리표 초안")
-    ap.add_argument("a")
-    ap.add_argument("b")
-    ap.add_argument("--names", default="인계기관A,인계기관B", help="두 기관 이름(쉼표)")
+    ap.add_argument("files", nargs="+", help="기관별 단위과제 목록 2개 이상(행정통합 등 3개 이상도 가능)")
+    ap.add_argument("--names", default="", help="기관 이름(쉼표, 파일 순서대로)")
     ap.add_argument("--type", default="", help="공통업무 준칙 기관유형(중앙행정기관·지방자치단체·교육(행정)기관·공공기관·학교·대학)")
     ap.add_argument("--threshold", type=float, default=0.8)
     ap.add_argument("-o", "--out", default="산출/통합_기록관리표.xlsx")
     a = ap.parse_args()
-    na, nb = (a.names.split(",") + ["인계기관B"])[:2]
-    A, ia = read(a.a)
-    B, ib = read(a.b)
+    if len(a.files) < 2:
+        print("입력 오류: 기관 단위과제 목록을 2개 이상 주세요.", file=sys.stderr)
+        return 2
+    names = [x.strip() for x in a.names.split(",")] if a.names else []
+    names = (names + [f"인계기관{chr(65 + k)}" for k in range(len(a.files))])[:len(a.files)]
+    data = [read(f) for f in a.files]
     common = []
     if a.type and os.path.exists(COMMON):
         with open(COMMON, encoding="utf-8-sig") as f:
@@ -125,68 +127,80 @@ def main() -> int:
     pre = wb.active
     pre.title = "사전 정비 대상"
     pre.append(["기관", "원본 행", "부서", "단위과제", "보존기간", "정비할 것"])
-    for r in precheck(na, A, ia) + precheck(nb, B, ib):
-        pre.append(r)
+    for nm, (rows_, idx_) in zip(names, data):
+        for r in precheck(nm, rows_, idx_):
+            pre.append(r)
+
+    # 첫 기관 목록을 기준으로 묶음(group)을 만들고, 다음 기관 과제를 가장 비슷한 묶음에 붙인다(같은 기관 안 중복은 건너뜀)
+    groups = []  # {기관명: 행}
+    for nm, (rows_, _) in zip(names, data):
+        seen_k = set()
+        for g in rows_:
+            k = key(g["과제"])
+            if k in seen_k:
+                continue  # 같은 기관 안 중복은 사전 정비 대상에서 종료
+            seen_k.add(k)
+            best, score = None, 0.0
+            for G in groups:
+                if nm in G["m"]:
+                    continue
+                sc = max(1.0 if key(x["과제"]) == k else difflib.SequenceMatcher(None, k, key(x["과제"])).ratio() for x in G["m"].values())
+                if sc > score:
+                    best, score = G, sc
+            if best and score >= a.threshold:
+                best["m"][nm] = g
+                best["s"] = min(best["s"], score)
+            else:
+                groups.append({"m": {nm: g}, "s": 1.0})
 
     cmp_ = wb.create_sheet("단위과제비교표")
-    cmp_.append([f"{na} 부서", f"{na} 단위과제", f"{na} 설명", f"{na} 보존기간", f"{na} 책정사유",
-                 f"{nb} 부서", f"{nb} 단위과제", f"{nb} 설명", f"{nb} 보존기간", f"{nb} 책정사유",
-                 "공통업무 준칙", "준칙 보존기간", "유사도", "문제유형", "개선안", "통합 후보 단위과제", "통합 후보 보존기간"])
-    used_a, used_b, merged, flagged = set(), set(), [], 0
-    for i, x in enumerate(A):
-        kx = key(x["과제"])
-        best, score = None, 0.0
-        for j, y in enumerate(B):
-            if j in used_b:
-                continue
-            sc = 1.0 if key(y["과제"]) == kx else difflib.SequenceMatcher(None, kx, key(y["과제"])).ratio()
-            if sc > score:
-                best, score = (j, y), sc
-        if not best or score < a.threshold:
+    cmp_.append([f"{nm} {c}" for nm in names for c in ("부서", "단위과제", "설명", "보존기간", "책정사유")]
+                + ["공통업무 준칙", "준칙 보존기간", "유사도", "문제유형", "개선안", "통합 후보 단위과제", "통합 후보 보존기간"])
+    merged, flagged, n_pair, n_only = [], 0, 0, 0
+    for G in groups:
+        mem = G["m"]
+        cells = []
+        for nm in names:
+            g = mem.get(nm)
+            cells += [g["부서"], g["과제"], g["설명"][:200], g["보존"], g["사유"][:120]] if g else ["", "", "", "", ""]
+        xs = list(mem.values())
+        rule = next((r for r in (rule_of(x["과제"]) for x in xs) if r), None)
+        if len(mem) == 1:
+            n_only += 1
+            org, g = next(iter(mem.items()))
+            cmp_.append(cells + [(rule or {}).get("단위과제명", ""), (rule or {}).get("보존기간", ""), "", f"{org}에만 있음(단독 업무)",
+                                 "단독 업무 수행부서는 현행 유지 · 폐지 부서면 제외 · 업무가 통합 뒤 사라지면 종료", g["과제"], g["보존"]])
+            merged.append([g["부서"], g["과제"], g["보존"], g["설명"], f"{org} 단독(현행 유지 후보)"])
             continue
-        j, y = best
-        used_a.add(i)
-        used_b.add(j)
-        rule = rule_of(x["과제"]) or rule_of(y["과제"])
+        n_pair += 1
         probs, fixes = [], []
-        if x["과제"] != y["과제"]:
+        if len({x["과제"] for x in xs}) > 1:
             probs.append("③ 명칭 다름")
             fixes.append("③ 단위과제 명칭 변경(통일)")
-        if x["기능유형"] and y["기능유형"] and x["기능유형"] != y["기능유형"]:
-            probs.append(f"⑤ 기능유형 다름({x['기능유형']}/{y['기능유형']})")
+        ft = [x["기능유형"] for x in xs if x["기능유형"]]
+        if len(set(ft)) > 1:
+            probs.append(f"⑤ 기능유형 다름({'/'.join(ft)})")
             fixes.append("⑤ 기능유형 변경")
-        if x["보존"] and y["보존"] and x["보존"] != y["보존"]:
-            probs.append(f"⑦ 보존기간 비대칭({x['보존']}/{y['보존']})")
+        ps = [x["보존"] for x in xs if x["보존"]]
+        if len(set(ps)) > 1:
+            probs.append(f"⑦ 보존기간 비대칭({'/'.join(ps)})")
             fixes.append("⑦ 유사업무 보존기간 일원화")
-        name, per = (x["과제"] if len(x["과제"]) >= len(y["과제"]) else y["과제"]), \
-            max((p for p in (x["보존"], y["보존"]) if p in RANK), key=RANK.get, default=x["보존"] or y["보존"])
+        name = max((x["과제"] for x in xs), key=len)
+        per = max((p for p in ps if p in RANK), key=RANK.get, default=ps[0] if ps else "")
         if rule:
             name, rp = rule["단위과제명"], rule["보존기간"]
-            low = [f"{o}({p})" for o, p in ((na, x["보존"]), (nb, y["보존"])) if p in RANK and rp in RANK and RANK[p] < RANK[rp]]
+            low = [f"{o}({x['보존']})" for o, x in mem.items() if x["보존"] in RANK and rp in RANK and RANK[x["보존"]] < RANK[rp]]
             if low:
                 probs.append(f"⑥ {'·'.join(low)}이 준칙({rp})보다 짧음")
                 fixes.append("⑥-2 책정기준 반영해 보존기간 변경")
-            per = rp if rp else per
+            per = rp or per
             fixes.append("공통업무는 준칙의 명칭·설명·보존기간·책정사유 준용")
         if probs:
             flagged += 1
-        merged.append([x["부서"] + " / " + y["부서"], name, per, (rule or {}).get("업무설명", "")[:300] or x["설명"] or y["설명"], "양 기관 통합"])
-        cmp_.append([x["부서"], x["과제"], x["설명"][:200], x["보존"], x["사유"][:120], y["부서"], y["과제"], y["설명"][:200], y["보존"], y["사유"][:120],
-                     (rule or {}).get("단위과제명", ""), (rule or {}).get("보존기간", ""), f"{score:.2f}",
-                     " · ".join(probs) or "같은 과제", " · ".join(fixes) or "현행 유지", name, per])
-    only = [(na, x) for i, x in enumerate(A) if i not in used_a] + [(nb, y) for j, y in enumerate(B) if j not in used_b]
-    done_keys = {(na, key(A[i]["과제"])) for i in used_a} | {(nb, key(B[j]["과제"])) for j in used_b}
-    for org, g in only:
-        if (org, key(g["과제"])) in done_keys:  # 같은 기관 안 중복은 사전 정비 대상에서 종료
-            continue
-        done_keys.add((org, key(g["과제"])))
-        rule = rule_of(g["과제"])
-        cmp_.append([g["부서"] if org == na else "", g["과제"] if org == na else "", g["설명"][:200] if org == na else "", g["보존"] if org == na else "", "",
-                     g["부서"] if org == nb else "", g["과제"] if org == nb else "", g["설명"][:200] if org == nb else "", g["보존"] if org == nb else "", "",
-                     (rule or {}).get("단위과제명", ""), (rule or {}).get("보존기간", ""), "", f"{org}에만 있음(단독 업무)",
-                     "단독 업무 수행부서는 현행 유지 · 폐지 부서면 제외 · 업무가 통합 뒤 사라지면 종료", g["과제"], g["보존"]])
-        merged.append([g["부서"], g["과제"], g["보존"], g["설명"], f"{org} 단독(현행 유지 후보)"])
-
+        merged.append([" / ".join(x["부서"] for x in xs), name, per, (rule or {}).get("업무설명", "")[:300] or next((x["설명"] for x in xs if x["설명"]), ""),
+                       f"{len(mem)}개 기관 통합({'·'.join(mem)})"])
+        cmp_.append(cells + [(rule or {}).get("단위과제명", ""), (rule or {}).get("보존기간", ""), f"{G['s']:.2f}",
+                             " · ".join(probs) or "같은 과제", " · ".join(fixes) or "현행 유지", name, per])
     tb = wb.create_sheet("통합 기록관리표(초안)")
     tb.append(["부서(통합 전)", "단위과제", "보존기간", "단위과제 설명", "출처", "부서명(통합 후)", "정책분야", "정책영역", "대기능", "중기능", "소기능", "기능유형", "보존기간 책정사유"])
     for m in merged:
@@ -226,7 +240,7 @@ def main() -> int:
             c.alignment = Alignment(wrap_text=True, vertical="top")
     os.makedirs(os.path.dirname(a.out) or ".", exist_ok=True)
     wb.save(a.out)
-    print(f"{na} {len(A)}과제 · {nb} {len(B)}과제 · 짝지은 과제 {len(used_b)} · 문제유형 있는 짝 {flagged} · 단독 {len(only)} · 사전 정비 {pre.max_row - 1} → {a.out}")
+    print(" · ".join(f"{nm} {len(d[0])}과제" for nm, d in zip(names, data)) + f" · 묶은 과제 {n_pair} · 문제유형 있는 묶음 {flagged} · 단독 {n_only} · 사전 정비 {pre.max_row - 1} → {a.out}")
     return 1 if flagged or pre.max_row > 1 else 0
 
 

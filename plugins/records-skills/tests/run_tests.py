@@ -1271,6 +1271,15 @@ def main():
           cms == 1 and "③ 명칭" in str(au[13]) and "⑦" in str(au[13]) and "⑥ 가시(5년)" in str(au[13]) and au[16] == "10년" and "자체감사실시" in str(au[15])
           and "같은 부서 안 중복" in prer and "단위과제카드 없음" in prer and "미확정" in prer
           and any("나시에만" in str(r[13]) for r in cmpr.values()) and cmpr.get("지역발전 기본계획 수립|지역발전기본계획수립", [""] * 17)[16] == "30년", oms + str(au))
+    xlsx(f"{t}/통합C.xlsx", [["부서명", "기능유형", "단위과제명", "단위과제설명", "보존기간"], ["감사관", "공통", "자체감사 실시", "감사", "3년"], ["관광과", "고유", "축제 운영", "축제", "5년"]])
+    cm3, om3 = run([S("agency-closure", "scripts", "merge_schedule.py"), f"{t}/통합A.xlsx", f"{t}/통합B.xlsx", f"{t}/통합C.xlsx", "--names", "가시,나시,다군",
+                    "--type", "지방자치단체", "-o", f"{t}/산출/통합기록관리표3.xlsx"])
+    w3 = openpyxl.load_workbook(f"{t}/산출/통합기록관리표3.xlsx") if os.path.exists(f"{t}/산출/통합기록관리표3.xlsx") else None
+    r3 = [r for r in w3["단위과제비교표"].iter_rows(min_row=2, values_only=True)] if w3 else []
+    aud = next((r for r in r3 if r[1] == "자체감사실시"), [""] * 22)
+    check("기관 통폐합 3개 기관(행정통합): 같은 과제 한 줄로 묶음·세 기관 보존기간 비대칭·준칙 준용",
+          cm3 == 1 and aud[11] == "자체감사 실시" and "⑦ 보존기간 비대칭(5년/10년/3년)" in str(aud[18]) and aud[21] == "10년"
+          and any("다군에만" in str(r[18]) for r in r3), om3 + str(aud))
 
     cch, och = run([S("agency-closure", "scripts", "closure_handover.py"), f"{t}/폐지목록.xlsx", "--type", "폐지-승계없음", "--org", "가상위원회",
                     "--to", "가상기록원", "--done", "2026-12-15", "-o", f"{t}/산출/인계인수.xlsx"])
