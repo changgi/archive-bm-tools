@@ -20,6 +20,10 @@ v2.21.0 변경: 기록물분류기준표 PDF 표본 6개 추가 확인, 행정�
 - **listing-qa** 새 `ramp_batch.py`: 기록물통합서비스플랫폼(RAMP) 일괄등록 규격(2024)대로 DOCU/DETAIL.TXT 만들기·점검(서식 assets 포함).
 - **typed-records-check** 새 `photo_select.py`: 시청각기록물 관리지침(2024) 등록대상 선정 기준 — 연사 대표·노출·흑백 변환·저해상도.
 - **evaluation-readiness** `task_checklist.py --kind 공공기관|대학`: 2026 공공기관·대학 기록물관리 지침 수행업무 리스트.
+- **listing-qa** 새 `dbproject_batch.py`: 행정정보DB구축 기록물의 기록관리시스템 규격(2023) — 철 31·건 42·특수목록 7항목 점검(규격 오류 문구), 철 28자리/건 19자리/00000001.TIF 이미지 폴더 점검.
+- **disaster-recovery** 새 `artifact_triage.py`: 재난 피해 행정박물 응급조치 실무 지침(2024) — 재질 군 순서·직물 48시간·수해/화재 요령·상태조사표·체크리스트, 평소 구조 우선순위(1~6등급·등외).
+- **preservation-inspection** 새 `preventive_care.py`: 보존 취약 종이기록물 예방조치 지침(2024) — 재질·구조·편철 재료·훼손 심화 4유형, 처리방향과 용품 수량, 복원 연계.
+- **retention-review** 새 `sector_guide_lookup.py`: 2021 대학 기록물 보존기간 책정기준 가이드(201과제)·의료기관 표준 기록관리기준표 운영 가이드(135과제) 대조.
 - **production-status-report** 서식 9: 국가기록원 속기록 생산의무 지정회의 현황('26. 4. 1., 97개 회의)과 회의체명을 대조해 지정회의 자동 표시.
 - **email-appraisal** `email_report.py --roles`: 주요 직위 계정 메일을 역할기반(캡스톤) 보존 후보로 표시(참고 방식, 국가기록원 특수유형 평가정책 연구 2024).
 - **admin-artifacts-check**: 유형·재질이 빈 행정박물에 이름·내용요약으로 후보 표시(국가기록원 「행정박물 상태검사·점검 원내 실무 매뉴얼」 형태·재질 분류).

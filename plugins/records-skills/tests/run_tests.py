@@ -409,6 +409,63 @@ def main():
           crb == 1 and len(dl) == 43 and dl[14] == "40" and dl[7] == "000001" and dl[8] == "001" and dl[-1].strip() == "20261121090000" and dl[-3] == "가상"
           and "보존장소" in rbs and "건 쪽수 합 9" in rbs and "모두 N" in rbs and "철 등록부에 없는 철" not in rbs, orb + rbs)
 
+    # 행정정보DB구축 기록물 일괄등록(행정정보DB구축 기록물의 기록관리시스템 규격 2023)
+    DBS = S("listing-qa", "scripts", "dbproject_batch.py")
+    run([DBS, "--template", f"{t}/행정DB서식.xlsx"])
+    _dw = openpyxl.load_workbook(f"{t}/행정DB서식.xlsx")
+    def _put(ws, **kw):
+        h = [str(c.value).lstrip("*") for c in ws[1]]
+        ws.delete_rows(2)
+        ws.append([kw.get(x, "") for x in h])
+    _cls = "1234567" + "99999999" + "1998" + "000001" + "001"
+    _put(_dw["기록물철등록부"], 처리과기관코드="1234567", 구기록물철생산기관명="가상부 가상과", 생산년도="1998", 기록물철등록일련번호="1", 기록물철제목="가상 접수철",
+         기록물형태="1", 시작년도="1998", 종료연도="1998", 보존기간="영구", 보존방법="3", 보존장소="2", 기록물등록건수="1", 기록물쪽수="5")
+    _put(_dw["기록물등록대장"], 처리과기관코드="1234567", 구기록물생산기관명="가상과", 등록구분="1", 제목="가상 보고", 쪽수="3", 분류번호=_cls,
+         구기록물보존기간="영구", 건일련번호="1", 공개여부="1NNNNNNNN", **{"생산(접수)등록일자": "199806041400", "생산(접수)등록번호": "1234567000001"})
+    _dw.remove(_dw["특수목록"])
+    _dw.save(f"{t}/행정DB목록.xlsx")
+    _ip = f"{t}/행정DB이미지/{_cls}/1998123456700000100"
+    os.makedirs(_ip, exist_ok=True)
+    open(f"{_ip}/00000001.TIF", "wb").write(b"II*")
+    open(f"{_ip}/00000003.TIF", "wb").write(b"")
+    cdb, odb = run([DBS, f"{t}/행정DB목록.xlsx", "--images", f"{t}/행정DB이미지", "-o", f"{t}/산출/행정DB"])
+    dbs = " ".join(str(c) for r in openpyxl.load_workbook(f"{t}/산출/행정DB/행정DB일괄등록_점검.xlsx")["점검"].iter_rows(values_only=True) for c in r) if os.path.exists(f"{t}/산출/행정DB/행정DB일괄등록_점검.xlsx") else ""
+    dd = open(f"{t}/산출/행정DB/DOCU.TXT", encoding="cp949").read().rstrip("\r\n").split("\t") if os.path.exists(f"{t}/산출/행정DB/DOCU.TXT") else []
+    check("행정정보DB구축 일괄등록: 철 31칸·고정값(99999999·000000)·영구→40·쪽수 합 불일치·이미지 0바이트·일련번호 빠짐 점검",
+          cdb == 1 and len(dd) == 31 and dd[2] == "99999999" and dd[12] == "40" and dd[23] == "000000" and "쪽수 합(3)" in dbs
+          and "크기가 '0'" in dbs and "일련번호들을 확인" in dbs and "기록물철에 기록물건이 존재하지 않습니다" not in dbs, odb + dbs)
+
+    # 재난 피해 행정박물 응급조치(2024. 12.)·보존 취약 종이기록물 예방조치(2024. 11.)
+    xlsx(f"{t}/피해박물.xlsx", [["관리번호", "명칭", "재질", "형태", "피해", "손상유형", "훼손도", "수량", "위치", "비고"],
+        ["P1", "가상 접시", "도자기", "식기", "화재", "B,D", "1", "3", "2층", ""], ["P2", "가상 제복", "직물", "의복", "수해", "A,E", "3", "2", "1층", "염색"],
+        ["P3", "가상 현판", "목재", "현판", "수해", "A", "2", "1", "1층", ""]])
+    cat, oat = run([S("disaster-recovery", "scripts", "artifact_triage.py"), f"{t}/피해박물.xlsx", "--found", "2026-07-15 09:00", "--now", "2026-07-17 12:00", "-o", f"{t}/산출/박물응급.xlsx"])
+    atr = [r for r in openpyxl.load_workbook(f"{t}/산출/박물응급.xlsx")["응급조치 순서"].iter_rows(min_row=2, values_only=True)] if os.path.exists(f"{t}/산출/박물응급.xlsx") else []
+    xlsx(f"{t}/보유박물.xlsx", [["관리번호", "명칭", "보존기간", "생산연도", "생산기관", "보존가치", "상징성"], ["Q1", "가", "영구", "1955", "외교부", "높음", "높음"],
+        ["Q2", "나", "준영구", "1975", "행정안전부", "보통", "보통"]])
+    cap, oap = run([S("disaster-recovery", "scripts", "artifact_triage.py"), f"{t}/보유박물.xlsx", "--prepare", "-o", f"{t}/산출/박물구조.xlsx"])
+    apr = [r for r in openpyxl.load_workbook(f"{t}/산출/박물구조.xlsx")["구조 우선순위"].iter_rows(min_row=2, values_only=True)] if os.path.exists(f"{t}/산출/박물구조.xlsx") else []
+    check("행정박물 응급조치: 직물 48시간 지남·염색 먼저·목재 24시간·도자기 후순위·화재 물 금지, 구조 우선순위 1·4등급",
+          cat == 0 and [r[1] for r in atr] == ["P2", "P3", "P1"] and "48시간 지남" in str(atr[0][12]) and atr[2][9] == "후순위" and "물·수분 절대" in str(atr[2][11])
+          and [r[8] for r in apr] == ["1", "4"], oat + oap + str(atr))
+    xlsx(f"{t}/예방목록.xlsx", [["관리번호", "철제목", "매수", "재질", "규격", "편철", "상태", "해당 면"], ["F1", "가상 팩스철", "80", "감열지", "A4", "클립", "", "3-5,8"],
+        ["F2", "가상 대장", "650", "일반", "A4", "", "", ""], ["F3", "가상 철", "60", "일반", "A4", "", "바스라짐", ""], ["F4", "가상 정상", "50", "일반", "A4", "", "", ""]])
+    cpc, opc = run([S("preservation-inspection", "scripts", "preventive_care.py"), f"{t}/예방목록.xlsx", "-o", f"{t}/산출/예방조치.xlsx"])
+    wpc = openpyxl.load_workbook(f"{t}/산출/예방조치.xlsx") if os.path.exists(f"{t}/산출/예방조치.xlsx") else None
+    pcr = [r for r in wpc["예방조치 계획"].iter_rows(min_row=2, values_only=True)] if wpc else []
+    pcs = {r[0]: r[1] for r in wpc["용품 준비"].iter_rows(min_row=2, values_only=True)} if wpc else {}
+    check("예방조치: 감열지 간지(면 4)·금속철 제거·거대 편철 500매 초과·훼손 심화 봉투+복원 연계·정상 철 제외",
+          cpc == 0 and {(r[0], r[4]) for r in pcr} == {("F1", "감열지"), ("F1", "금속철"), ("F2", "거대 편철"), ("F3", "훼손 심화")}
+          and pcs.get("간지") == 4 and any(r[10] for r in pcr if r[0] == "F3"), opc + str(pcr))
+
+    # 대학·의료기관 보존기간 가이드 대조
+    open(f"{t}/대학기준표.csv", "w", encoding="utf-8-sig").write("단위과제명,보존기간\n학생증발급,3년\n학사일정관리,10년\n자격증관리대장,10년\n")
+    csg, osg = run([S("retention-review", "scripts", "sector_guide_lookup.py"), f"{t}/대학기준표.csv", "--sector", "대학", "-o", f"{t}/산출/대학가이드.xlsx"])
+    sgr = [r for r in openpyxl.load_workbook(f"{t}/산출/대학가이드.xlsx")["대조"].iter_rows(min_row=2, values_only=True)] if os.path.exists(f"{t}/산출/대학가이드.xlsx") else []
+    cmd, omd = run([S("retention-review", "scripts", "sector_guide_lookup.py"), "--sector", "의료", "--find", "응급의료"])
+    check("대학·의료 가이드: 유사 단위과제로 맞춤(학생증발급→학생증관리 5년)·짧음 2건·의료 135과제 검색",
+          csg == 1 and len(sgr) == 3 and sgr[0][6] == "학생증관리" and sgr[0][8] == "5년" and sgr[2][8] == "준영구" and "/135과제" in omd, osg + omd)
+
     # 청사 이전 대비 기록물 이송·재배치(국가기록원 청사 이전 매뉴얼 2014)
     xlsx(f"{t}/보유현황.xlsx", [["부서", "기록물철 제목", "생산연도", "보존기간", "보관위치", "권수", "비밀구분"],
         ["가과", "가상 계획", "2015", "5년", "사무실", "2", ""], ["가과", "가상 대장", "2010", "영구", "문서고", "1", ""],

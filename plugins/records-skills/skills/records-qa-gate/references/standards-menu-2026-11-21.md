@@ -20,8 +20,8 @@
 | 지침 | 2026 | 2026년 대학 기록물관리 지침 | evaluation-readiness task_checklist --kind 대학(처리과 27·기록관 18) |
 | 지침 | 2025 | 기록물 상태검사 지침(2025) | preservation-inspection 첫 상태검사 우선순위(2.3.2), 별표 3·14는 이미 반영 |
 | 지침 | 2025 | 영구기록물관리기관 비밀기록물 관리지침 | 열지 않음(비밀 관련 — 담당자 확인) |
-| 지침 | 2024 | 재난 피해 행정박물 응급조치 실무 지침 | disaster-recovery 참고(행정박물 응급조치) — 다음 반영 후보 |
-| 지침 | 2024 | 보존 취약 종이기록물 예방조치 지침 | preservation-inspection 취약 재질 목록 근거 — 다음 반영 후보(예방조치 방법) |
+| 지침 | 2024 | 재난 피해 행정박물 응급조치 실무 지침 | disaster-recovery artifact_triage.py(재질 군·직물 48시간·수해/화재 요령, 참고 2~5) |
+| 지침 | 2024 | 보존 취약 종이기록물 예방조치 지침 | preservation-inspection preventive_care.py(취약 4유형·처리방향·용품 수량, 표 1·3·5·7·9) |
 | 지침 | 2024 | 시청각기록물 관리지침 | typed-records-check photo_select.py(3.2 등록대상 선정), 동영상 HD·MPEG-2/4 안내 |
 | 지침 | 2022 | 국가기록원 기록물 대여 지침 | 국가기록원 내부 — 스킬 대상 아님 |
 | 지침 | 2021 | 2021년 기록관리 중점 추진사항 | 옛 판 — 2026 지침이 대신 |
@@ -39,8 +39,8 @@
 | 매뉴얼 | 2023 | 중앙행정기관 단위과제정비 매뉴얼(2차 개정판) | records-schedule-check 정비 문제유형(8유형 15개선안), agency-closure merge_schedule |
 | 매뉴얼 | 2023 | 재난 피해 기록물 응급복구 가이드 라인 | 이미지 PDF — disaster-recovery 참고 |
 | 매뉴얼 | 2022 | 기록물 소독대상 선별 및 처리 매뉴얼 | preservation-inspection bio_check --traps(해충 1·2등급, 재포획 시 전량 저산소), ATP 1,000 RLU |
-| 매뉴얼 | 2021 | 2021년도 대학 기록물 보존기간 책정기준 가이드 | retention-review 대학 공통 준칙(2024)이 대신 — 다음 대조 후보 |
-| 매뉴얼 | 2016 | 의료기관 표준 기록관리기준표 운영 가이드 | 의료기관 특화 — 다음 반영 후보(retention-review) |
+| 매뉴얼 | 2021 | 2021년도 대학 기록물 보존기간 책정기준 가이드 | retention-review sector_guide_lookup.py --sector 대학(201과제) |
+| 매뉴얼 | 2016 | 의료기관 표준 기록관리기준표 운영 가이드 | retention-review sector_guide_lookup.py --sector 의료(135과제·공개여부·접근권한) |
 | 매뉴얼 | 2014 | 공공기관 청사 이전 대비 기록관리 업무 매뉴얼 | 새 스킬 office-relocation |
 | 매뉴얼 | 2010 | 30년경과 비공개기록물 공개재분류 가이드북(특수기록관 기록물) | 이미지 PDF — disclosure-reclass 참고 |
 | 매뉴얼 | 2010 | 비밀기록물 재분류 매뉴얼 | 열지 않음(비밀 관련 — 담당자 확인) |
@@ -48,8 +48,8 @@
 | 규격·서식 | 2024 | 기록물 생산현황 통보서식 | production-status-report(서식 1~11) |
 | 규격·서식 | 2024 | 기록물통합서비스플랫폼 기록물 일괄등록 규격 | listing-qa ramp_batch.py |
 | 규격·서식 | 2024 | 기록물통합서비스플랫폼 기록물 일괄등록 서식 | listing-qa assets/RAMP_일괄등록_서식_2024.xlsx |
-| 규격·서식 | 2023 | 행정정보DB구축 기록물의 기록관리시스템 규격 | 다음 반영 후보(DB구축 결과물 등록 규격) |
-| 규격·서식 | 2023 | [2023]행정정보DB구축 기록물의 기록관리시스템 규격 | 다음 반영 후보 |
+| 규격·서식 | 2023 | 행정정보DB구축 기록물의 기록관리시스템 규격 | listing-qa dbproject_batch.py(철 31·건 42·특수목록 7항목, 이미지 폴더 점검) |
+| 규격·서식 | 2023 | [2023]행정정보DB구축 기록물의 기록관리시스템 규격 | listing-qa dbproject_batch.py(같은 규격의 hwp판) |
 
 ## 해외표준에서 참고할 것(스킬 근거로는 국내 법령·NAK가 우선)
 - 미국 NARA: 확장된 이관요건 1~6(전자우편·스캔·PDF·디지털사진·지리공간·웹), 웹 기록 관리 가이던스, 전자서명 기록관리 → transfer-reconcile·web-records-check·email-appraisal 참고.
