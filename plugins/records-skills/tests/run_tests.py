@@ -182,6 +182,14 @@ def main():
     rv16 = {r[0]: r for r in wb["검토서(NAK 16-1 부속서 F)"].iter_rows(min_row=2, values_only=True) if r and r[0] and str(r[0]).startswith("R")}
     want = {"30년 경과": ["R1"], "연장 신청 기한": ["R8"], "5년 주기": ["R3"], "6호 유예": ["R2"], "이력 없음": ["R4"], "사유 결함": ["R4"], "제외(비밀)": ["R6"]}
     check("공개 재분류: 7개 분류 정확(연장 신청 기한 제72조③ 포함, R5 공개·R7 주기 전 제외)", got == want, str(got))
+    xlsx(f"{t}/점수목록.xlsx", [["관리번호", "제목", "생산년도", "공개구분", "비공개사유", "재분류일", "비공개확률"],
+        ["S1", "가", "1990", "비공개", "제5호 의사결정 과정", "2021", "0.05"], ["S2", "나", "1990", "비공개", "제5호 의사결정 과정", "2021", "0.5"],
+        ["S3", "다", "1990", "비공개", "제5호 의사결정 과정", "2021", "0.95"], ["S4", "라", "1990", "비공개", "제5호 의사결정 과정", "2021", "x"]])
+    csc, osc = run([S("disclosure-reclass", "scripts", "reclass_candidates.py"), f"{t}/점수목록.xlsx", "--year", "2026", "--score-col", "비공개확률",
+                    "-o", f"{t}/산출/점수.xlsx"])
+    sc = {r[0]: r[-1] for r in openpyxl.load_workbook(f"{t}/산출/점수.xlsx")["30년 경과"].iter_rows(min_row=2, values_only=True)} if csc in (0, 1) else {}
+    check("공개 재분류 --score-col: 0.10·0.90 검토 우선순위 구간(2025 연구 국외 사례), 점수 없음 표시",
+          "공개 쪽 확실" in str(sc.get("S1")) and "검토 필요(0.50)" in str(sc.get("S2")) and "비공개 쪽 확실" in str(sc.get("S3")) and "점수 없음" in str(sc.get("S4")), osc + str(sc))
     check("공개 재분류 NAK 16-1: 검토서 16칸(심의 대상만, 비밀 제외), 기준서·체크리스트 시트",
           sorted(rv16) == ["R1", "R3", "R4", "R8"] and rv16["R1"][9] == "제5호 의사결정 과정" and rv16["R8"][16] == "연장 신청 기한"
           and "공개관리 체크리스트" in wb.sheetnames and "기준서(NAK 16-1 부속서 A)" in wb.sheetnames, str(rv16))

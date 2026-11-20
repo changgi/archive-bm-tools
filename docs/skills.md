@@ -509,6 +509,7 @@ python skills/fixity-check/scripts/fixity.py verify 보존 산출/기준선.csv 
 
 🆕 **NAK 16-1** 결과에 `검토서(NAK 16-1 부속서 F)`(16칸, 심의 대상만 — ⑪~⑯은 전문요원이 채움), `기준서(NAK 16-1 부속서 A)`(단위과제명 열이 있으면 업무별 비공개 건수·호수), `공개관리 체크리스트`가 함께 나옵니다.
 ---
+- **검토 우선순위**(`--score-col`): 외부 분류기 비공개 확률을 0.10·0.90 구간으로(2025 연구 국외 사례). 결정은 심의회.
 
 ## 20. pii-redact — 개인정보 찾기·부분공개 가림 목록
 
@@ -630,6 +631,7 @@ python skills/dataset-schedule/scripts/dataset_schedule.py 스키마.csv --org "
 ---
 
 - **SIARD 2.1 점검**(`siard_check.py`, NAK 35 부속서 B): ZIP·암호화 금지·content/header만·siardversion/2.1·이름 규칙·metadata↔content 대응·열 수.
+- **재현정보**: 스키마·코드표·XSLT·재현 도구를 함께 받아 패키지에 둠(국가기록원 2025 연구, 표준 확정 전 제안).
 
 ## 26. classified-records-check — 비밀기록물 점검(서식 10·11)
 

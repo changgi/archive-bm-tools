@@ -27,4 +27,10 @@ description: 행정정보시스템의 테이블·컬럼 정의(스키마 csv 또
 - content 폴더·파일 이름 규칙(영문자로 시작, 영문·숫자·_), 테이블 폴더의 tableN.xml·xsd, metadata.xml 스키마·테이블 폴더와 content가 같은지, 열 수가 xsd와 같은지.
 - 테이블 값은 열지 않는다. SIARD는 NAK 37:2025 데이터베이스형 '수용가능포맷'(보존포맷은 CSV·JSON·XML)이고 스키마(구조정보)를 함께 보존하도록 권장된다.
 
+## 3. 재현정보 함께 챙기기 (국가기록원 2025 연구 「오픈 포맷을 활용한 행정정보 데이터세트 보존 방안」 3.6)
+데이터세트는 원시 데이터만으로 테이블 관계·제약조건·화면 표시를 되살리기 어렵다. 이관·보존 준비 때 다음을 시스템 담당자에게 받아 함께 둔다.
+- 스키마(DDL·테이블정의서·ERD), 코드표(공통코드 값↔의미), 화면 재현용 서식(XSLT·CSS 등), 재현 도구 이름·버전·설치본·매뉴얼, 추가 처리용 SQL 스크립트.
+- 연구가 제안한 오픈 포맷은 metadata.xml의 `<table>` 안 `<representationInfo method=…><description/><location/>`로 representation/ 폴더의 도구를 가리키고,
+  장기보존패키지(NEO3)에는 RepresentationInformation/ 폴더를 둔다. 아직 표준(NAK 31-2·35) 확정 전 제안이므로, SIARD 파일 안에 representation/ 폴더를 넣지 않는다(P_4.2-1: content/·header/ 밖 금지) — 패키지 쪽에 따로 둔다.
+
 이관·삭제는 국가기록원 SIARD_KR 지원도구(같은 게시판 '지원도구 설치 파일 및 매뉴얼')를 쓰며, 이 스킬은 실행하지 않는다.
