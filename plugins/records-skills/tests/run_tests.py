@@ -1055,7 +1055,7 @@ def main():
         ok_annex = (stD["R-2"][1] == "③" and stD["R-3"][2] == "E" and stD["R-3"][4] == "○" and stD["R-1"][7] == 3 and stD["R-1"][6] == "1"
                     and "진공건조 절대 금지" in str(byid["R-2"][11]) and "부적합" in envE and "60%" in envE and "지퍼백" in kitA)
         ok_d = ok_annex and ([r[1] for r in rows_] == ["R-3", "R-1", "R-2", "R-4"] and byid["R-4"][7] == "지남" and "즉시 냉동동결" in byid["R-4"][8]
-                and "분리" in byid["R-3"][8] and "습식" in byid["R-2"][9] and "습식" in byid["R-4"][9] and lab_["R-3"][5] == "유" and lab_["R-3"][8] == "동결")
+                and "분리" in byid["R-3"][8] and "15 kGy" in byid["R-3"][8] and "kGy" not in str(byid["R-2"][8]) and "습식" in byid["R-2"][9] and "습식" in byid["R-4"][9] and lab_["R-3"][5] == "유" and lab_["R-3"][8] == "동결")
     xlsx(f"{t}/매체피해.xlsx", [["관리번호", "제목", "보존기간", "대피등급", "재질", "훼손유형", "발견일시"],
                             ["M-1", "필름", "영구", "1", "마이크로필름", "완전침수", "2026-07-13 09:00"],
                             ["M-2", "사진", "영구", "1", "사진", "침수", "2026-07-15 09:00"],
