@@ -1,6 +1,6 @@
 <div align="center">
 
-<img src=".github/assets/banner.svg" alt="archive-bm-tools — 기록관리 담당자를 위한 Claude 스킬 41종" width="100%">
+<img src=".github/assets/banner.svg" alt="archive-bm-tools — 기록관리 담당자를 위한 Claude 스킬 42종" width="100%">
 
 **공공기관 기록관리 담당자를 위한 Claude 플러그인 마켓플레이스**
 
@@ -8,7 +8,7 @@
 반복되는 점검과 서식 작성은 스크립트가, 판단과 제출은 사람이.
 
 ![version](https://img.shields.io/badge/records--skills-v2.13.0-1f6feb)
-![skills](https://img.shields.io/badge/스킬-41종-2da44e)
+![skills](https://img.shields.io/badge/스킬-42종-2da44e)
 ![tests](https://img.shields.io/badge/시험-76%2F76%20통과-2da44e)
 ![python](https://img.shields.io/badge/Python-3.10%2B-3776ab?logo=python&logoColor=white)
 ![law](https://img.shields.io/badge/근거-시행령%202026.8.25.-8250df)
@@ -104,9 +104,9 @@ flowchart LR
 
 ---
 
-## 🧰 스킬 41종
+## 🧰 스킬 42종
 
-> 스킬마다 준비할 파일·말하는 법·받는 결과·주의할 점은 **[스킬 41종 사용법](docs/skills.md)**, 언제 무엇을 쓰는지는 **[연간 업무 달력](docs/calendar.md)** 에 있습니다.
+> 스킬마다 준비할 파일·말하는 법·받는 결과·주의할 점은 **[스킬 42종 사용법](docs/skills.md)**, 언제 무엇을 쓰는지는 **[연간 업무 달력](docs/calendar.md)** 에 있습니다.
 
 <details open>
 <summary><b>📝 생산·등록 (14)</b></summary>
@@ -140,6 +140,7 @@ flowchart LR
 | [transfer-triage](plugins/records-skills/skills/transfer-triage) | 인수·기증 폴더 첫 진단 — 포맷 분포·중복·위험 파일 |
 | [format-identify](plugins/records-skills/skills/format-identify) | 내용으로 실제 포맷 식별, 확장자 불일치 |
 | 🆕 [agency-closure](plugins/records-skills/skills/agency-closure) | 한시·폐지·통합·전환 기관 인계인수 — 관리 주체, 유형별 이관목록, 인계인수서, 체크리스트, 3개월 통보 기한 — NAK 15 |
+| 🆕 [office-relocation](plugins/records-skills/skills/office-relocation) | 청사 이전·문서고 이전 — 보유현황 통계, 보존기간 확인, 평가·폐기 후보, 관리번호·레이블, 이송 박스·배가표, 추진상황 점검표 — 국가기록원 청사 이전 매뉴얼 |
 
 </details>
 
@@ -252,7 +253,7 @@ flowchart LR
 python plugins/records-skills/tests/run_tests.py
 ```
 
-76개(veraPDF가 PATH에 있으면 77개, ffmpeg가 없으면 1개 적음) — 스킬 41종의 주요 계산과, 보호 훅이 Windows처럼 `python3`가 없거나 가짜일 때도 꺼지지 않는지까지 확인합니다. 필요 패키지: `openpyxl` `pypdf` `pikepdf` `pillow` `numpy` (선택: `python-docx` `python-hwpx` `holidays`, LibreOffice). Python 3.11·3.12·3.13에서 확인했고, [GitHub Actions](.github/workflows/test.yml)로 3.10~3.13을 돌립니다.
+76개(veraPDF가 PATH에 있으면 77개, ffmpeg가 없으면 1개 적음) — 스킬 42종의 주요 계산과, 보호 훅이 Windows처럼 `python3`가 없거나 가짜일 때도 꺼지지 않는지까지 확인합니다. 필요 패키지: `openpyxl` `pypdf` `pikepdf` `pillow` `numpy` (선택: `python-docx` `python-hwpx` `holidays`, LibreOffice). Python 3.11·3.12·3.13에서 확인했고, [GitHub Actions](.github/workflows/test.yml)로 3.10~3.13을 돌립니다.
 
 ---
 

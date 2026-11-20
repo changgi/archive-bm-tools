@@ -21,6 +21,9 @@ ALIAS = {"구분": ["구분", "측정구분"], "대상": ["대상", "관리번�
          "세균": ["부유세균", "부유세균(CFU/m3)", "세균"], "진균": ["부유곰팡이", "부유진균", "부유곰팡이(CFU/m3)", "진균"], "재질": ["재질", "종이재질", "용지"],
          "육안": ["곰팡이육안", "육안곰팡이", "곰팡이"], "비고": ["비고"]}
 RLU_LIMIT, BACT, FUNGI = 1000, 800, 500
+# 「기록물 소독대상 선별 및 처리 매뉴얼」(2022) 3.5 소독대상 판단 개체종 — 1등급: 물리적 피해·오염, 2등급: 오염
+PEST1 = re.compile(r"딱정벌레|수시렁이|빗살수염벌레|권연벌레|인삼벌레|나무좀|하늘소|좀목|\b좀\b|^좀$|흰개미")
+PEST2 = re.compile(r"파리|거미|개미|바퀴|메뚜기|꼽등이|귀뚜라미|그리마|다듬이벌레")
 
 
 def num(s):
@@ -44,6 +47,7 @@ def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("list")
     ap.add_argument("--today")
+    ap.add_argument("--traps", help="해충 트랩 결과 xlsx/csv: 서고, 수거일, 트랩(페로몬·점착), 해충(목·과·종), 개체수")
     ap.add_argument("-o", "--out", default="산출/생물오염_점검.xlsx")
     a = ap.parse_args()
     today = dt.date.fromisoformat(a.today) if a.today else dt.date.today()
@@ -87,13 +91,47 @@ def main() -> int:
         hits += bool(out)
         for j, k in out:
             ws.append([n, g("구분"), tgt, day, g("RLU") or g("세균") or g("진균"), j, k])
+    if a.traps:
+        if a.traps.lower().endswith((".xlsx", ".xlsm")):
+            from openpyxl import load_workbook
+            tr = [["" if v is None else str(v).strip() for v in r] for r in load_workbook(a.traps, read_only=True, data_only=True).active.iter_rows(values_only=True)]
+        else:
+            import csv
+            tr = list(csv.reader(open(a.traps, encoding="utf-8-sig")))
+        th = [re.sub(r"\s", "", h) for h in tr[0]]
+        col = lambda *ns: next((th.index(x) for x in ns if x in th), None)
+        si, di, ki, pi, ci = col("서고", "서고명"), col("수거일", "수거일자", "일자"), col("트랩", "트랩종류"), col("해충", "개체종", "종", "목"), col("개체수", "마리")
+        tw = wb.create_sheet("해충 트랩")
+        tw.append(["원본 행", "서고", "수거일", "트랩", "해충", "개체수", "위해도", "판정"])
+        seen1 = {}
+        for n, r in enumerate(tr[1:], 2):
+            gt = lambda i, r=r: r[i].strip() if i is not None and i < len(r) else ""
+            pest, room = gt(pi), gt(si)
+            if not pest:
+                continue
+            cnt = num(gt(ci)) or 0
+            grade = "1등급(물리적 피해·오염)" if PEST1.search(pest) else ("2등급(오염)" if PEST2.search(pest) else "판단 개체종 아님 — 동정 확인")
+            verdict = ""
+            if grade.startswith("1등급") and cnt > 0:
+                seen1.setdefault(room, []).append(gt(di))
+                verdict = (f"1등급 해충 같은 서고 재포획({len(seen1[room])}회) — 서고 내 기록물 전량 저산소 소독 대상" if len(seen1[room]) >= 2
+                           else "1등급 해충 포획 — 다음 30일 모니터링에서 다시 잡히면 서고 전량 저산소 소독")
+                hits += len(seen1[room]) >= 2
+            elif grade.startswith("2등급") and cnt > 0:
+                verdict = "오염 해충 — 서고 청소·출입·틈새 차단, 모니터링 계속"
+            tw.append([n, room, gt(di), gt(ki), pest, cnt or "", grade, verdict])
     s = wb.create_sheet("기준")
     for row in (["항목", "기준", "근거"],
                 ["ATP 표본", "1,000 RLU 이상 → 소독·정밀검사 대상, 서가 단별(이관·미소독)·서가별(소장) 1권, 10×10cm 공란 채취, 연 1회 이상",
                  "국가기록원 「미소독기록물 유해충·균 모니터링 및 기준 검증 연구(3차)」 제5절"],
                 ["종이 재질 감도", "트레싱지 가장 민감, 박엽지 가장 낮음 — 박엽지는 정밀검사 보완", "같은 연구"],
                 ["부유세균", "800 CFU/m³", "실내공기질 관리 기준(같은 연구 인용)"],
-                ["부유곰팡이", "500 CFU/m³", "실내공기질 관리 기준(2018 확대, 같은 연구 인용)"]):
+                ["부유곰팡이", "500 CFU/m³", "실내공기질 관리 기준(2018 확대, 같은 연구 인용)"],
+                ["해충 트랩", "페로몬트랩은 서고 가운데, 점착식트랩은 입구·복도 가장자리, 30일 모니터링. 1등급 해충이 같은 서고에서 다시 잡히면 서고 내 기록물 전량 저산소 소독",
+                 "국가기록원 「기록물 소독대상 선별 및 처리 매뉴얼」(2022) 3장"],
+                ["해충 위해도", "1등급: 딱정벌레목(수시렁이·빗살수염벌레(권연벌레·인삼벌레)·개나무좀·하늘소 등), 좀목, 흰개미목 / 2등급: 파리·거미·개미·바퀴·메뚜기(꼽등이·귀뚜라미)·그리마·다듬이벌레",
+                 "같은 매뉴얼 3.5"],
+                ["ATP 표본(매뉴얼)", "인수·소장 기록물 모두 복식서가 기준 1권 이상 표본, 육안검사 뒤 ATP 측정, 1,000 RLU 이상이면 반출해 화학소독", "같은 매뉴얼 1장"]):
         s.append(row)
     for i, w in enumerate((8, 10, 18, 12, 12, 34, 60)):
         ws.column_dimensions[chr(65 + i)].width = w

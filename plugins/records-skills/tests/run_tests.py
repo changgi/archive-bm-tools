@@ -409,6 +409,20 @@ def main():
           crb == 1 and len(dl) == 43 and dl[14] == "40" and dl[7] == "000001" and dl[8] == "001" and dl[-1].strip() == "20261121090000" and dl[-3] == "가상"
           and "보존장소" in rbs and "건 쪽수 합 9" in rbs and "모두 N" in rbs and "철 등록부에 없는 철" not in rbs, orb + rbs)
 
+    # 청사 이전 대비 기록물 이송·재배치(국가기록원 청사 이전 매뉴얼 2014)
+    xlsx(f"{t}/보유현황.xlsx", [["부서", "기록물철 제목", "생산연도", "보존기간", "보관위치", "권수", "비밀구분"],
+        ["가과", "가상 계획", "2015", "5년", "사무실", "2", ""], ["가과", "가상 대장", "2010", "영구", "문서고", "1", ""],
+        ["가과", "가상 통계", "2024", "", "사무실", "1", ""], ["나과", "가상 보고", "2023", "3년", "사무실", "12", ""],
+        ["나과", "가상 비밀철", "2020", "30년", "문서고", "1", "Ⅲ급비밀"]])
+    crl, orl = run([S("office-relocation", "scripts", "relocation_plan.py"), f"{t}/보유현황.xlsx", "--year", "2026", "--per-box", "10", "-o", f"{t}/산출/청사이전.xlsx"])
+    wrl = openpyxl.load_workbook(f"{t}/산출/청사이전.xlsx") if os.path.exists(f"{t}/산출/청사이전.xlsx") else None
+    rlf = " ".join(str(c) for sh in wrl.worksheets for r in sh.iter_rows(values_only=True) for c in r if c) if wrl else ""
+    dzr = [r for r in wrl["평가·폐기 후보"].iter_rows(min_row=2, values_only=True)] if wrl else []
+    bxr = [r for r in wrl["이송 박스"].iter_rows(min_row=2, values_only=True)] if wrl else []
+    check("청사 이전: 보존기간 확인·평가폐기 후보(만료)·관리번호(부서→연도→보존기간)·이송 박스·비밀 제외·점검표",
+          crl == 0 and len(dzr) == 1 and dzr[0][2] == "가상 계획" and "보존기간 없음" in rlf and "비밀철" not in rlf and "1건 — 목록에서 뺐음" in rlf
+          and len({r[0] for r in bxr}) == 4 and "선탑" in rlf, orl + str(bxr))
+
     # 사진 등록대상 선별(국가기록원 시청각기록물 관리지침 2024 3.2)
     try:
         import numpy as _np
@@ -547,6 +561,13 @@ def main():
     check("정수점검·상태검사(별표 14): 등급별·매체별 주기와 지남·예정·확인 필요",
           sch["A1"][9] == 2025 and sch["A2"][6] == 2025 and sch["A2"][9] == 2020 and sch["A3"][9] == 2025 and sch["A5"][9] == 2026
           and "지남" in sch["A2"][10] and sorted(need) == ["A4", "A6"], f"{sch} {need}")
+    xlsx(f"{t}/보존현황2.xlsx", [["관리번호", "제목", "유형", "재질", "보존기간", "상태등급", "최근정수점검", "최근상태검사", "생산연도"],
+        ["P1", "가상 팩스 기록", "종이", "감열지", "영구", "", 2025, "", 1995], ["P2", "가상 문서", "종이", "", "10년", "", 2025, "", 2020],
+        ["P3", "가상 녹화", "비디오테이프", "", "준영구", "", 2025, "", 1985]])
+    run([S("preservation-inspection", "scripts", "inspection_schedule.py"), f"{t}/보존현황2.xlsx", "--year", "2026", "-o", f"{t}/산출/점검일정2.xlsx"])
+    pr = [r for r in openpyxl.load_workbook(f"{t}/산출/점검일정2.xlsx")["첫 상태검사 우선순위"].iter_rows(min_row=2, values_only=True) if r[0]]
+    check("첫 상태검사 우선순위(기록물 상태검사 지침 2025): 영구·준영구·오래된 것·취약 재질 먼저",
+          [r[2] for r in pr][:3] == ["P3", "P1", "P2"] and "감열" in str(pr[1][7]), str(pr))
 
     # 정리 점검(시행규칙 제14조)
     xlsx(f"{t}/정리등록.xlsx", [["철분류번호", "제목", "생산연도", "보존기간", "단위과제", "쪽수", "공개구분", "비공개사유", "접근권한", "비밀구분", "기록물형태"],
@@ -1697,6 +1718,12 @@ def main():
           and "1000" in bj(("B-1", "2026-10-01")) and "박엽지" in bj(("B-2", "2026-10-01")) and "육안" in bj(("B-3", "2026-10-01"))
           and ("B-4", "2026-10-01") not in bio and "부유세균" in bj(("1서고", "2026-10-01")) and "3배" in bj(("1서고", "2026-10-01"))
           and "부유곰팡이 600" in bj(("2서고", "2025-06-01")) and "1년 지남" in bj(("2서고", "2025-06-01")), obio + str(bio))
+    xlsx(f"{t}/트랩.xlsx", [["서고", "수거일", "트랩", "해충", "개체수"], ["1서고", "2026-09-01", "페로몬", "권연벌레", "2"], ["1서고", "2026-10-01", "페로몬", "권연벌레", "1"],
+                           ["2서고", "2026-10-01", "점착", "바퀴", "1"], ["3서고", "2026-10-01", "점착", "좀", "1"]])
+    ctr, otr = run([S("preservation-inspection", "scripts", "bio_check.py"), f"{t}/생물.xlsx", "--traps", f"{t}/트랩.xlsx", "--today", "2026-11-20", "-o", f"{t}/산출/생물2.xlsx"])
+    trp = [r for r in openpyxl.load_workbook(f"{t}/산출/생물2.xlsx")["해충 트랩"].iter_rows(min_row=2, values_only=True)]
+    check("해충 트랩(기록물 소독대상 선별 및 처리 매뉴얼 2022): 1등급 재포획 → 서고 전량 저산소 소독, 2등급 오염 해충",
+          "전량 저산소" in str(trp[1][7]) and "다시 잡히면" in str(trp[0][7]) and trp[2][6].startswith("2등급") and trp[3][6].startswith("1등급"), otr + str(trp))
     check("기록재료 별표 15: 용지·필기구·용기·pH 7.5·탄산칼슘 2%·내광성 4호, 30년 미만 제외", cm == 1
           and not any(r[1] in ("M-1", "M-3", "M-4") for r in mr) and all(k in m2 for k in ("재생지", "수성", "pH 6.2", "탄산칼슘 1", "내광성 3", "용기") if k != "용기")
           and any(r[1] == "M-2" and r[4] == "용기" for r in mr), om + str(mr))
