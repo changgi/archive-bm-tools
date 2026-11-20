@@ -24,13 +24,16 @@ flowchart LR
 | **수시** | 정보공개 청구 기한 관리 | [access-request](skills.md#18-access-request--정보공개-처리-기한) | "이번 주 마감 청구 알려줘" |
 | | 부분공개 전 개인정보 찾기 | [pii-redact](skills.md#20-pii-redact--개인정보-찾기부분공개-가림-목록) | "개인정보 후보 찾아서 가림 목록 만들어줘" |
 | | 결과물 내보내기 전 검수 | [records-qa-gate](skills.md#3-records-qa-gate--내보내기-전-품질-관문) | "내보내도 되는지 검수해줘" |
+| **연초** | 처리과 → 기록관 이관 기한·연장 목록, 비치기록물 연장 신청 기한 | [transfer-schedule](skills.md#29-transfer-schedule--이관-시기연장-관리) | "올해 기록관에 넘길 것하고 기한 지난 것 알려줘" |
+| **정리 기간** | 보존상자 편성·표지, 색인목록 | [box-labels](skills.md#32-box-labels--보존상자-편성표지), [records-forms](skills.md#31-records-forms--법정-서식-작성) | "보존상자 편성하고 표지 뽑아줘" |
 | **6~8월** | 기록관 → 영구기록물관리기관 이관 준비 | [retention-review](skills.md#21-retention-review--보존기간-검토만료이관-대상)(이관 대상), [transfer-reconcile](skills.md#11-transfer-reconcile--이관-목록-대조패키지) | "올해 이관 대상 뽑고 이관목록 서식 만들어줘" |
 | | 통합(전자+비전자) 이관 | [transfer-reconcile](skills.md#11-transfer-reconcile--이관-목록-대조패키지) | "2015년까지 생산분 별송 붙임 후보 찾아줘" |
 | | 이관 전 공개 재분류 | [disclosure-reclass](skills.md#19-disclosure-reclass--공개-재분류-심의-대상) `--transfer` | "이관 대상 중 재분류 필요한 것 나눠줘" |
 | **연중 1회** | 정수점검·상태검사 | [preservation-inspection](skills.md#15-preservation-inspection--정수점검상태검사) | "올해 대상 뽑고 별지 7호 작업지 만들어줘" |
-| | 공개 재분류 심의 | [disclosure-reclass](skills.md#19-disclosure-reclass--공개-재분류-심의-대상) | "올해 재분류 심의 대상 뽑아줘" |
+| | 공개 재분류 심의, 결과 공고(별지 제13호의2) | [disclosure-reclass](skills.md#19-disclosure-reclass--공개-재분류-심의-대상) | "올해 재분류 심의 대상 뽑아줘", "비공개 유형별 현황 만들어줘" |
 | | 웹기록물 수집 준비 | [web-records-check](skills.md#24-web-records-check--웹기록물-수집-준비) | "누리집 수집 잘 되는지 점검해줘" |
 | | 행정정보 데이터세트 | [dataset-schedule](skills.md#25-dataset-schedule--행정정보-데이터세트) | "시스템 목록으로 관리대상 유형 분류해줘" |
+| **매월·분기** | 서고 온습도 점검 | [stack-environment](skills.md#30-stack-environment--서고-환경-점검) | "서고온습도.csv 기준으로 점검해줘" |
 | **분기마다** | 보존 파일 무결성 대조 | [fixity-check](skills.md#16-fixity-check--변조사라짐-감시) | "보존 폴더를 기준선이랑 대조해줘" |
 | **9~10월** | 기록관리 기관평가 증빙 | [evaluation-readiness](skills.md#27-evaluation-readiness--기록관리-기관평가-준비) | "평가 증빙 지표별로 점검해줘" |
 | **10~12월** | 보존기간 만료 기록 평가 | [retention-review](skills.md#21-retention-review--보존기간-검토만료이관-대상) → [disposal-dossier](skills.md#22-disposal-dossier--평가심의서의견조회표) | "만료 목록으로 평가심의서·의견조회표 만들어줘" |

@@ -39,6 +39,10 @@ body:
         - classified-records-check
         - evaluation-readiness
         - hwpx-report
+        - transfer-schedule
+        - stack-environment
+        - records-forms
+        - box-labels
         - 훅(비밀·원본 보호)
         - 잘 모름
     validations:

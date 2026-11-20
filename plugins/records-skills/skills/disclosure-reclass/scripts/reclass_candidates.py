@@ -140,6 +140,48 @@ def main() -> int:
                 need += 1
                 wt.append([*(r[c] for c in head), "이관 전 재분류 필요", "이관 대상 비공개·부분공개 기록물은 건별 공개여부 재분류 후 이관"])
         summ.append(["이관 전 재분류", f"필요 {need} · 생략 가능 {skip}", "「2026년 기록물관리 지침」 이관대상 기록물 공개여부 재분류"])
+    # 별지 제13호의2 비공개로 재분류된 기록물의 비공개 유형별 현황(법 제35조④ 공고, 시행규칙 제40조의2)
+    res_col = next((c for c in ("재분류결과", "재분류 결과", "심의결과", "재분류 후 공개구분") if c in head), None)
+    rs_col = next((c for c in ("재분류 비공개사유", "재분류비공개사유", "재분류 사유") if c in head), None)
+    ry_col = next((c for c in ("재분류연도", "재분류일", "재분류일자", "최종재분류일") if c in head), None)
+    labels = ["법령상 비밀·비공개(제1호)", "국방 등 국익침해(제2호)", "국민의 생명 등 공익침해(제3호)", "재판관련 정보 등(제4호)",
+              "공정한 업무수행 지장 등(제5호)", "개인사생활 침해(제6호)", "법인 등 영업상 비밀침해(제7호)", "특정인의 이익·불이익(제8호)"]
+    f13 = wb.create_sheet("별지 13의2")
+    f13.append(["■ 공공기록물 관리에 관한 법률 시행규칙 [별지 제13호의2서식] 비공개로 재분류된 기록물의 비공개 유형별 현황"])
+    by, total, partial, nores = [0] * 8, 0, 0, 0
+    for r in rows:
+        kinds, _ = classify(r, head, a.year)
+        if "제외(비밀)" in kinds:
+            continue
+        if res_col:
+            if ry_col and year_of(r.get(ry_col, "")) not in (None, a.year):
+                continue
+            res = r.get(res_col, "").replace(" ", "")
+            if res == "부분공개":
+                partial += 1
+            if res != "비공개":
+                continue
+        elif r.get("공개구분", "").replace(" ", "") != "비공개":
+            continue
+        total += 1
+        m = REASON_RX.findall(r.get(rs_col, "") if rs_col else "") or REASON_RX.findall(r.get("비공개사유", "") or r.get("비공개 사유", ""))
+        n = int(m[0]) if m else 0
+        if 1 <= n <= 8:
+            by[n - 1] += 1
+        else:
+            nores += 1
+    f13.append(["재분류된 비공개 총 건수", *labels])
+    f13.append([total, *by])
+    f13.append([])
+    f13.append(["※ 비공개 유형은 「공공기관의 정보공개에 관한 법률」 제9조제1항의 비공개 사유로 하되, 동일 건에 비공개 사유가 2개 이상인 경우에는 주요 비공개 사유를 표기"])
+    f13.append(["이 킷의 계산", "사유에 적힌 첫 번째 호를 주요 사유로 봄 — 다르면 고쳐 적음"])
+    if res_col:
+        f13.append(["기준", f"'{res_col}' 열이 '비공개'인 건" + (f", '{ry_col}'이 {a.year}년인 건" if ry_col else "") + f" · 부분공개로 재분류 {partial}건은 이 서식에 넣지 않음"])
+    else:
+        f13.append(["주의", "재분류 결과 열(재분류결과)이 없어 현재 공개구분이 '비공개'인 건으로 셈 — 심의 뒤 결과 열을 넣고 다시 돌림"])
+    if nores:
+        f13.append(["확인", f"호수를 읽지 못한 비공개 {nores}건(총 건수에는 포함)"])
+    summ.append(["별지 13의2", f"비공개로 재분류 {total}건", "법 제35조④ 공고, 시행규칙 제40조의2"])
     summ.append(["기준 연도", a.year])
     summ.append(["입력 행", len(rows)])
     for k in ORDER:

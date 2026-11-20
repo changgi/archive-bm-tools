@@ -168,7 +168,7 @@ def main():
         ["R8", "1996년 조사", "1996", "비공개", "제4호 감사 관련 조사 기록", "2024", ""]])
     code, out = run([S("disclosure-reclass", "scripts", "reclass_candidates.py"), f"{t}/비공개목록.xlsx", "--year", "2026", "-o", f"{t}/산출/reclass.xlsx"])
     wb = openpyxl.load_workbook(f"{t}/산출/reclass.xlsx")
-    got = {ws.title: [r[0] for r in ws.iter_rows(min_row=2, values_only=True)] for ws in wb.worksheets[1:]}
+    got = {ws.title: [r[0] for r in ws.iter_rows(min_row=2, values_only=True)] for ws in wb.worksheets[1:] if ws.title != "별지 13의2"}
     want = {"30년 경과": ["R1"], "연장 신청 기한": ["R8"], "5년 주기": ["R3"], "6호 유예": ["R2"], "이력 없음": ["R4"], "사유 결함": ["R4"], "제외(비밀)": ["R6"]}
     check("공개 재분류: 7개 분류 정확(연장 신청 기한 제72조③ 포함, R5 공개·R7 주기 전 제외)", got == want, str(got))
 
@@ -815,6 +815,117 @@ def main():
     guide_ok = bool(gw) and "의견 작성 안내" in openpyxl.load_workbook(gw[0]).sheetnames
     check("2026 지침: 1호 비공개는 법령 조항 필요·이관 전 재분류(최근 5년 생략 가능)·평가심의서 '의견 작성 안내'",
           r1 == 0 and defect == ["A-1"] and pre["A-2"] == "이관 전 재분류 필요" and pre["A-1"].startswith("생략 가능") and guide_ok, or1 + str(defect) + str(pre) + str(gw))
+
+    # 2.13: 이관 시기(현행·2027 규정), 비치기록물, 별지 1의2
+    xlsx(f"{t}/철목록.xlsx", [["철분류번호", "철제목", "처리과", "처리과코드", "생산연도", "종료연도", "보존기간", "기록물형태", "비치여부", "비치종료일", "기록관이관일", "영구이관일", "이관희망시기"],
+                            ["A-1", "예산 철", "기획과", "6410002", 2024, 2024, "준영구", "전자", "", "", "", "", ""],
+                            ["A-2", "도면 철", "건축과", "6410005", 2024, 2024, "10년", "비전자", "", "", "", "", ""],
+                            ["A-3", "비치 철", "민원과", "6410003", 2019, 2019, "영구", "전자", "비치", "2026-12-20", "", "", ""],
+                            ["A-4", "옛 영구", "총무과", "6410001", 2020, 2020, "영구", "전자", "", "", "2021-03-01", "", ""],
+                            ["A-5", "연장 철", "총무과", "6410001", 2023, 2023, "5년", "비전자", "", "", "", "", "2028"]])
+    c1, o1 = run([S("transfer-schedule", "scripts", "transfer_schedule.py"), f"{t}/철목록.xlsx", "--today", "2026-11-20", "-o", f"{t}/산출/이관_현행.xlsx"])
+    c2, o2 = run([S("transfer-schedule", "scripts", "transfer_schedule.py"), f"{t}/철목록.xlsx", "--today", "2027-02-01", "--year", "2027", "-o", f"{t}/산출/이관_2027.xlsx"])
+    ok_ts = False
+    if c1 == 0 and c2 == 0:
+        w1 = openpyxl.load_workbook(f"{t}/산출/이관_현행.xlsx")
+        w2 = openpyxl.load_workbook(f"{t}/산출/이관_2027.xlsx")
+        st1 = {r[1]: (r[11], r[12], r[13], r[14]) for r in w1["이관 일정"].iter_rows(min_row=2, values_only=True)}
+        st2 = {r[1]: (r[11], r[14]) for r in w2["이관 일정"].iter_rows(min_row=2, values_only=True)}
+        ext2 = [r[2] for r in w2["연장 목록(별지 1의2)"].iter_rows(min_row=4, values_only=True) if r[0] and str(r[0]).isdigit()]
+        bichi1 = [r[6] for r in w1["비치기록물"].iter_rows(min_row=2, values_only=True)]
+        ok_ts = (st1["A-1"][0] == "기한 지남" and st1["A-2"][0] == "2026년 이관" and st2["A-2"][0] == "기한 지남"
+                 and "경과규정" in (st2["A-2"][1] or "") and st1["A-4"][1] == 2026 and st1["A-3"][2].startswith("비치 중")
+                 and st2["A-5"][0] == "연장 한도 넘음" and "A-2" in ext2 and bichi1 == ["연장 신청 기한 지남(종료 60일 전)"])
+    check("이관 시기: 현행·2027 규정, 비치 연장 신청 기한, 영구 이관 연도, 별지 1의2 목록", ok_ts, o1 + o2)
+
+    # 암호화 기록물 목록(제31조의2)
+    import pypdf
+    os.makedirs(f"{t}/이관폴더/비밀", exist_ok=True)
+    pw = pypdf.PdfWriter(); pw.add_blank_page(100, 100); pw.encrypt("x"); pw.write(f"{t}/이관폴더/잠김.pdf")
+    pw = pypdf.PdfWriter(); pw.add_blank_page(100, 100); pw.write(f"{t}/이관폴더/보통.pdf")
+    hdr = b"\xd0\xcf\x11\xe0\xa1\xb1\x1a\xe1" + b"\0" * 504
+    with open(f"{t}/이관폴더/암호.hwp", "wb") as f:
+        f.write(hdr + b"HWP Document File" + b"\0" * 15 + b"\x00\x00\x05\x05" + (2).to_bytes(4, "little") + b"\0" * 216)
+    with open(f"{t}/이관폴더/비밀/x.pdf", "wb") as f:
+        f.write(b"%PDF /Encrypt")
+    ce, oe = run([S("transfer-schedule", "scripts", "encrypted_scan.py"), f"{t}/이관폴더", "-o", f"{t}/산출/암호화.xlsx"])
+    enc = [r[1] for r in openpyxl.load_workbook(f"{t}/산출/암호화.xlsx").worksheets[0].iter_rows(min_row=2, values_only=True)] if ce == 0 else []
+    check("암호화 기록물: PDF·HWP 암호 찾음, 보통 파일·비밀 폴더 제외", ce == 0 and sorted(enc) == ["암호.hwp", "잠김.pdf"], oe + str(enc))
+
+    # 서고 환경(시행령 별표 6)
+    import datetime as _dt
+    with open(f"{t}/온습도.csv", "w", encoding="cp949", newline="") as f:
+        cw = csv.writer(f)
+        cw.writerow(["측정일시", "서고", "온도(℃)", "습도(%)"])
+        for i in range(48):
+            tt = (_dt.datetime(2026, 10, 1) + _dt.timedelta(hours=i)).strftime("%Y-%m-%d %H:%M")
+            cw.writerow([tt, "1서고", "20.5", "62" if 10 <= i < 40 else "50"])
+            cw.writerow([tt, "2서고", "15.2", "41"])
+    cv, ov = run([S("stack-environment", "scripts", "env_check.py"), f"{t}/온습도.csv", "--org", "특수기록관", "--media", "2서고=자기",
+                  "--books", "20000", "--area", "150", "-o", f"{t}/산출/서고환경.xlsx"])
+    ok_env = False
+    if cv == 0:
+        we = openpyxl.load_workbook(f"{t}/산출/서고환경.xlsx")
+        sm = {r[0]: r for r in we["요약"].iter_rows(min_row=2, values_only=True)}
+        area = [r for r in we["서고 면적"].iter_rows(values_only=True)]
+        ok_env = (sm["1서고"][7] == 62.5 and sm["1서고"][9] == 29 and str(sm["1서고"][13]).startswith("조치 필요")
+                  and sm["2서고"][3] == "40±5%" and str(sm["2서고"][13]).startswith("기준 안") and "198.0㎡" in str(area[1][1]) and "부족" in str(area[2][2]))
+    check("서고 환경: 별표 6 매체별 기준, 이탈 시간, 면적 계산", ok_env, ov)
+
+    # 법정 서식: 색인목록 쪽표시·100매, 반출 30년 이상 경고, 폐기 금지 요청서
+    xlsx(f"{t}/색인원본.xlsx", [["철분류번호", "철제목", "생산연도", "생산일자", "등록번호", "제목", "쪽수", "기록물형태", "보존기간"],
+                              ["A-1", "예산 철", 2025, "2025-01-10", "기획과-1", "문서 1", 3, "전자", "영구"],
+                              ["A-1", "예산 철", 2025, "2025-02-10", "기획과-2", "문서 2", 1, "전자", "영구"],
+                              ["A-1", "예산 철", 2025, "2025-03-10", "기획과-3", "문서 3", 99, "전자", "영구"]])
+    ci, oi = run([S("records-forms", "scripts", "make_form.py"), "index", "--list", f"{t}/색인원본.xlsx", "-o", f"{t}/산출/색인.xlsx"])
+    cc, oc = run([S("records-forms", "scripts", "make_form.py"), "carry", "--list", f"{t}/색인원본.xlsx", "-o", f"{t}/산출/반출.xlsx"])
+    ch, oh = run([S("records-forms", "scripts", "make_form.py"), "hold", "--set", "기관명=가상시", "-o", f"{t}/산출/폐기금지.xlsx"])
+    ok_f = False
+    if ci == 0 and cc == 0 and ch == 0:
+        wi = openpyxl.load_workbook(f"{t}/산출/색인.xlsx")
+        marks = [r[6] for r in wi["서식"].iter_rows(values_only=True) if isinstance(r[0], int)]
+        warn_i = " ".join(str(r[2]) for r in wi["빈칸 점검"].iter_rows(values_only=True))
+        warn_c = " ".join(str(r[2]) for r in openpyxl.load_workbook(f"{t}/산출/반출.xlsx")["빈칸 점검"].iter_rows(values_only=True))
+        hold_t = " ".join(str(c) for r in openpyxl.load_workbook(f"{t}/산출/폐기금지.xlsx")["서식"].iter_rows(values_only=True) for c in r if c)
+        ok_f = (marks == ["1-3", "4", "5-103"] and "103매" in warn_i and "제32조" in warn_c and "국가기록원장 귀하" in hold_t and "별지 제11호의2" in hold_t)
+    check("법정 서식: 색인목록 쪽표시·100매, 반출 제한 경고, 폐기 금지 요청서", ok_f, oi + oc + oh)
+
+    # 보존상자 편성·표지(별표 6)
+    xlsx(f"{t}/상자원본.xlsx", [["철분류번호", "철제목", "생산연도", "보존기간", "단위과제명", "쪽수", "처리과"],
+                              ["B-1", "가", 2025, "준영구", "예산편성", 600, "기획과"], ["B-2", "나", 2025, "준영구", "예산편성", 500, "기획과"],
+                              ["B-3", "다", 2025, "10년", "청사관리", 80, "총무과"], ["B-4", "라", 2024, "준영구", "예산편성", 90, "기획과"]])
+    cb, ob = run([S("box-labels", "scripts", "box_labels.py"), f"{t}/상자원본.xlsx", "--prefix", "T-", "-o", f"{t}/산출/상자"])
+    ok_b = False
+    if cb == 0:
+        wb_ = openpyxl.load_workbook(f"{t}/산출/상자/보존상자_편성안.xlsx")
+        boxes = [(r[0], r[1], r[2], r[5]) for r in wb_["편성안"].iter_rows(min_row=2, values_only=True) if r[0]]
+        warn_b = " ".join(str(r[3]) for r in wb_["확인할 것"].iter_rows(values_only=True))
+        html_ok = os.path.exists(f"{t}/산출/상자/보존상자_표지.html") and "업무명" in open(f"{t}/산출/상자/보존상자_표지.html", encoding="utf-8").read()
+        ok_b = (boxes == [("T-001", "2024", "준영구", 1), ("T-002", "2025", "준영구", 1), ("T-003", "2025", "준영구", 1), ("T-004", "2025", "10년", 1)]
+                and "600매" in warn_b and html_ok)
+    check("보존상자: 연도·보존기간·단위과제별 편성, 상자 분량, 100매 경고, 표지 HTML", ok_b, ob)
+
+    # 보완: 별지 13의2, 간행물 15일, 정리 점검 100매·수정 이력
+    xlsx(f"{t}/재분류결과.xlsx", [["관리번호", "제목", "생산연도", "공개구분", "비공개사유", "재분류결과", "재분류연도"],
+                                ["1", "가", "1990", "비공개", "6호 사생활 정보", "비공개", "2026"],
+                                ["2", "나", "2000", "비공개", "5호, 6호 감사 진행", "비공개", "2026"],
+                                ["3", "다", "2001", "비공개", "1호 「공익신고자 보호법」 제12조", "부분공개", "2026"]])
+    cr, orr = run([S("disclosure-reclass", "scripts", "reclass_candidates.py"), f"{t}/재분류결과.xlsx", "--year", "2026", "-o", f"{t}/산출/재분류13.xlsx"])
+    f13 = [r for r in openpyxl.load_workbook(f"{t}/산출/재분류13.xlsx")["별지 13의2"].iter_rows(values_only=True)] if cr == 0 else []
+    check("공개 재분류: 별지 13의2 총 건수·호별 건수(주요 사유)", cr == 0 and list(f13[2][:9]) == [2, 0, 0, 0, 0, 1, 1, 0, 0], orr + str(f13[2:3]))
+    xlsx(f"{t}/간행물15.xlsx", [["제목", "발간등록번호", "발행일", "형태", "유형", "송부일", "송부부수", "PDF송부"],
+                              ["백서", "51-6410000-000123-10", "2026-01-02", "책자", "연속간행물", "2026-02-20", 3, "Y"],
+                              ["정상", "51-6410000-000125-01", "2026-03-01", "책자", "단행본", "2026-03-10", 3, "Y"]])
+    cp_, op_ = run([S("publications-check", "scripts", "pubs_check.py"), f"{t}/간행물15.xlsx", "--year", "2026", "--today", "2026-11-20", "-o", f"{t}/산출/간행물15.xlsx"])
+    pj = {r[1]: r[-1] for r in openpyxl.load_workbook(f"{t}/산출/간행물15.xlsx")["점검"].iter_rows(min_row=2, values_only=True)} if cp_ == 0 else {}
+    check("간행물: 발간 후 15일 송부 기한(시행령 제55조④)", "49일" in str(pj.get("백서")) and pj.get("정상") == "통과", op_ + str(pj))
+    xlsx(f"{t}/정리등록.xlsx", [["철분류번호", "등록번호", "제목", "생산연도", "보존기간", "단위과제", "쪽수", "공개구분", "기록물형태", "권호수", "수정일자", "수정내용", "수정사유"],
+                              ["C", "C-1", "가 철", "2025", "10년", "가", "70", "공개", "비전자", "1", "", "", ""],
+                              ["C", "C-2", "가 철", "2025", "10년", "가", "50", "공개", "비전자", "1", "2026-01-05", "제목 오타", ""]])
+    xlsx(f"{t}/정리실물.xlsx", [["상자번호", "철분류번호", "실물쪽수"], ["1", "C", "120"]])
+    cg, og = run([S("records-register-audit", "scripts", "register_audit.py"), f"{t}/정리등록.xlsx", f"{t}/정리실물.xlsx", "-o", f"{t}/산출/정리100.xlsx"])
+    kinds = [r[0] for r in openpyxl.load_workbook(f"{t}/산출/정리100.xlsx")["점검 결과"].iter_rows(min_row=2, values_only=True)] if cg == 0 else []
+    check("정리 점검: 철당 100매 초과, 수정 이력(일자·내용·사유) 누락", "철 분량" in kinds and "수정 이력" in kinds, og + str(kinds))
 
     # 플러그인 훅 명령: Windows(Git Bash)처럼 python3가 없거나 가짜일 때도 보호가 꺼지지 않는지
     hj = os.path.join(ROOT, "hooks", "hooks.json")
