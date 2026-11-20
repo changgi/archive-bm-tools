@@ -549,6 +549,15 @@ def main():
           want <= items and not any(k == "U1" for k, _ in items) and notice == {("U1", "보존기간 변경"), ("U2", "신설"), ("U3", "신설"), ("U4", "신설")},
           f"{sorted(items - want)} {sorted(want - items)} {notice}")
 
+    xlsx(f"{t}/기준표유사.xlsx", [sh,
+        ["V1", "민원처리", "민원과", "민원", *good], ["V2", "민원 처리 관리", "민원과", "민원", good[0], "5년", *good[2:]],
+        ["V3", "청사 시설 관리", "총무과", "청사", *good], ["V4", "청사시설관리", "총무과", "청사", *good], ["V5", "예산편성", "기획과", "예산", *good]])
+    cs_, os_ = run([S("records-schedule-check", "scripts", "schedule_check.py"), f"{t}/기준표유사.xlsx", "-o", f"{t}/산출/기준표유사.xlsx"])
+    simr = [r for r in openpyxl.load_workbook(f"{t}/산출/기준표유사.xlsx")["유사 단위과제"].iter_rows(min_row=2, values_only=True)]
+    pairs = {(r[0], r[3]): r[7] for r in simr if r[0]}
+    check("기준표 유사·중복 단위과제(자치단체 기준표 빅데이터 연구): 보존기간 다른 유사 과제·중복 생성 의심", "보존기간 다름" in str(pairs.get(("V1", "V2")))
+          and "중복" in str(pairs.get(("V3", "V4"))) and not any("V5" in k for k in pairs), os_ + str(pairs))
+
     # 국가기록원 공식 생산현황 통보서식 채우기
     form = S("production-status-report", "assets", "2024년도기록물생산현황통보서식.xlsx")
     ps = [["철분류번호", "철제목", "등록번호", "건제목", "생산부서", "처리과코드", "단위과제ID", "단위과제명", "생산연도", "보존기간", "기록물형태", "유형", "공개구분", "비밀구분"]]

@@ -139,6 +139,24 @@ def main() -> int:
         if "접근" in idx and not match(r.get("접근"), ACCESS):
             add(n, r, "접근권한", f"'{r.get('접근')}' — 목록 및 원문 열람 / 목록만 열람 / 열람 불가 중 하나가 아님", "NAK 4 4.3.7")
 
+    # 유사·중복 단위과제(국가기록원 「빅데이터 분석기술을 활용한 자치단체 기록관리기준표 현황분석 및 개선방안 연구」 —
+    # 단위과제 중복·과대 생성, 유사 단위과제 간 보존기간 상이를 문제로 지적): 이름을 정규화해 같거나 매우 비슷한 과제를 묶는다
+    import difflib
+    def key(nm):
+        k = re.sub(r"[\s·,ㆍ()（）\-]|및|등|관련|업무$|관리$|운영$", "", str(nm or ""))
+        return k
+    named = [(n, r, key(r.get("명"))) for n, r in rows if r.get("명")]
+    similar, seen = [], set()
+    for i, (n1, r1, k1) in enumerate(named):
+        for n2, r2, k2 in named[i + 1:]:
+            if not k1 or not k2 or (n1, n2) in seen:
+                continue
+            ratio = 1.0 if k1 == k2 else difflib.SequenceMatcher(None, k1, k2).ratio()
+            if ratio >= 0.85 and min(len(k1), len(k2)) >= 3:
+                seen.add((n1, n2))
+                p1, p2 = norm(r1.get("보존기간")), norm(r2.get("보존기간"))
+                similar.append([r1.get("코드", ""), r1.get("명", ""), p1, r2.get("코드", ""), r2.get("명", ""), p2, f"{ratio:.2f}",
+                                "보존기간 다름 — 하나로 통합하거나 차이 사유를 책정 사유에 적음" if p1 != p2 else "중복 생성 의심 — 통합 검토"])
     notice = []
     if a.previous:
         prev, _ = read(a.previous)
@@ -167,6 +185,13 @@ def main() -> int:
     d.append(["원본 행", "단위과제코드", "단위과제명", "항목", "내용", "근거"])
     for i in issues:
         d.append(i)
+    sim = wb.create_sheet("유사 단위과제")
+    sim.append(["코드 1", "단위과제명 1", "보존기간 1", "코드 2", "단위과제명 2", "보존기간 2", "이름 유사도", "검토"])
+    for x in similar:
+        sim.append(x)
+    if not similar:
+        sim.append(["", "", "", "", "", "", "", "유사·중복 후보 없음"])
+    s.append(["유사·중복 단위과제 후보", len(similar)])
     if a.previous:
         g = wb.create_sheet("고시 대상")
         g.append(["단위과제코드", "단위과제명", "구분", "이전 보존기간", "보존기간", "단위과제 업무설명"])
