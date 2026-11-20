@@ -368,6 +368,7 @@ python skills/transfer-reconcile/scripts/integrated_transfer.py 등록정보.xls
 # 🛡️ 보존
 
 - **NAK 37:2025 권고 열**: 보존포맷(PDF·PDF/A·DOCX·XLSX·PPTX·TIF·PNG·WAV·MP4·CSV·JSON·XML 등)·수용가능포맷(HWPX·FLAC·MKV·MOV·SIARD 등)·권고 외(HWP·DOC·XLS·PPT 등 변환 검토).
+- **문서 DRM 의심 표시**: 소프트캠프·마크애니·파수 헤더(국가기록원 2018 연구).
 
 ## 14. preservation-convert — PDF/A 보존포맷 변환
 
@@ -735,6 +736,7 @@ python skills/transfer-schedule/scripts/encrypted_scan.py 이관폴더 --list �
 - 해제 정보(비밀번호)는 기관 보안 절차로 따로 전달하세요.
 
 ---
+- **문서 DRM**: encrypted_scan.py가 DRM 헤더 의심 파일도 암호화 목록에 넣음(2018 연구).
 
 ## 30. stack-environment — 서고 환경 점검
 

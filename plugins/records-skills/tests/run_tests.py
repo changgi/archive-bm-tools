@@ -144,13 +144,14 @@ def main():
     check("포맷 식별: 확장자 불일치 표시", "PDF 아님" in rows.get("fake.pdf", [""])[-1], out.strip())
     os.makedirs(f"{t}/fmt37")
     for n_, data in (("a.hwp", b"\xd0\xcf\x11\xe0x"), ("b.hwpx", b"PK\x03\x04x"), ("c.xlsx", b"PK\x03\x04x"), ("d.pdf", b"%PDF-1.4 <pdfaid:part>1</pdfaid:part>"),
-                     ("e.mkv", b"\x1aE\xdf\xa3"), ("f.csv", b"a,b")):
+                     ("e.mkv", b"\x1aE\xdf\xa3"), ("f.csv", b"a,b"), ("g.docx", b"PK\x03\x04 ... Document SAFER")):
         open(f"{t}/fmt37/{n_}", "wb").write(data)
     run([S("format-identify", "scripts", "identify.py"), f"{t}/fmt37", "-o", f"{t}/산출/fmt37.csv"])
     r37 = {r[0]: r[6] for r in list(csv.reader(open(f"{t}/산출/fmt37.csv", encoding="utf-8-sig")))[1:]}
     check("포맷 NAK 37: 보존포맷(xlsx·csv·PDF/A-1)·수용가능(hwpx·mkv)·권고 외(hwp)",
           r37.get("c.xlsx", "").startswith("보존포맷") and r37.get("f.csv", "").startswith("보존포맷") and "PDF/A-1" in r37.get("d.pdf", "")
-          and r37.get("b.hwpx", "").startswith("수용가능") and r37.get("e.mkv", "").startswith("수용가능") and r37.get("a.hwp", "").startswith("권고 외"), str(r37))
+          and r37.get("b.hwpx", "").startswith("수용가능") and r37.get("e.mkv", "").startswith("수용가능") and r37.get("a.hwp", "").startswith("권고 외")
+          and "마크애니" in {r[0]: r[-1] for r in list(csv.reader(open(f"{t}/산출/fmt37.csv", encoding="utf-8-sig")))[1:]}.get("g.docx", ""), str(r37))
 
     # 9. 비밀기록물 차단: 훅(읽기·검색)과 검수 게이트
     code, _ = run([g], json.dumps({"tool_name": "Read", "tool_input": {"file_path": f"{t}/비밀/보고서.hwp"}}))
@@ -898,11 +899,13 @@ def main():
     hdr = b"\xd0\xcf\x11\xe0\xa1\xb1\x1a\xe1" + b"\0" * 504
     with open(f"{t}/이관폴더/암호.hwp", "wb") as f:
         f.write(hdr + b"HWP Document File" + b"\0" * 15 + b"\x00\x00\x05\x05" + (2).to_bytes(4, "little") + b"\0" * 216)
+    with open(f"{t}/이관폴더/drm.docx", "wb") as f:
+        f.write(b"SCD0003" + b"\0" * 100)
     with open(f"{t}/이관폴더/비밀/x.pdf", "wb") as f:
         f.write(b"%PDF /Encrypt")
     ce, oe = run([S("transfer-schedule", "scripts", "encrypted_scan.py"), f"{t}/이관폴더", "-o", f"{t}/산출/암호화.xlsx"])
     enc = [r[1] for r in openpyxl.load_workbook(f"{t}/산출/암호화.xlsx").worksheets[0].iter_rows(min_row=2, values_only=True)] if ce == 0 else []
-    check("암호화 기록물: PDF·HWP 암호 찾음, 보통 파일·비밀 폴더 제외", ce == 0 and sorted(enc) == ["암호.hwp", "잠김.pdf"], oe + str(enc))
+    check("암호화 기록물: PDF·HWP 암호·문서 DRM 헤더(2018 연구) 찾음, 보통 파일·비밀 폴더 제외", ce == 0 and sorted(enc) == ["drm.docx", "암호.hwp", "잠김.pdf"], oe + str(enc))
 
     # 서고 환경(시행령 별표 6)
     import datetime as _dt

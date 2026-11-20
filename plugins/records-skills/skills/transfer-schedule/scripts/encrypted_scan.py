@@ -11,14 +11,20 @@
   HWPX·ODF  META-INF/manifest.xml 의 encryption-data
   ZIP       항목의 암호화 플래그(general purpose bit 0)
   옛 DOC·XLS  확실히 판단하지 못하면 '확인 필요'
+  문서 DRM   앞 4KB에 SCD0002~4(소프트캠프)·Document SAFER(마크애니)·fasoo(파수) 표시 — 국가기록원 2018 연구 헤더 분석
 원칙:  목록만 만든다. 비밀번호·해제 정보는 이 파일에 적지 말고 기관의 보안 절차로 따로 전달한다.
        파일을 열거나 고치지 않는다(읽기만).
 """
 import argparse
 import os
+import re
 import sys
 import zipfile
 
+# 국가기록원 「암호설정 등 내용열람 불가 전자기록물 처리방안 연구」(2018) 국내 DRM 헤더 분석:
+#   소프트캠프 Document Security — 파일 헤더 SCD0002·SCD0003·SCD0004, 마크애니 Document SAFER — 'Document SAFER', 파수닷컴 — '…fasoo'
+#   (연구 결론: 헤더로 제조사를 완전히 식별하지는 못함 — 걸리지 않았다고 DRM이 없다는 뜻은 아님)
+DRM = [(rb"SCD000[2-4]", "소프트캠프 Document Security"), (rb"Document SAFER", "마크애니 Document SAFER"), (rb"(?i)fasoo", "파수 DRM")]
 CFB = b"\xd0\xcf\x11\xe0\xa1\xb1\x1a\xe1"
 U16 = lambda s: s.encode("utf-16-le")
 
@@ -40,7 +46,11 @@ def check(path):
         if os.path.getsize(path) == 0:
             return "확인 필요", "0바이트"
         with open(path, "rb") as f:
-            sig = f.read(8)
+            head = f.read(4096)
+        sig = head[:8]
+        for rx, vendor in DRM:
+            if re.search(rx, head):
+                return "암호화", f"문서 DRM 의심({vendor}) — 해당 DRM 시스템·마스터키로 복호화 협의"
         if sig.startswith(b"%PDF"):
             data = read_head_tail(path)
             return ("암호화", "PDF /Encrypt") if b"/Encrypt" in data else ("아님", "PDF")
