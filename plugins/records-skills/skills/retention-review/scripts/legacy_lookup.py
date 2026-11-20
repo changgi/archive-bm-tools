@@ -66,6 +66,8 @@ def main() -> int:
     with open(ASSET, encoding="utf-8-sig") as f:
         for r in csv.DictReader(f):
             table.setdefault((r["판"], r["분류번호"]), []).append(r)
+    with open(os.path.join(os.path.dirname(ASSET), "gongmunseo_cls_1979.csv"), encoding="utf-8-sig") as f:
+        cls79 = {r["분류번호"]: r for r in csv.DictReader(f)}
     if a.list.lower().endswith((".xlsx", ".xlsm")):
         from openpyxl import load_workbook
         rows = [["" if v is None else str(v).strip() for v in r] for r in load_workbook(a.list, read_only=True, data_only=True).active.iter_rows(values_only=True)]
@@ -95,7 +97,13 @@ def main() -> int:
                    "2000년 이후": "2000년 이후 — 기관 기록물분류기준표(2012 공개본)·기록관리기준표 확인"}[ed]
             ws.append([n, g("번호"), g("코드"), g("연도"), g("제목"), ed or "", "", "", "", cur, msg])
             continue
-        if ed in ("1964", "1979"):
+        sub, sub_miss = None, ""
+        if ed == "1979" and re.match(r"^\s*\d{3,4}\s*-\s*\d{1,2}", g("코드")):
+            b, d = re.findall(r"\d+", g("코드"))[:2]
+            code, sub = b, cls79.get(f"{b}-{d}")
+            if not sub:
+                sub_miss = f" · 세부번호 {b}-{d}는 1979 정부공문서분류표에 없음"
+        elif ed in ("1964", "1979"):
             code = re.sub(r"\D", "", g("코드"))
         elif len(code) < 5:
             code = code.ljust(5, "0")
@@ -107,6 +115,12 @@ def main() -> int:
         fn = items[0]["기능"]
         cand = [i for i in items if i["단위사안"]]
         tt = tokens(g("제목"))
+        if sub:  # 1979 정부공문서분류표 세부번호: 세부기능 이름으로 후보를 좁히고 그 이름도 제목 낱말로 본다
+            names = {re.sub(r"\s", "", x) for x in (sub["기능명칭"], sub["상위 세부기능"]) if x}
+            narrowed = [i for i in cand if any(nm in re.sub(r"\s", "", i["기능"]) for nm in names)]
+            cand = narrowed or cand
+            tt |= tokens(sub["기능명칭"])
+            fn = f"{fn} › {sub['상위 세부기능'] + ' › ' if sub['상위 세부기능'] else ''}{sub['기능명칭']}"
         scored = sorted(cand, key=lambda i: -overlap(tt, i["단위사안"]))
         hit = [i for i in scored if overlap(tt, i["단위사안"])][:5] or scored[:5]
         show = " / ".join(f"{i['단위사안'][:30]}({i['보존기간']})" for i in hit)
@@ -117,13 +131,14 @@ def main() -> int:
         if cur in RANK and best in RANK and RANK[cur] < RANK[best]:
             judge += f" — 지금 보존기간({cur})이 당시 기준보다 짧음, 재평가 때 확인"
             flagged += 1
+        judge += sub_miss
         if any(i["보존기간"] == "조기호표" for i in hit):
             judge += " · [☆] 조기호표 적용 항목 있음"
         ws.append([n, g("번호"), g("코드"), g("연도"), g("제목"), ed, fn, show, longest, cur, judge])
     s = wb.create_sheet("판 구분")
-    for row in (["생산연도", "적용 판", "비고"], ["~1963", "정부처무규정(1949~1955)", "이 스크립트 범위 밖"],
+    for row in (["생산연도", "적용 판", "비고"], ["~1963", "정부처무규정(1949 대통령훈령 제1호)", "제69조 갑 영구·을 10년·병 3년·정 1년(표 없음)"],
                 ["1964~1978", "공문서종별보존기간책정기준표 1964", "한자 표기, 분류번호 3~4자리"],
-                ["1979~1984", "공문서보존기간종별책정기준표 1979(총리령 제223호 별표)", "영구(갑)·(을), 준영구는 규칙 제2조③의 하한 기간(아래)"],
+                ["1979~1984", "공문서보존기간종별책정기준표 1979(총리령 제223호 별표)", "영구(갑)·(을), 준영구는 규칙 제2조③의 하한 기간(아래). 세부번호(예 111-24)는 정부공문서분류표(총리령 제222호)로 풀이"],
                 ["1979 준영구", "인사발령 발령 후 15년 · 훈령·예규·방침·기준 폐지 후 5년 · 정책·계획 완료 후 3년 · 허가·인가 취소·만료 후 · 인사기록 사망 후 5년 · 기타 기관장 인정 기간(10년 미만이면 10년), 10년 지나면 3년마다 점검", "규칙 제2조③④"],
                 ["1985~1991", "공문서 분류번호 및 보존기간표 1985", ""], ["1992~1996", "공문서 분류번호 및 보존기간표 1992", "조기호표 별도"],
                 ["1997~1999", "공문서 분류번호 및 보존기간표 1997", "[ ] 생산·( ) 접수·[☆] 조기호표"], ["2000~", "기록물분류기준표(기관별)", "이 스크립트 범위 밖"],
