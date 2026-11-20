@@ -570,6 +570,14 @@ def main():
     pairs = {(r[0], r[3]): r[7] for r in simr if r[0]}
     check("기준표 유사·중복 단위과제(자치단체 기준표 빅데이터 연구): 보존기간 다른 유사 과제·중복 생성 의심", "보존기간 다름" in str(pairs.get(("V1", "V2")))
           and "중복" in str(pairs.get(("V3", "V4"))) and not any("V5" in k for k in pairs), os_ + str(pairs))
+    xlsx(f"{t}/기준표정비.xlsx", [["단위과제코드", "단위과제명", "처리과", "기능유형", "단위과제카드", "업무설명", "보존기간", "보존기간책정사유", "생산건수"],
+        ["T1", "업무계획및성과관리", "가과", "과단위공통", "정책 및 학술 연구과제 관리", "업무계획", "5년", "별표1", "12"],
+        ["T2", "서무", "가과", "과단위공통", "서무", "서무", "3년", "별표1", "0"],
+        ["T3", "지역발전 기본계획 수립", "나과", "기관고유", "지역발전 기본계획 수립", "지역발전 기본계획을 수립", "10년", "별표1", "3"]])
+    cfx, ofx = run([S("records-schedule-check", "scripts", "schedule_check.py"), f"{t}/기준표정비.xlsx", "-o", f"{t}/산출/기준표정비.xlsx"])
+    fxs = " ".join(str(c) for r in openpyxl.load_workbook(f"{t}/산출/기준표정비.xlsx")["정비 문제유형"].iter_rows(values_only=True) for c in r if c)
+    check("기준표 정비 문제유형(중앙 기준표 개선 지원 사업): ① 고유 과제 없음·①-1 카드 분리·③ 무기록·⑥ 과소 책정",
+          "① 고유업무 있으나" in fxs and "①-1" in fxs and "③ 무기록" in fxs and "⑥ 보존기간 과소" in fxs and "나과" not in fxs.split("⑥")[0].split("①")[0], ofx + fxs[:500])
 
     # 국가기록원 공식 생산현황 통보서식 채우기
     form = S("production-status-report", "assets", "2024년도기록물생산현황통보서식.xlsx")
@@ -1232,6 +1240,22 @@ def main():
                              ["가상위원회", "조사과", "조사 결과", "1", "2025", "영구", "문서", "비공개", "", ""],
                              ["가상위원회", "홍보과", "행사 사진", "120", "2025", "준영구", "사진", "공개", "", ""],
                              ["가상위원회", "총무과", "현판", "1", "2024", "", "행정박물", "", "", ""]])
+    xlsx(f"{t}/통합A.xlsx", [["부서명", "기능유형", "단위과제명", "단위과제설명", "보존기간", "단위과제카드", "업무담당자", "보존기간확정여부"],
+        ["감사담당관", "공통", "자체감사실시", "자체감사", "5년", "감사카드", "김", "Y"], ["기획과", "고유", "지역발전 기본계획 수립", "계획", "10년", "카드", "이", "Y"],
+        ["기획과", "고유", "지역발전 기본계획 수립", "계획", "10년", "카드", "이", "Y"], ["총무과", "공통", "청사관리", "청사", "10년", "", "", "N"]])
+    xlsx(f"{t}/통합B.xlsx", [["부서명", "기능유형", "단위과제명", "단위과제설명", "보존기간", "단위과제카드", "업무담당자", "보존기간확정여부"],
+        ["감사실", "공통", "자체 감사 실시", "감사", "10년", "c", "박", "Y"], ["정책과", "공통", "지역발전기본계획수립", "계획", "30년", "c", "최", "Y"],
+        ["교통과", "고유", "버스노선 조정", "노선", "10년", "c", "정", "Y"]])
+    cms, oms = run([S("agency-closure", "scripts", "merge_schedule.py"), f"{t}/통합A.xlsx", f"{t}/통합B.xlsx", "--names", "가시,나시", "--type", "지방자치단체", "-o", f"{t}/산출/통합기록관리표.xlsx"])
+    wm = openpyxl.load_workbook(f"{t}/산출/통합기록관리표.xlsx") if os.path.exists(f"{t}/산출/통합기록관리표.xlsx") else None
+    cmpr = {(r[1] or "") + "|" + (r[6] or ""): r for r in wm["단위과제비교표"].iter_rows(min_row=2, values_only=True)} if wm else {}
+    prer = " ".join(str(c) for r in wm["사전 정비 대상"].iter_rows(values_only=True) for c in r if c) if wm else ""
+    au = cmpr.get("자체감사실시|자체 감사 실시", [""] * 17)
+    check("기관 통폐합 통합 기록관리표: 사전 정비(중복·카드 없음·미확정)·③⑦⑥ 문제유형·준칙 준용·단독 업무",
+          cms == 1 and "③ 명칭" in str(au[13]) and "⑦" in str(au[13]) and "⑥ 가시(5년)" in str(au[13]) and au[16] == "10년" and "자체감사실시" in str(au[15])
+          and "같은 부서 안 중복" in prer and "단위과제카드 없음" in prer and "미확정" in prer
+          and any("나시에만" in str(r[13]) for r in cmpr.values()) and cmpr.get("지역발전 기본계획 수립|지역발전기본계획수립", [""] * 17)[16] == "30년", oms + str(au))
+
     cch, och = run([S("agency-closure", "scripts", "closure_handover.py"), f"{t}/폐지목록.xlsx", "--type", "폐지-승계없음", "--org", "가상위원회",
                     "--to", "가상기록원", "--done", "2026-12-15", "-o", f"{t}/산출/인계인수.xlsx"])
     ok_ch = False
