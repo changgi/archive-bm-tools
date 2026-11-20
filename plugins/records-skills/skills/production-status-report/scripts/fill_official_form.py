@@ -276,7 +276,19 @@ def main() -> int:
                     c["서면무록"] += 1
             KINDS9 = ("법률", "대통령령", "총리령", "부령", "조례", "규칙", "훈령", "예규", "고시")
             body9 = []
+            jj = {}
+            jp = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "assets", "jijeong_2026.csv")
+            if os.path.exists(jp):
+                import csv as _csv
+                with open(jp, encoding="utf-8-sig") as fh:
+                    for r in _csv.DictReader(fh):
+                        jj[re.sub(r"\s|\(.*?\)", "", r["대상회의"])] = r
             for b in bodies:
+                kn = re.sub(r"\s|\(.*?\)", "", b.get("회의체명", ""))
+                hitj = jj.get(kn) or next((v for k, v in jj.items() if len(kn) >= 6 and (k.endswith(kn) or kn.endswith(k))), None)
+                if hitj and "지정" not in b.get("속기록지정", ""):
+                    b["속기록지정"] = "지정회의"
+                    notes.append(f"서식 9 '{b.get('회의체명', '')[:20]}': 국가기록원 '속기록 생산의무 지정회의 현황'('26. 4. 1., {hitj['소관기관']})에 있음 — 속기록지정을 '지정회의'로 채움, 확인")
                 c, nm = agg[id(b)], b.get("회의체명", "")
                 chk = []
                 if b.get("근거구분") and not any(k in b["근거구분"] for k in KINDS9):

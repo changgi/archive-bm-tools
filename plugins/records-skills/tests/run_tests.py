@@ -821,6 +821,14 @@ def main():
           and s9["P7"].value == 2 and s9["Q7"].value == 1 and s8["C8"].value == 2 and s8["C10"].value == 2
           and "정보공개법" in o9 and "서면 개최 1회에 회의록 0건" in o9 and "지정회의인데 속기록·녹음 1건" in o9 and "YYYY.MM.DD" in o9
           and "지방공무원법" not in o9, o9)
+    xlsx(f"{t}/회의체j.xlsx", [["회의체명", "속기록지정", "부서명", "회의호수", "근거구분", "근거명칭", "근거조항", "최초구성일"],
+        ["고용정책심의회", "", "고용정책과", "5", "법률", "고용정책 기본법", "제10조", "2005.03.19"]])
+    xlsx(f"{t}/회의j.xlsx", [["회의명", "회의종류", "개최방식", "회의록건수", "속기록건수"], ["고용정책심의회 제1차", "5", "대면", "1", "0"]])
+    cj9, oj9 = run([S("production-status-report", "scripts", "fill_official_form.py"), f"{t}/생산등록.xlsx", "--form", form, "--year", "2025",
+                    "--meetings", f"{t}/회의j.xlsx", "--bodies", f"{t}/회의체j.xlsx", "-o", f"{t}/산출/통보서식_지정.xlsx"])
+    sj9 = openpyxl.load_workbook(f"{t}/산출/통보서식_지정.xlsx")["서식 9"]
+    check("서식 9 지정회의 자동 표시: 국가기록원 속기록 생산의무 지정회의 현황('26. 4. 1., 97개)과 대조", "지정회의 현황" in oj9 and "고용노동부" in oj9
+          and "지정회의인데 속기록·녹음 0건" in oj9 and sj9["B5"].value == "지정회의", oj9)
 
     # 한 번에 돌리기(run_all.py): 입력 폴더 → 점검 → 서식 1~9 → 통보전_확인.md, 비밀 파일은 건너뜀
     ind = f"{t}/통보입력"
