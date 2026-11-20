@@ -472,6 +472,7 @@ python skills/fixity-check/scripts/fixity.py verify 보존 산출/기준선.csv 
 ---
 
 # 🔓 공개·활용
+- **시청각 내용 검사**(`av_qc.py --content`): 블랙·정지·무음·클리핑 구간과 원인·해결(국가기록원 시청각물 품질오류 연구).
 
 ## 18. access-request — 정보공개 처리 기한
 

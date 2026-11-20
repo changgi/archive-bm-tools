@@ -1140,6 +1140,15 @@ def main():
         ar_ = {r[0]: r for r in list(csv.reader(open(f"{t}/산출/av.csv", encoding="utf-8-sig")))[1:]} if os.path.exists(f"{t}/산출/av.csv") else {}
         check("시청각 디지털화 NAK 26: HD FFV1/FLAC 통과, 720p·0.4Mbps·44.1kHz 재작업",
               ar_.get("hd.mkv", [""])[-1] == "통과" and ar_.get("low.mp4", [""])[-1] == "재작업 후보" and "10Mbps" in ar_.get("low.mp4", [""] * 12)[10], oav)
+        av2 = f"{t}/av2"
+        os.makedirs(av2)
+        ff("-f", "lavfi", "-i", "color=black:s=320x240:d=3", "-f", "lavfi", "-i", "testsrc=s=320x240:d=3", "-f", "lavfi", "-i", "anullsrc=r=48000:cl=mono",
+           "-filter_complex", "[0:v][1:v]concat=n=2:v=1:a=0[v]", "-map", "[v]", "-map", "2:a", "-t", "6", "-c:v", "ffv1", "-c:a", "flac", f"{av2}/blk.mkv")
+        ff("-f", "lavfi", "-i", "sine=f=440:r=48000:d=3,volume=20", "-c:a", "flac", "-sample_fmt", "s32", f"{av2}/loud.flac")
+        run([S("scan-qc", "scripts", "av_qc.py"), av2, "--kind", "비디오SD", "--content", "-o", f"{t}/산출/av2.csv"])
+        cc_ = [(r[0], r[1]) for r in list(csv.reader(open(f"{t}/산출/av2_내용검사.csv", encoding="utf-8-sig")))[1:]] if os.path.exists(f"{t}/산출/av2_내용검사.csv") else []
+        check("시청각 내용 검사 --content: 블랙·정지·무음·클리핑과 원인(시청각물 품질오류 연구)",
+              {("blk.mkv", "블랙"), ("blk.mkv", "무음"), ("loud.flac", "클리핑")} <= set(cc_), str(cc_))
 
     # 처분결과 관리·폐기 집행 점검(NAK 5-1 7.5~8.4)
     xlsx(f"{t}/심의결과.xlsx", [["관리번호", "제목", "생산부서", "보존기간", "종료연도", "심의 결과", "재책정 보존기간", "보류기간", "사유", "기록물형태"],
