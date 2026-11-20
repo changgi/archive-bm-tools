@@ -1225,6 +1225,12 @@ def main():
         ok_rp = ([r[1] for r in rp_][:2] == ["C-3", "C-1"] and byp["C-1"][7] == "심화복원" and byp["C-1"][8] == "대상" and byp["C-2"][7] == "예방복원"
                  and byp["C-5"][7] == "예방복원" and byp["C-4"][7] == "보존 관리" and byp["C-4"][8] == "대상" and byp["C-3"][7] == "응급복원")
     check("복원처리 NAK 25: 응급→심화(3등급·상·상)→예방(3등급·대형), pH 6.5 이하·바스러짐 탈산", ok_rp, orp)
+    xlsx(f"{t}/탈산이력.xlsx", [["관리번호", "제목", "훼손도", "pH", "탈산연도", "상태"],
+                             ["T-1", "가", "2등급", "6.2", "2008", ""], ["T-2", "나", "2등급", "", "2010", "백화"], ["T-3", "다", "2등급", "8.5", "2012", ""]])
+    ctd, otd = run([S("preservation-inspection", "scripts", "restoration_plan.py"), f"{t}/탈산이력.xlsx", "-o", f"{t}/산출/탈산이력.xlsx"])
+    td_ = {r[1]: " ".join(str(c) for c in r if c) for r in openpyxl.load_workbook(f"{t}/산출/탈산이력.xlsx")["복원처리 계획"].iter_rows(min_row=2, values_only=True)} if ctd == 0 else {}
+    check("탈산 처리 기록물 사후평가(국가기록원 탈산 상태평가 연구): pH 6.8 미만 재탈산, 표본 3곳 측정, 백화현상",
+          "6.8" in td_.get("T-1", "") and "1/4" in td_.get("T-2", "") and "백화현상" in td_.get("T-2", "") and "재탈산" not in td_.get("T-3", ""), otd + str(td_))
 
     # 목록 작성·디지털화 검수(NAK 23)
     xlsx(f"{t}/색인검수.xlsx", [["철관리번호", "철제목", "권호", "보존기간", "등록번호", "건제목", "생산일자", "시작쪽", "끝쪽", "작업자", "작업일"],
