@@ -50,6 +50,7 @@ body:
         - agency-closure
         - listing-qa
         - archival-description
+        - official-doc-check
         - 훅(비밀·원본 보호)
         - 잘 모름
     validations:

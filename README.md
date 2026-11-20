@@ -1,6 +1,6 @@
 <div align="center">
 
-<img src=".github/assets/banner.svg" alt="archive-bm-tools — 기록관리 담당자를 위한 Claude 스킬 39종" width="100%">
+<img src=".github/assets/banner.svg" alt="archive-bm-tools — 기록관리 담당자를 위한 Claude 스킬 40종" width="100%">
 
 **공공기관 기록관리 담당자를 위한 Claude 플러그인 마켓플레이스**
 
@@ -8,8 +8,8 @@
 반복되는 점검과 서식 작성은 스크립트가, 판단과 제출은 사람이.
 
 ![version](https://img.shields.io/badge/records--skills-v2.13.0-1f6feb)
-![skills](https://img.shields.io/badge/스킬-39종-2da44e)
-![tests](https://img.shields.io/badge/시험-72%2F72%20통과-2da44e)
+![skills](https://img.shields.io/badge/스킬-40종-2da44e)
+![tests](https://img.shields.io/badge/시험-73%2F73%20통과-2da44e)
 ![python](https://img.shields.io/badge/Python-3.10%2B-3776ab?logo=python&logoColor=white)
 ![law](https://img.shields.io/badge/근거-시행령%202026.8.25.-8250df)
 ![license](https://img.shields.io/badge/코드-MIT-lightgrey)
@@ -57,7 +57,7 @@
 
 ```mermaid
 flowchart LR
-    A["📝 생산·등록<br/>13종"] --> B["📦 이관·인수<br/>5종"]
+    A["📝 생산·등록<br/>14종"] --> B["📦 이관·인수<br/>5종"]
     B --> C["🛡️ 보존<br/>10종"]
     C --> D["🔓 공개·활용<br/>3종"]
     D --> E["⚖️ 평가·폐기<br/>3종"]
@@ -104,12 +104,12 @@ flowchart LR
 
 ---
 
-## 🧰 스킬 39종
+## 🧰 스킬 40종
 
-> 스킬마다 준비할 파일·말하는 법·받는 결과·주의할 점은 **[스킬 39종 사용법](docs/skills.md)**, 언제 무엇을 쓰는지는 **[연간 업무 달력](docs/calendar.md)** 에 있습니다.
+> 스킬마다 준비할 파일·말하는 법·받는 결과·주의할 점은 **[스킬 40종 사용법](docs/skills.md)**, 언제 무엇을 쓰는지는 **[연간 업무 달력](docs/calendar.md)** 에 있습니다.
 
 <details open>
-<summary><b>📝 생산·등록 (13)</b></summary>
+<summary><b>📝 생산·등록 (14)</b></summary>
 
 | 스킬 | 하는 일 |
 |---|---|
@@ -121,6 +121,7 @@ flowchart LR
 | [task-suggest](plugins/records-skills/skills/task-suggest) | 제목으로 공통업무 단위과제·보존기간 후보 |
 | [records-schedule-check](plugins/records-skills/skills/records-schedule-check) | 기록관리기준표 관리항목 점검(NAK 4:2025) |
 | 🆕 [listing-qa](plugins/records-skills/skills/listing-qa) | 목록 작성·디지털화 사업 검수 — 면표시·편철 순서·쪽수↔이미지·작업자별 표본 3%·99.9% — NAK 23 |
+| 🆕 [official-doc-check](plugins/records-skills/skills/official-doc-check) | 공문서 표기 점검 — 날짜·시간·금액(한글 대조)·항목 기호·붙임·끝 표시 — 행정업무규정 제7조·시행규칙 제2·4조 |
 | 🆕 [archival-description](plugins/records-skills/skills/archival-description) | 기록물 기술 점검 — 필수요소 6개, 일자 표기·연호 환산, 계층별 일자 — NAK 13 |
 | [typed-records-check](plugins/records-skills/skills/typed-records-check) | 회의록 구성 요소 8가지, 시청각 생산정보 |
 | [publications-check](plugins/records-skills/skills/publications-check) | 발간등록번호·발간주기·송부 책자 3부 |
@@ -250,7 +251,7 @@ flowchart LR
 python plugins/records-skills/tests/run_tests.py
 ```
 
-72개(veraPDF가 PATH에 있으면 73개, ffmpeg가 없으면 1개 적음) — 스킬 39종의 주요 계산과, 보호 훅이 Windows처럼 `python3`가 없거나 가짜일 때도 꺼지지 않는지까지 확인합니다. 필요 패키지: `openpyxl` `pypdf` `pikepdf` `pillow` `numpy` (선택: `python-docx` `python-hwpx` `holidays`, LibreOffice). Python 3.11·3.12·3.13에서 확인했고, [GitHub Actions](.github/workflows/test.yml)로 3.10~3.13을 돌립니다.
+73개(veraPDF가 PATH에 있으면 74개, ffmpeg가 없으면 1개 적음) — 스킬 40종의 주요 계산과, 보호 훅이 Windows처럼 `python3`가 없거나 가짜일 때도 꺼지지 않는지까지 확인합니다. 필요 패키지: `openpyxl` `pypdf` `pikepdf` `pillow` `numpy` (선택: `python-docx` `python-hwpx` `holidays`, LibreOffice). Python 3.11·3.12·3.13에서 확인했고, [GitHub Actions](.github/workflows/test.yml)로 3.10~3.13을 돌립니다.
 
 ---
 

@@ -1219,6 +1219,22 @@ def main():
                  and tot[5][6] == 1 and tot[5][7] == 1 and len(p11) == 1)
     check("정보공개 서식: 별표 수수료(A3 첫장+추가·지움=사본 동일·열람 1시간 초과), 처리대장·이의신청대장, 운영실태 총괄·결정기간·사유별", ok_ff, off)
 
+    # 공문서 표기(행정업무규정 제7조, 시행규칙 제2조·제4조)
+    with open(f"{t}/공문.txt", "w", encoding="utf-8") as fh:
+        fh.write("행사 계획\n1. 일시: 2026년 11월 20일 오후 2시 30분\n2. 장소: 대회의실\n4. 예산: 113,560원\n  가. 인쇄비: 금50,000원(금오만원)\n"
+                 "  나. 다과비: 금63,560원(금육만삼천원)\n  라. 기타\n    1) 회의 2026-12-01\n    (1) 세부\n\n붙임  계획서 1부.\n      2. 명단\n본문 끝  끝\n")
+    with open(f"{t}/공문2.txt", "w", encoding="utf-8") as fh:
+        fh.write("회의 개최 알림\n1. 일시: 2026. 11. 20. 14:30\n2. 예산: 금113,560원(금일십일만삼천오백육십원)\n  가. 장소\n  나. 참석\n\n붙임  1. 계획서 1부.\n      2. 명단 1부. 끝.\n")
+    cdk, odk = run([S("official-doc-check", "scripts", "doc_check.py"), f"{t}/공문.txt", f"{t}/공문2.txt", "-o", f"{t}/산출/공문점검.xlsx"])
+    ok_dk = False
+    if os.path.exists(f"{t}/산출/공문점검.xlsx"):
+        dk = [(r[0], r[2], r[4]) for r in openpyxl.load_workbook(f"{t}/산출/공문점검.xlsx")["점검 결과"].iter_rows(min_row=2, values_only=True)]
+        txt = " | ".join(f"{a_}:{b_}:{c_}" for a_, b_, c_ in dk)
+        ok_dk = (cdk == 1 and "공문.txt:날짜:2026. 11. 20." in txt and "공문.txt:시간:14:30" in txt and "금일십일만삼천오백육십원" in txt
+                 and "금육만삼천오백육십원" in txt and "공문.txt:항목 순서:1. 단계 2 다음은 3번째" in txt and "가. 단계 2 다음은 3번째" in txt
+                 and "1) 다음 하위 항목은 가)" in txt and "공문.txt:붙임" in txt and "끝." in txt and not any(f_ == "공문2.txt" for f_, _, _ in dk))
+    check("공문서 표기: 날짜·시간·금액(한글 대조), 항목 순서·단계, 붙임 구분·수량, 끝 표시 — 바른 문서는 제안 0", ok_dk, odk + txt[:300] if os.path.exists(f"{t}/산출/공문점검.xlsx") else odk)
+
     # 플러그인 훅 명령: Windows(Git Bash)처럼 python3가 없거나 가짜일 때도 보호가 꺼지지 않는지
     hj = os.path.join(ROOT, "hooks", "hooks.json")
     bash = shutil.which("bash")

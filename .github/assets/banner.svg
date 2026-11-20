@@ -1,4 +1,4 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="300" viewBox="0 0 1200 300" role="img" aria-label="archive-bm-tools — 기록관리 담당자를 위한 Claude 스킬 39종">
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="300" viewBox="0 0 1200 300" role="img" aria-label="archive-bm-tools — 기록관리 담당자를 위한 Claude 스킬 40종">
   <defs>
     <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
       <stop offset="0" stop-color="#0d2b45"/>
@@ -20,6 +20,6 @@
     <path d="M-13 1 L-4 10 L14 -9" fill="none" stroke="#fff" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>
   </g>
   <text x="70" y="118" font-family="'Noto Sans CJK KR','Malgun Gothic','Apple SD Gothic Neo',sans-serif" font-size="60" font-weight="700" fill="#ffffff">archive-bm-tools</text>
-  <text x="72" y="172" font-family="'Noto Sans CJK KR','Malgun Gothic','Apple SD Gothic Neo',sans-serif" font-size="30" fill="#d6e8ff">기록관리 담당자를 위한 Claude 스킬 39종</text>
+  <text x="72" y="172" font-family="'Noto Sans CJK KR','Malgun Gothic','Apple SD Gothic Neo',sans-serif" font-size="30" fill="#d6e8ff">기록관리 담당자를 위한 Claude 스킬 40종</text>
   <text x="72" y="222" font-family="'Noto Sans CJK KR','Malgun Gothic','Apple SD Gothic Neo',sans-serif" font-size="22" fill="#9ecbff">생산 · 이관 · 보존 · 공개 · 평가 · 폐기 — 점검은 스크립트가, 결정은 사람이</text>
 </svg>

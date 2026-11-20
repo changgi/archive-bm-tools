@@ -21,7 +21,8 @@ flowchart LR
 | **3~5월** | 생산현황 통보 서식 1~11 | [production-status-report](skills.md#1-production-status-report--생산현황-통보서식-111) 외 | "입력 폴더로 생산현황 통보서 만들어줘" |
 | | 회의록·시청각·간행물·행정박물 점검 | [typed-records-check](skills.md#8-typed-records-check--회의록시청각-점검), [publications-check](skills.md#9-publications-check--간행물-점검서식-7), [admin-artifacts-check](skills.md#10-admin-artifacts-check--행정박물-점검서식-56) | "간행물 송부 안 한 것 알려줘" |
 | | 비밀기록물 서식 10·11 (담당자 전용 장비) | [classified-records-check](skills.md#26-classified-records-check--비밀기록물-점검서식-1011) | (Claude 밖에서 직접 실행) |
-| **수시** | 정보공개 청구 기한 관리 | [access-request](skills.md#18-access-request--정보공개-처리-기한) | "이번 주 마감 청구 알려줘" |
+| **수시** | 기안문·보고서 결재 전 표기 점검 | [official-doc-check](skills.md#40-official-doc-check--공문서-표기-점검) | "이 기안문 공문서 표기 봐줘" |
+| | 정보공개 청구 기한 관리 | [access-request](skills.md#18-access-request--정보공개-처리-기한) | "이번 주 마감 청구 알려줘" |
 | | 부분공개 전 개인정보 찾기 | [pii-redact](skills.md#20-pii-redact--개인정보-찾기부분공개-가림-목록) | "개인정보 후보 찾아서 가림 목록 만들어줘" |
 | | 결과물 내보내기 전 검수 | [records-qa-gate](skills.md#3-records-qa-gate--내보내기-전-품질-관문) | "내보내도 되는지 검수해줘" |
 | **12월(다음 해 준비)** | 연간 업무 일정·캘린더, 기관장 보고 점검표 | [evaluation-readiness](skills.md#27-evaluation-readiness--기록관리-기관평가-준비) | "내년 기록관리 일정 캘린더로 만들어줘" |
