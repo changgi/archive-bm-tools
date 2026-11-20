@@ -45,6 +45,7 @@ body:
         - box-labels
         - vital-records
         - disaster-recovery
+        - security-disaster-plan
         - 훅(비밀·원본 보호)
         - 잘 모름
     validations:

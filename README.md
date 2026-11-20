@@ -1,6 +1,6 @@
 <div align="center">
 
-<img src=".github/assets/banner.svg" alt="archive-bm-tools — 기록관리 담당자를 위한 Claude 스킬 34종" width="100%">
+<img src=".github/assets/banner.svg" alt="archive-bm-tools — 기록관리 담당자를 위한 Claude 스킬 35종" width="100%">
 
 **공공기관 기록관리 담당자를 위한 Claude 플러그인 마켓플레이스**
 
@@ -8,8 +8,8 @@
 반복되는 점검과 서식 작성은 스크립트가, 판단과 제출은 사람이.
 
 ![version](https://img.shields.io/badge/records--skills-v2.13.0-1f6feb)
-![skills](https://img.shields.io/badge/스킬-34종-2da44e)
-![tests](https://img.shields.io/badge/시험-60%2F60%20통과-2da44e)
+![skills](https://img.shields.io/badge/스킬-35종-2da44e)
+![tests](https://img.shields.io/badge/시험-61%2F61%20통과-2da44e)
 ![python](https://img.shields.io/badge/Python-3.10%2B-3776ab?logo=python&logoColor=white)
 ![law](https://img.shields.io/badge/근거-시행령%202026.8.25.-8250df)
 ![license](https://img.shields.io/badge/코드-MIT-lightgrey)
@@ -58,7 +58,7 @@
 ```mermaid
 flowchart LR
     A["📝 생산·등록<br/>11종"] --> B["📦 이관·인수<br/>4종"]
-    B --> C["🛡️ 보존<br/>8종"]
+    B --> C["🛡️ 보존<br/>9종"]
     C --> D["🔓 공개·활용<br/>3종"]
     D --> E["⚖️ 평가·폐기<br/>3종"]
     N["🌐 새 유형<br/>기록 3종"] -.-> A
@@ -104,9 +104,9 @@ flowchart LR
 
 ---
 
-## 🧰 스킬 34종
+## 🧰 스킬 35종
 
-> 스킬마다 준비할 파일·말하는 법·받는 결과·주의할 점은 **[스킬 34종 사용법](docs/skills.md)**, 언제 무엇을 쓰는지는 **[연간 업무 달력](docs/calendar.md)** 에 있습니다.
+> 스킬마다 준비할 파일·말하는 법·받는 결과·주의할 점은 **[스킬 35종 사용법](docs/skills.md)**, 언제 무엇을 쓰는지는 **[연간 업무 달력](docs/calendar.md)** 에 있습니다.
 
 <details open>
 <summary><b>📝 생산·등록 (11)</b></summary>
@@ -140,7 +140,7 @@ flowchart LR
 </details>
 
 <details>
-<summary><b>🛡️ 보존 (8)</b></summary>
+<summary><b>🛡️ 보존 (9)</b></summary>
 
 | 스킬 | 하는 일 |
 |---|---|
@@ -151,7 +151,8 @@ flowchart LR
 | [stack-environment](plugins/records-skills/skills/stack-environment) | 서고 온습도 기록을 시행령 별표 6 기준(매체별)에 견줌, 이탈 시간, 서고 면적, 장비 점검표, 🆕 NAK 11 서고 점검표·권 수 환산·검·교정 주기 |
 | [box-labels](plugins/records-skills/skills/box-labels) | 보존상자 편성(생산연도·보존기간·단위과제별), 별표 6 상자 표지 PDF·HTML, 철당 100매 분권 후보 |
 | 🆕 [vital-records](plugins/records-skills/skills/vital-records) | 필수기록물 필수성 평가표(기능성·고유성·증거성), 보호기간 점검, 관리목록표, 복본·분산(10km) 점검, 10월 31일 검토 기한, 재난 뒤 피해 평가·업무복구 순서 — NAK 2-2 |
-| 🆕 [disaster-recovery](plugins/records-skills/skills/disaster-recovery) | 수해·화재 피해 종이기록물 응급복구 순서, 48시간 기한·즉시 냉동동결·곰팡이 분리, 포장 라벨, 재질별 건조 방법, 부속서 A·C·D·E, 대피 우선순위 — NAK 38 |
+| 🆕 [disaster-recovery](plugins/records-skills/skills/disaster-recovery) | 수해·화재 피해 종이기록물 응급복구 순서, 48시간 기한·즉시 냉동동결·곰팡이 분리, 포장 라벨, 재질별 건조 방법, 부속서 A·C·D·E, 대피 우선순위 — NAK 38, 필름·사진·테이프 등 종이 외 매체 — NAK 2-1 |
+| 🆕 [security-disaster-plan](plugins/records-skills/skills/security-disaster-plan) | 보안·재난관리 체크리스트, 위험평가표(발생가능성×위험도), 업무별 안전규칙, 임무카드·비상용품 점검, 재난 보고서, 영구기관 RTO·RPO — NAK 2-1 |
 
 </details>
 
@@ -230,7 +231,7 @@ flowchart LR
 | 공공기록물 관리에 관한 법률·시행령(2026. 8. 25. 개정)·시행규칙(2026. 9. 11. 개정) | 국가법령정보센터(law.go.kr) 원문 |
 | 「2026년 기록물관리 지침」 | 국가기록원(archives.go.kr) |
 | 생산현황 통보서식, 공통업무 보존기간 준칙 | 국가기록원 공개 자료 |
-| NAK 2-2:2025(v1.2) 필수기록물 선별·보호 · NAK 38:2024(v1.0) 재난 피해 종이기록물 응급복구 · NAK 11:2025(v2.0) 보존시설·장비·환경 기준 | 국가기록원 표준 원문 PDF (2026-11-20 내려받아 확인) |
+| NAK 2-1:2024(v1.2) 보안 및 재난관리 기준 · NAK 2-2:2025(v1.2) 필수기록물 선별·보호 · NAK 38:2024(v1.0) 재난 피해 종이기록물 응급복구 · NAK 11:2025(v2.0) 보존시설·장비·환경 기준 | 국가기록원 표준 원문 PDF (2026-11-20 내려받아 확인) |
 | NAK 10:2026(v1.5) 확정 · NAK 17:2026(v1.4)안 · NAK 39:2026(v1.0) 제정(안) | 국가기록원 고시·예고 |
 | 시행령 별표 1~6(보존기간·보존방법·상태검사·행정박물·시설환경) · 시행규칙 별표 1~16·별지 제1~25호 | 국가법령정보센터 별표·서식 원문(2026-11-20 확인 — [기록](plugins/records-skills/skills/records-qa-gate/references/law-forms-2026-11-20.md)) |
 | 국가기록원 행정규칙(고시 제2025-10호로 재고시된 NAK 표준, 부기·정정 처리 기준 훈령 제224호 등) · 간행물 발간등록 안내 | 국가법령정보센터 행정규칙, 국가기록포털 |
@@ -245,7 +246,7 @@ flowchart LR
 python plugins/records-skills/tests/run_tests.py
 ```
 
-60개(veraPDF가 PATH에 있으면 61개) — 스킬 34종의 주요 계산과, 보호 훅이 Windows처럼 `python3`가 없거나 가짜일 때도 꺼지지 않는지까지 확인합니다. 필요 패키지: `openpyxl` `pypdf` `pikepdf` `pillow` `numpy` (선택: `python-docx` `python-hwpx` `holidays`, LibreOffice). Python 3.11·3.12·3.13에서 확인했고, [GitHub Actions](.github/workflows/test.yml)로 3.10~3.13을 돌립니다.
+61개(veraPDF가 PATH에 있으면 62개) — 스킬 35종의 주요 계산과, 보호 훅이 Windows처럼 `python3`가 없거나 가짜일 때도 꺼지지 않는지까지 확인합니다. 필요 패키지: `openpyxl` `pypdf` `pikepdf` `pillow` `numpy` (선택: `python-docx` `python-hwpx` `holidays`, LibreOffice). Python 3.11·3.12·3.13에서 확인했고, [GitHub Actions](.github/workflows/test.yml)로 3.10~3.13을 돌립니다.
 
 ---
 
