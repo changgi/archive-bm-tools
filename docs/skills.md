@@ -393,6 +393,7 @@ python skills/transfer-reconcile/scripts/integrated_transfer.py 등록정보.xls
 
 🆕 **veraPDF가 없을 때(NAK 30)** `python skills/preservation-convert/scripts/pdfa_precheck.py 산출/보존포맷/` — 암호화·LZW·내장 파일·OutputIntent·폰트 미내장·부분집합 CharSet/CIDSet·투명도·금지 주석·JavaScript·XMP 선언을 사전 점검합니다. '사전 점검 통과'는 공식 적합이 아닙니다.
 ---
+- **변환 시기**: 시행령 제36조②(기산일+5년 이상 보존 → 6년 전 표준보존패키지), 부칙 제9조 2016~2020년분 연도별 특례.
 
 ## 15. preservation-inspection — 정수점검·상태검사
 
@@ -494,6 +495,7 @@ python skills/fixity-check/scripts/fixity.py verify 보존 산출/기준선.csv 
 올해 정보공개 청구 목록으로 처리대장이랑 운영실태 통계 만들어줘. 수수료도 계산해줘.
 ```
 ---
+- **연장 사유·심의회**: 선택 열로 시행령 제7조 연장 사유 4가지, 법 제18조② 이의신청 심의회 미개최 사유를 점검.
 
 ## 19. disclosure-reclass — 공개 재분류 심의 대상
 
@@ -682,6 +684,7 @@ python fill_official_form.py 등록정보.xlsx --form 통보서식.xlsx --year 2
 내년 기록관리 연간 일정 만들어서 캘린더에 넣을 수 있게 해줘. 기관장 보고용 점검표도.
 ```
 ---
+- **수행업무 점검표**(`task_checklist.py`): 「2026년 기록물관리 지침」 처리과 28·기록관 24 수행업무를 O·X로, 수행률·미수행과 도움 되는 스킬, 법령 변경 비고.
 
 ## 28. hwpx-report — 한글(HWPX) 보고서·공문 서식
 
@@ -801,6 +804,7 @@ python skills/records-forms/scripts/make_form.py hold --info 기관정보.json -
 **알아 둘 점** 제출·결재·직인은 사람이 합니다. 한글 파일이 필요하면 [28번 hwpx-report](#28-hwpx-report--한글hwpx-보고서공문-서식)로 넘기세요.
 
 ---
+- **별지 제5호·제14호**(`microfilm`·`limited`·`review`): 마이크로필름 촬영계획서, 비공개기록물 제한적 열람신청서·재심의 요청서(주민등록번호는 파일에 안 적음).
 - **별지 제1호의2**(`extend`, 2027. 1. 1. 시행): 기록물 이관 기간 연장·일정 연기 목록 — 처리과→기록관, 기록관→영구기록물관리기관 협의에 첨부.
 
 
@@ -938,6 +942,7 @@ E 드라이브 DVD를 간이 검사해줘. 복사본은 산출/매체검사/DVD-
 **알아 둘 점** 광디스크·하드디스크 점검 주기 1년은 이 킷의 기본값입니다(표준은 '주기적'으로만 정함). 간이 검사는 매체를 읽기만 하고, '이상 없음'은 검사한 그 시점에 한합니다.
 
 ---
+- **광디스크 오류율**(`disc_errors.py`): DVD PI sum 8(ISO/IEC 29121·DA/T 38), BD R-SER(JIIMA), CD BLER로 등급·다음 검사일(국가기록원 매체 기준 연구).
 
 ## 37. agency-closure — 한시·폐지기관 인계인수
 

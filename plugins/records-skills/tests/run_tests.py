@@ -421,6 +421,19 @@ def main():
     code, out = run([S("access-request", "scripts", "foi_deadlines.py"), f"{t}/청구2.xlsx", "--today", "2026-11-19", "-o", f"{t}/산출/foi2.xlsx"])
     txt2 = " ".join(str(r[2]) for r in openpyxl.load_workbook(f"{t}/산출/foi2.xlsx")["결정 점검"].iter_rows(min_row=2, values_only=True))
     check("정보공개: 제3자 요청 시 30일 간격(제21조③)·결정 없이 20일 경과(제18조①)", "30일 간격 미달" in txt2 and "이의신청 가능" in txt2, txt2)
+    xlsx(f"{t}/청구3.xlsx", [["접수번호", "청구일", "연장통지일", "연장사유", "결정일", "결정", "이의신청일", "이의결정일", "심의회개최", "미개최사유"],
+                            ["H-1", "2026-09-01", "2026-09-10", "제3자 의견청취 필요", "2026-09-20", "공개", "", "", "", ""],
+                            ["H-2", "2026-09-01", "2026-09-10", "", "2026-09-20", "공개", "", "", "", ""],
+                            ["H-3", "2026-09-01", "2026-09-10", "담당자 출장", "2026-09-20", "공개", "", "", "", ""],
+                            ["H-4", "2026-09-01", "", "", "2026-09-08", "비공개", "2026-09-20", "2026-09-25", "N", ""],
+                            ["H-5", "2026-09-01", "", "", "2026-09-08", "비공개", "2026-09-20", "2026-09-25", "N", "단순 반복 청구"]])
+    run([S("access-request", "scripts", "foi_deadlines.py"), f"{t}/청구3.xlsx", "--today", "2026-11-19", "-o", f"{t}/산출/foi3.xlsx"])
+    r3 = {}
+    for r_ in openpyxl.load_workbook(f"{t}/산출/foi3.xlsx")["결정 점검"].iter_rows(min_row=2, values_only=True):
+        r3.setdefault(r_[0], []).append(str(r_[2]))
+    check("정보공개 연장 사유(시행령 제7조)·이의신청 심의회 미개최 사유(법 제18조②)",
+          not any("연장 사유" in x for x in r3.get("H-1", [])) and any("비어 있음" in x for x in r3.get("H-2", [])) and any("네 가지" in x for x in r3.get("H-3", []))
+          and any("미개최 사유" in x for x in r3.get("H-4", [])) and not any("심의회" in x for x in r3.get("H-5", [])), str(r3))
 
     xlsx(f"{t}/등록정보.xlsx", [["생산부서", "생산연도", "단위과제", "보존기간", "기록물형태", "유형", "공개구분", "등록번호", "제목", "쪽수", "실물쪽수", "비밀구분"],
                                ["행정과", 2025, "기록관리", "10년", "전자", "일반문서", "공개", "행정과-1", "가상 계획", 3, "", ""],
@@ -986,6 +999,14 @@ def main():
     ew = " ".join(str(c) for r in openpyxl.load_workbook(f"{t}/산출/연장.xlsx")["빈칸 점검"].iter_rows(values_only=True) for c in r if c) if ce == 0 else ""
     ca_, oa_ = run([S("records-forms", "scripts", "make_form.py"), "annotate", "--set", "기관명=가상시", "-o", f"{t}/산출/부기.xlsx"])
     at = " ".join(str(c) for r in openpyxl.load_workbook(f"{t}/산출/부기.xlsx")["서식"].iter_rows(values_only=True) for c in r if c) if ca_ == 0 else ""
+    xlsx(f"{t}/촬영원본.xlsx", [["철분류번호", "철제목", "쪽수", "시작", "끝"], ["F-1", "가상 대장", "120", "1", "120"], ["F-2", "", "", "121", "180"]])
+    cmf, omf = run([S("records-forms", "scripts", "make_form.py"), "microfilm", "--list", f"{t}/촬영원본.xlsx", "--set", "필름번호=MF-1", "-o", f"{t}/산출/촬영.xlsx"])
+    clm, olm = run([S("records-forms", "scripts", "make_form.py"), "limited", "--set", "성명(기관·단체명)=가상", "-o", f"{t}/산출/제한열람.xlsx"])
+    lmt = " ".join(str(c) for r in openpyxl.load_workbook(f"{t}/산출/제한열람.xlsx")["서식"].iter_rows(values_only=True) for c in r if c) if clm == 0 else ""
+    mft = [r for r in openpyxl.load_workbook(f"{t}/산출/촬영.xlsx")["서식"].iter_rows(values_only=True)] if cmf == 0 else []
+    check("법정 서식 별지 제5호(마이크로필름 촬영계획서)·제14호(제한적 열람신청서, 주민등록번호는 파일에 안 적음)",
+          any(r[0] == "F-1" and r[4] == "1" for r in mft) and "제37조①" in lmt and "주민등록번호는 이 파일에 적지 않고" in lmt and "주민등록번호\"" not in lmt
+          and "소속" in lmt, omf + olm)
     check("부기·정정 요청서: 처리 방법(훈령 제224호 3단계·시행규칙 제14조 두 선)·조문 번호 차이 안내", ca_ == 0
           and "두 선" in at and "보존매체에도" in at and "제62조의3" in at, oa_)
     check("법정 서식 별지 제1호의2(2027 시행): 이관 기간 연장·일정 연기 목록 빈칸·희망시기·사유", ce == 0
@@ -1266,9 +1287,25 @@ def main():
     if cyp == 0:
         icsx = open(f"{t}/산출/일정2027.ics", encoding="utf-8", newline="").read()
         lvv = [r for r in openpyxl.load_workbook(f"{t}/산출/연간2027.xlsx")["수준 체크리스트"].iter_rows(values_only=True)]
-        ok_yp = (icsx.startswith("BEGIN:VCALENDAR") and "DTSTART;VALUE=DATE:20271031" in icsx and "DTSTART;VALUE=DATE:20270831" in icsx and icsx.count("BEGIN:VEVENT") >= 15
+        ok_yp = (icsx.startswith("BEGIN:VCALENDAR") and "DTSTART;VALUE=DATE:20271031" in icsx and "DTSTART;VALUE=DATE:20270831" in icsx and "DTSTART;VALUE=DATE:20270531" in icsx and "DTSTART;VALUE=DATE:20270630" in icsx and icsx.count("BEGIN:VEVENT") >= 18
                  and "\r\n" in icsx and any(r and r[0] == "인력 배치" and r[2] == "미달" and "2명" in r[1] for r in lvv) and lvv[-1][0] == "교육")
-    check("연간 일정 NAK 18: 월별 업무·10/31 기한 .ics, 수준 체크리스트, 전문요원 1/4", ok_yp, oyp)
+    check("연간 일정 NAK 18: 월별 업무·5/31(제33조)·6/30·8/31·10/31 기한 .ics, 수준 체크리스트, 전문요원 1/4", ok_yp, oyp)
+
+    # 2026 지침 수행업무 리스트 점검표
+    ctk, otk = run([S("evaluation-readiness", "scripts", "task_checklist.py"), "--role", "처리과", "-o", f"{t}/산출/수행업무.xlsx"])
+    tk_ok = False
+    if ctk == 0:
+        wtk = openpyxl.load_workbook(f"{t}/산출/수행업무.xlsx")
+        ws_ = wtk["점검표"]
+        rows_ = [r for r in ws_.iter_rows(min_row=3)]
+        for i, r in enumerate(rows_):
+            r[4].value = "O" if i % 2 == 0 else ("X" if i % 3 else None)
+        wtk.save(f"{t}/산출/수행업무_채움.xlsx")
+        crk, ork = run([S("evaluation-readiness", "scripts", "task_checklist.py"), "--results", f"{t}/산출/수행업무_채움.xlsx", "-o", f"{t}/산출/수행업무_결과.xlsx"])
+        sm = [r for r in openpyxl.load_workbook(f"{t}/산출/수행업무_결과.xlsx")["요약"].iter_rows(values_only=True)]
+        notes_ = {r[2].value: r[6].value for r in rows_}
+        tk_ok = (len(rows_) == 28 and crk == 1 and sm[1][0] == "처리과" and sm[1][1] == 28 and sm[1][2] == 14 and "2027" in str(notes_.get("3-5")))
+    check("2026 지침 수행업무 점검표: 처리과 28항목·O/X 결과 수행률·미수행, 법령 변경 비고(3-5 이관 연장)", tk_ok, otk)
 
     # 기록물 기술 점검(NAK 13)
     xlsx(f"{t}/기술목록.xlsx", [["참조코드", "상위참조코드", "제목", "일자", "기술계층", "생산자명", "범위와내용", "규모", "종류"],
@@ -1476,6 +1513,19 @@ def main():
     check("기록재료 별표 15: 용지·필기구·용기·pH 7.5·탄산칼슘 2%·내광성 4호, 30년 미만 제외", cm == 1
           and not any(r[1] in ("M-1", "M-3", "M-4") for r in mr) and all(k in m2 for k in ("재생지", "수성", "pH 6.2", "탄산칼슘 1", "내광성 3", "용기") if k != "용기")
           and any(r[1] == "M-2" and r[4] == "용기" for r in mr), om + str(mr))
+
+    # 광디스크 오류율(국가기록원 매체 기준 연구: ISO/IEC 29121·JIIMA BD·DA/T 38)
+    xlsx(f"{t}/디스크.xlsx", [["매체번호", "종류", "검사구분", "측정일", "PI sum 8", "R-SER", "Burst", "BLER", "수정불가"],
+                            ["D1", "DVD-R", "초기", "2026-01-10", "120", "", "", "", ""], ["D2", "DVD-R", "정기", "2023-01-10", "90", "", "", "", ""],
+                            ["D3", "DVD-R", "정기", "2026-05-01", "300", "", "", "", ""], ["B1", "BD-R", "정기", "2026-05-01", "", "7E-4", "500", "", ""],
+                            ["C1", "CD-R", "정기", "2026-05-01", "", "", "", "230", ""], ["D4", "DVD-R", "정기", "2026-05-01", "50", "", "", "", "1"]])
+    cdk, odk = run([S("media-check", "scripts", "disc_errors.py"), f"{t}/디스크.xlsx", "--today", "2026-11-20", "-o", f"{t}/산출/디스크.xlsx"])
+    dk = {r[1]: r for r in openpyxl.load_workbook(f"{t}/산출/디스크.xlsx")["판정"].iter_rows(min_row=2, values_only=True)} if os.path.exists(f"{t}/산출/디스크.xlsx") else {}
+    cdc, _ = run([S("media-check", "scripts", "disc_errors.py"), f"{t}/디스크.xlsx", "--standard", "china", "--today", "2026-11-20", "-o", f"{t}/산출/디스크중국.xlsx"])
+    dkc = {r[1]: r for r in openpyxl.load_workbook(f"{t}/산출/디스크중국.xlsx")["판정"].iter_rows(min_row=2, values_only=True)} if os.path.exists(f"{t}/산출/디스크중국.xlsx") else {}
+    check("광디스크 오류율: DVD 초기 100·정기 140/280(ISO 29121), 3년 주기 지남, BD R-SER, CD BLER 220, 수정불가 즉시, 중국 기준 초기 80",
+          cdk == 1 and dk["D1"][6] == 2 and dk["D2"][6] == 1 and "지남" in str(dk["D2"][9]) and dk["D3"][6] == 3 and dk["B1"][6] == 2
+          and dk["C1"][6] == 3 and dk["D4"][6] == 3 and dkc["D1"][6] == 2 and dkc["D2"][6] == 1, odk + str(dk))
 
     # 플러그인 훅 명령: Windows(Git Bash)처럼 python3가 없거나 가짜일 때도 보호가 꺼지지 않는지
     hj = os.path.join(ROOT, "hooks", "hooks.json")
