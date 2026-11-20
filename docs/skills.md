@@ -369,6 +369,7 @@ python skills/transfer-reconcile/scripts/integrated_transfer.py 등록정보.xls
 
 - **NAK 37:2025 권고 열**: 보존포맷(PDF·PDF/A·DOCX·XLSX·PPTX·TIF·PNG·WAV·MP4·CSV·JSON·XML 등)·수용가능포맷(HWPX·FLAC·MKV·MOV·SIARD 등)·권고 외(HWP·DOC·XLS·PPT 등 변환 검토).
 - **문서 DRM 의심 표시**: 소프트캠프·마크애니·파수 헤더(국가기록원 2018 연구).
+- **손상파일 분류**(`damage_check.py`): 국가기록원 2018 연구 손상 코드와 복구 가능 여부(O·△·X), PDF·ZIP 뒤 잘림.
 
 ## 14. preservation-convert — PDF/A 보존포맷 변환
 

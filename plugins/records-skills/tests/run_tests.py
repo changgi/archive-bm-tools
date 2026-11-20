@@ -161,6 +161,24 @@ def main():
           and r37.get("b.hwpx", "").startswith("수용가능") and r37.get("e.mkv", "").startswith("수용가능") and r37.get("a.hwp", "").startswith("권고 외")
           and "마크애니" in {r[0]: r[-1] for r in list(csv.reader(open(f"{t}/산출/fmt37.csv", encoding="utf-8-sig")))[1:]}.get("g.docx", ""), str(r37))
 
+    # 손상 전자기록물 1차 분류(국가기록원 2018 손상파일 복구 연구 손상 코드)
+    import base64
+    os.makedirs(f"{t}/dmg")
+    cfb = b"\xd0\xcf\x11\xe0\xa1\xb1\x1a\xe1" + b"\0" * 22 + (9).to_bytes(2, "little") + b"\0" * 480
+    for n_, data in (("tiny.hwp", b"abc"), ("note.txt", "원문서을 확인할 수 없습니다. 담당자에게 문의 바랍니다.".encode("cp949")),
+                     ("b64.doc", base64.b64encode(b"x" * 120)), ("dfs.hwp", b"#Beginning_of_MetaData_Area_DestinyFS" + b"x" * 50),
+                     ("cut.hwp", cfb + b"\0" * 700), ("ok.hwp", cfb + b"HWP Document File" + b"\0" * (1024 - 17)),
+                     ("bad.hml", b"<HWPML><HEAD></HWPML>"), ("cut.pdf", b"%PDF-1.4 1 0 obj <<>> endobj " + b"x" * 100), ("cut.docx", b"PK\x03\x04broken" + b"\0" * 50)):
+        open(f"{t}/dmg/{n_}", "wb").write(data)
+    cdm, odm = run([S("format-identify", "scripts", "damage_check.py"), f"{t}/dmg", "-o", f"{t}/산출/dmg.csv"])
+    dm = {}
+    for r_ in list(csv.reader(open(f"{t}/산출/dmg.csv", encoding="utf-8-sig")))[1:]:
+        dm.setdefault(r_[0], []).append(r_[1])
+    check("손상파일 분류(2018 연구 코드): B003·S001·E001·E003·B015·B007·B002, PDF·ZIP 뒤 잘림, 정상 HWP 통과", cdm == 1
+          and dm.get("tiny.hwp") == ["B003"] and dm.get("note.txt") == ["S001"] and dm.get("b64.doc") == ["E001"] and dm.get("dfs.hwp") == ["E003"]
+          and dm.get("cut.hwp") == ["B015", "B007"] and "ok.hwp" not in dm and dm.get("bad.hml") == ["B002"]
+          and dm.get("cut.pdf") == ["추가-PDF"] and dm.get("cut.docx") == ["추가-ZIP"], odm + str(dm))
+
     # 9. 비밀기록물 차단: 훅(읽기·검색)과 검수 게이트
     code, _ = run([g], json.dumps({"tool_name": "Read", "tool_input": {"file_path": f"{t}/비밀/보고서.hwp"}}))
     code2, _ = run([g], json.dumps({"tool_name": "Grep", "tool_input": {"pattern": "예산", "path": f"{t}/비밀"}}))
