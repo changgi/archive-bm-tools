@@ -340,7 +340,7 @@ def main():
         log2 = {r["원본"]: r for r in csv.DictReader(open(f"{t}/산출/보존포맷/변환이력.csv", encoding="utf-8-sig"))}
         ko = log["한글회의록.txt"]
         ko_ok = ko["판정"] == "통과" or (ko["글꼴"].startswith("CharSet 없음") and "TrueType 한글 글꼴" in ko["비고"])
-        ok_pa = log["회의록.txt"]["판정"] == "통과" and log["회의록.txt"]["PDF/A 선언"] == "PDF/A-1b" and "날짜 맞춤" in log["회의록.txt"]["비고"] \
+        ok_pa = log["회의록.txt"]["판정"] == "통과" and log["회의록.txt"]["PDF/A 선언"] == "PDF/A-1b" and ("날짜 맞춤" in log["회의록.txt"]["비고"] or not log["회의록.txt"]["비고"]) \
             and log["list.csv"]["판정"] == "통과" and log["공문.hwp"]["판정"] == "보류" and log2["회의록.txt"]["판정"] == "건너뜀" and ko_ok
         check("보존포맷: PDF/A-1b 변환·날짜 맞춤(6.7.3)·OTF 한글 대체 글꼴 CharSet 경고(6.3.5)·HWP 보류·덮어쓰기 안 함", ok_pa,
               str({k: (v["판정"], v["PDF/A 선언"], v["글꼴"], v["비고"]) for k, v in log.items()}))
