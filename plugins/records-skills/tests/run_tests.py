@@ -375,6 +375,14 @@ def main():
     ok_em = len(msgs) == 3 and msgs[0][5] == 1 and "휴대전화" in (msgs[1][6] or "") and "비밀" in (msgs[2][7] or "") \
         and "검토 부탁드립니다" not in flat and "9876-5432" not in flat and wb["첨부 목록"].max_row == 2
     check("이메일: 3통 목록·첨부·개인정보·비밀 표시, 본문·원문 값 미포함", ok_em, out)
+    with open(f"{t}/주요직위.csv", "w", encoding="utf-8-sig") as fh:
+        fh.write("주소,직위,구분\npark@test.go.kr,차관,주요 직위\n")
+    code2, out2 = run([S("email-appraisal", "scripts", "email_report.py"), f"{t}/보관함.mbox", "--roles", f"{t}/주요직위.csv", "-o", f"{t}/산출/email_role.xlsx"])
+    wr = openpyxl.load_workbook(f"{t}/산출/email_role.xlsx")
+    rl = [r[9] for r in wr["메시지 목록"].iter_rows(min_row=2, values_only=True)]
+    sm = " ".join(str(c) for r in wr["요약"].iter_rows(values_only=True) for c in r if c)
+    check("이메일 역할기반(캡스톤) 후보: 주요 직위 계정 표시·일반 계정 구분·국내 법정 기준 아님 안내",
+          sum(1 for x in rl if str(x).startswith("역할기반")) == 1 and "차관" in str(rl[2]) and "일반 계정" in str(rl[0]) and "법정 기준이 아니며" in sm, out2 + str(rl))
 
     import zipfile as _zf
     md = f"{t}/메타"
