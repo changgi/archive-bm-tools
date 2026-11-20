@@ -24,7 +24,9 @@ flowchart LR
 | **수시** | 정보공개 청구 기한 관리 | [access-request](skills.md#18-access-request--정보공개-처리-기한) | "이번 주 마감 청구 알려줘" |
 | | 부분공개 전 개인정보 찾기 | [pii-redact](skills.md#20-pii-redact--개인정보-찾기부분공개-가림-목록) | "개인정보 후보 찾아서 가림 목록 만들어줘" |
 | | 결과물 내보내기 전 검수 | [records-qa-gate](skills.md#3-records-qa-gate--내보내기-전-품질-관문) | "내보내도 되는지 검수해줘" |
+| **12월(다음 해 준비)** | 연간 업무 일정·캘린더, 기관장 보고 점검표 | [evaluation-readiness](skills.md#27-evaluation-readiness--기록관리-기관평가-준비) | "내년 기록관리 일정 캘린더로 만들어줘" |
 | **연초** | 처리과 → 기록관 이관 기한·연장 목록, 비치기록물 연장 신청 기한 | [transfer-schedule](skills.md#29-transfer-schedule--이관-시기연장-관리) | "올해 기록관에 넘길 것하고 기한 지난 것 알려줘" |
+| **정리 기간** | 정리·색인·스캔 결과 검수, 표본검사 | [listing-qa](skills.md#38-listing-qa--목록-작성디지털화-사업-검수) | "색인목록이랑 스캔 폴더 검수해줘" |
 | **정리 기간** | 보존상자 편성·표지, 색인목록 | [box-labels](skills.md#32-box-labels--보존상자-편성표지), [records-forms](skills.md#31-records-forms--법정-서식-작성) | "보존상자 편성하고 표지 뽑아줘" |
 | **6~8월** | 기록관 → 영구기록물관리기관 이관 준비 | [retention-review](skills.md#21-retention-review--보존기간-검토만료이관-대상)(이관 대상), [transfer-reconcile](skills.md#11-transfer-reconcile--이관-목록-대조패키지) | "올해 이관 대상 뽑고 이관목록 서식 만들어줘" |
 | | 통합(전자+비전자) 이관 | [transfer-reconcile](skills.md#11-transfer-reconcile--이관-목록-대조패키지) | "2015년까지 생산분 별송 붙임 후보 찾아줘" |

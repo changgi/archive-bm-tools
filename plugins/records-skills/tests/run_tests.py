@@ -1145,6 +1145,60 @@ def main():
                  and byp["C-5"][7] == "예방복원" and byp["C-4"][7] == "보존 관리" and byp["C-4"][8] == "대상" and byp["C-3"][7] == "응급복원")
     check("복원처리 NAK 25: 응급→심화(3등급·상·상)→예방(3등급·대형), pH 6.5 이하·바스러짐 탈산", ok_rp, orp)
 
+    # 목록 작성·디지털화 검수(NAK 23)
+    xlsx(f"{t}/색인검수.xlsx", [["철관리번호", "철제목", "권호", "보존기간", "등록번호", "건제목", "생산일자", "시작쪽", "끝쪽", "작업자", "작업일"],
+                             ["L-1", "예산", "1", "영구", "E-1", "가", "2020-01-05", "1", "3", "김", "2026-11-01"],
+                             ["L-1", "예산", "1", "영구", "E-2", "나", "2020-02-05", "4", "6", "김", "2026-11-01"],
+                             ["L-1", "예산", "1", "영구", "E-3", "다", "2020-01-20", "8", "9", "김", "2026-11-01"],
+                             ["L-1", "예산", "2", "영구", "E-4", "라", "2020-03-01", "1", "2", "이", "2026-11-01"],
+                             ["L-2", "행사", "1", "3년", "E-5", "마", "2021-05-01", "1", "2", "이", "2026-11-02"],
+                             ["L-2", "행사", "1", "3년", "E-6", "", "2021-03-01", "3", "3", "이", "2026-11-02"]])
+    os.makedirs(f"{t}/색인이미지/E-1")
+    for i in range(3):
+        open(f"{t}/색인이미지/E-1/{i}.tif", "wb").write(b"II*\0")
+    for i in range(2):
+        open(f"{t}/색인이미지/E-2_{i + 1}.jpg", "wb").write(b"\xff\xd8")
+    clq, olq = run([S("listing-qa", "scripts", "listing_qa.py"), f"{t}/색인검수.xlsx", "--images", f"{t}/색인이미지", "--checked", "2000", "--errors", "3",
+                    "-o", f"{t}/산출/목록검수.xlsx"])
+    ok_lq = False
+    if os.path.exists(f"{t}/산출/목록검수.xlsx"):
+        wlq = openpyxl.load_workbook(f"{t}/산출/목록검수.xlsx")
+        iss = [(r[3], r[4], r[5]) for r in wlq["검수 결과"].iter_rows(min_row=2, values_only=True)]
+        txt = " | ".join(f"{a_}:{b_}:{c_}" for a_, b_, c_ in iss)
+        qq = {r[0]: r for r in wlq["품질 수준"].iter_rows(min_row=2, values_only=True)}
+        sp_ = [r for r in wlq["표본"].iter_rows(min_row=2, values_only=True) if isinstance(r[2], int)]
+        ok_lq = (clq == 1 and "E-3:면표시:7~7쪽 빠짐" in txt and "E-4:면표시:2권 첫 쪽 1 — 10쪽부터" in txt and "E-3:편철 순서" in txt
+                 and "E-6:필수 항목" in txt and "E-2:이미지 수:쪽수 3 · 이미지 2" in txt and "E-1:이미지 수" not in txt
+                 and "미달" in str(qq["정확도"][2]) and len(sp_) == 3 and "E-5:편철 순서" not in txt)
+    check("목록 검수 NAK 23: 면표시 빠짐·분권 이어짐, 보존기간별 편철 순서, 필수 항목, 쪽수↔이미지, 작업자별 표본, 99.9%", ok_lq, olq)
+
+    # 연간 업무 일정·수준 점검(NAK 18)
+    cyp, oyp = run([S("evaluation-readiness", "scripts", "yearly_plan.py"), "--year", "2027", "--staff", "5", "--experts", "1",
+                    "--ics", f"{t}/산출/일정2027.ics", "-o", f"{t}/산출/연간2027.xlsx"])
+    ok_yp = False
+    if cyp == 0:
+        icsx = open(f"{t}/산출/일정2027.ics", encoding="utf-8", newline="").read()
+        lvv = [r for r in openpyxl.load_workbook(f"{t}/산출/연간2027.xlsx")["수준 체크리스트"].iter_rows(values_only=True)]
+        ok_yp = (icsx.startswith("BEGIN:VCALENDAR") and "DTSTART;VALUE=DATE:20271031" in icsx and icsx.count("BEGIN:VEVENT") >= 15
+                 and "\r\n" in icsx and lvv[-1][2] == "미달" and "2명" in lvv[-1][1])
+    check("연간 일정 NAK 18: 월별 업무·10/31 기한 .ics, 수준 체크리스트, 전문요원 1/4", ok_yp, oyp)
+
+    # 기록물 기술 점검(NAK 13)
+    xlsx(f"{t}/기술목록.xlsx", [["참조코드", "상위참조코드", "제목", "일자", "기술계층", "생산자명", "범위와내용", "규모", "종류"],
+                             ["G1", "", "가상청 기록물군", "1960-2006", "기록물군", "가상청", "가상청 기록", "", ""],
+                             ["S1", "G1", "인사 계열", "1955-1975", "기록물계열", "가상청", "인사", "", ""],
+                             ["F1", "S1", "인사 발령철", "1960/03/01-1960/12/31", "기록물철", "가상청", "발령", "", ""],
+                             ["I1", "F1", "발령 통지", "단기4293년", "기록물건", "가상청", "", "", ""],
+                             ["I2", "F1", "전산 파일", "1960/05/02", "건", "가상청", "파일", "3개", "전자"]])
+    cdc, odc = run([S("archival-description", "scripts", "description_check.py"), f"{t}/기술목록.xlsx", "-o", f"{t}/산출/기술점검.xlsx"])
+    ok_dc = False
+    if os.path.exists(f"{t}/산출/기술점검.xlsx"):
+        dcx = [(r[1], r[3], r[5]) for r in openpyxl.load_workbook(f"{t}/산출/기술점검.xlsx")["점검 결과"].iter_rows(min_row=2, values_only=True)]
+        txt = " | ".join(f"{a_}:{b_}:{c_}" for a_, b_, c_ in dcx)
+        ok_dc = (cdc == 1 and "S1:상위 계층 일자" in txt and "F1:계층별 일자:1960-1960" in txt and "I1:필수요소" in txt and "I1:일자 표기:1960" in txt
+                 and "I2:기술계층" in txt and "I2:규모" in txt and not any(c == "G1" for c, _, _ in dcx))
+    check("기술 NAK 13: 필수요소, 연호→서기, 철은 연도만, 상위 범위, 계층 값, 전자 용량 단위", ok_dc, odc)
+
     # 플러그인 훅 명령: Windows(Git Bash)처럼 python3가 없거나 가짜일 때도 보호가 꺼지지 않는지
     hj = os.path.join(ROOT, "hooks", "hooks.json")
     bash = shutil.which("bash")
