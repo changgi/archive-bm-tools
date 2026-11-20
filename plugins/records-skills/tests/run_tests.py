@@ -931,6 +931,13 @@ def main():
         hold_t = " ".join(str(c) for r in openpyxl.load_workbook(f"{t}/산출/폐기금지.xlsx")["서식"].iter_rows(values_only=True) for c in r if c)
         ok_f = (marks == ["1-3", "4", "5-103"] and "103매" in warn_i and "제32조" in warn_c and "국가기록원장 귀하" in hold_t and "별지 제11호의2" in hold_t)
     check("법정 서식: 색인목록 쪽표시·100매, 반출 제한 경고, 폐기 금지 요청서", ok_f, oi + oc + oh)
+    xlsx(f"{t}/연장원본.xlsx", [["처리과코드", "철분류번호", "철제목", "생산연도", "이관희망연도", "연장사유"],
+                              ["1234567", "C-1", "가상 사업철", "2024", "2028", "후속 사업 추진에 따라 업무 참고 필요"],
+                              ["1234567", "C-2", "가상 대장", "2024", "2024", "필요"], ["1234567", "C-3", "", "2024", "2027", ""]])
+    ce, oe = run([S("records-forms", "scripts", "make_form.py"), "extend", "--list", f"{t}/연장원본.xlsx", "--set", "기관명=가상시", "-o", f"{t}/산출/연장.xlsx"])
+    ew = " ".join(str(c) for r in openpyxl.load_workbook(f"{t}/산출/연장.xlsx")["빈칸 점검"].iter_rows(values_only=True) for c in r if c) if ce == 0 else ""
+    check("법정 서식 별지 제1호의2(2027 시행): 이관 기간 연장·일정 연기 목록 빈칸·희망시기·사유", ce == 0
+          and "C-3" in ew and "사유 비어" in ew and "늦지 않음" in ew and "사유가 짧음" in ew and "C-1" not in ew, oe + ew)
 
     # 보존상자 편성·표지(별표 6)
     xlsx(f"{t}/상자원본.xlsx", [["철분류번호", "철제목", "생산연도", "보존기간", "단위과제명", "쪽수", "처리과"],
@@ -1365,6 +1372,19 @@ def main():
     sb = " ".join(r[0] for r in list(csv.reader(open(f"{t}/산출/siard_bad.csv", encoding="utf-8-sig")))[1:]) if os.path.exists(f"{t}/산출/siard_bad.csv") else ""
     check("SIARD NAK 35 부속서 B: 최상위 폴더·버전 폴더·이름 규칙·metadata 대응·열 수", cs == 0 and cb == 1
           and all(k in sb for k in ("P_4.2-1", "P_4.2-4", "P_4.2-6", "P_4.3-1", "P_4.3-2")), os_ + ob + sb)
+
+    # 기록재료(시행규칙 별표 15)
+    xlsx(f"{t}/재료.xlsx", [["철분류번호", "제목", "보존기간", "용지", "필기구", "용기", "용지pH", "탄산칼슘", "내광성"],
+                          ["M-1", "가상 대장", "영구", "보존복사용지", "레이저 토너", "보존용 판지 상자", "8.1", "2.5", "5"],
+                          ["M-2", "가상 도면", "준영구", "재생지", "수성 볼펜", "일반 서류봉투", "6.2", "1", "3"],
+                          ["M-3", "가상 메모", "5년", "재생지", "볼펜", "", "", "", ""],
+                          ["M-4", "가상 서명부", "30년", "한지", "탄소형 사인펜", "", "", "", ""]])
+    cm, om = run([S("preservation-inspection", "scripts", "materials_check.py"), f"{t}/재료.xlsx", "-o", f"{t}/산출/재료.xlsx"])
+    mr = [r for r in openpyxl.load_workbook(f"{t}/산출/재료.xlsx")["점검 결과"].iter_rows(min_row=2, values_only=True)] if os.path.exists(f"{t}/산출/재료.xlsx") else []
+    m2 = " ".join(r[5] for r in mr if r[1] == "M-2")
+    check("기록재료 별표 15: 용지·필기구·용기·pH 7.5·탄산칼슘 2%·내광성 4호, 30년 미만 제외", cm == 1
+          and not any(r[1] in ("M-1", "M-3", "M-4") for r in mr) and all(k in m2 for k in ("재생지", "수성", "pH 6.2", "탄산칼슘 1", "내광성 3", "용기") if k != "용기")
+          and any(r[1] == "M-2" and r[4] == "용기" for r in mr), om + str(mr))
 
     # 플러그인 훅 명령: Windows(Git Bash)처럼 python3가 없거나 가짜일 때도 보호가 꺼지지 않는지
     hj = os.path.join(ROOT, "hooks", "hooks.json")

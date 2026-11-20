@@ -421,6 +421,8 @@ python skills/preservation-inspection/scripts/inspection_form.py apply 산출/�
 상태검사 결과로 복원처리 계획 세워줘. 탈산할 것도 골라줘.
 ```
 ---
+- **기록재료 점검**(`materials_check.py`, 시행규칙 별표 15): 30년 이상 기록물의 용지·필기구·보존용 판지와 pH·탄산칼슘·내광성.
+
 
 ## 16. fixity-check — 변조·사라짐 감시
 
@@ -789,6 +791,8 @@ python skills/records-forms/scripts/make_form.py hold --info 기관정보.json -
 **알아 둘 점** 제출·결재·직인은 사람이 합니다. 한글 파일이 필요하면 [28번 hwpx-report](#28-hwpx-report--한글hwpx-보고서공문-서식)로 넘기세요.
 
 ---
+- **별지 제1호의2**(`extend`, 2027. 1. 1. 시행): 기록물 이관 기간 연장·일정 연기 목록 — 처리과→기록관, 기록관→영구기록물관리기관 협의에 첨부.
+
 
 ## 32. box-labels — 보존상자 편성·표지
 
