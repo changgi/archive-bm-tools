@@ -938,6 +938,10 @@ def main():
                               ["1234567", "C-2", "가상 대장", "2024", "2024", "필요"], ["1234567", "C-3", "", "2024", "2027", ""]])
     ce, oe = run([S("records-forms", "scripts", "make_form.py"), "extend", "--list", f"{t}/연장원본.xlsx", "--set", "기관명=가상시", "-o", f"{t}/산출/연장.xlsx"])
     ew = " ".join(str(c) for r in openpyxl.load_workbook(f"{t}/산출/연장.xlsx")["빈칸 점검"].iter_rows(values_only=True) for c in r if c) if ce == 0 else ""
+    ca_, oa_ = run([S("records-forms", "scripts", "make_form.py"), "annotate", "--set", "기관명=가상시", "-o", f"{t}/산출/부기.xlsx"])
+    at = " ".join(str(c) for r in openpyxl.load_workbook(f"{t}/산출/부기.xlsx")["서식"].iter_rows(values_only=True) for c in r if c) if ca_ == 0 else ""
+    check("부기·정정 요청서: 처리 방법(훈령 제224호 3단계·시행규칙 제14조 두 선)·조문 번호 차이 안내", ca_ == 0
+          and "두 선" in at and "보존매체에도" in at and "제62조의3" in at, oa_)
     check("법정 서식 별지 제1호의2(2027 시행): 이관 기간 연장·일정 연기 목록 빈칸·희망시기·사유", ce == 0
           and "C-3" in ew and "사유 비어" in ew and "늦지 않음" in ew and "사유가 짧음" in ew and "C-1" not in ew, oe + ew)
 
