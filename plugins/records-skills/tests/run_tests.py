@@ -939,6 +939,103 @@ def main():
     kinds = [r[0] for r in openpyxl.load_workbook(f"{t}/산출/정리100.xlsx")["점검 결과"].iter_rows(min_row=2, values_only=True)] if cg == 0 else []
     check("정리 점검: 철당 100매 초과, 수정 이력(일자·내용·사유) 누락", "철 분량" in kinds and "수정 이력" in kinds, og + str(kinds))
 
+    # 서고 환경 NAK 11: 매수·서가 길이 환산, 규모, 검·교정 1년
+    cn, on_ = run([S("stack-environment", "scripts", "env_check.py"), f"{t}/온습도.csv", "--pages", "250050", "--shelf-m", "30", "--area", "320",
+                   "--calibrated", "2025-10-01", "--today", "2026-11-20", "-o", f"{t}/산출/서고NAK11.xlsx"])
+    ok_n = False
+    if cn == 0:
+        wn = openpyxl.load_workbook(f"{t}/산출/서고NAK11.xlsx")
+        ar_ = {r[0]: r for r in wn["서고 면적"].iter_rows(values_only=True)}
+        ck_ = [r for r in wn["서고 점검표(NAK 11)"].iter_rows(values_only=True)]
+        ok_n = (ar_["권 수(매수 환산)"][1] == "2,501권" and ar_["권 수(서가 길이 환산)"][1] == "1,500~2,000권" and ar_["서고 규모"][1] == "대형"
+                and any(r[0] == "검·교정" and r[2] == "부적합" for r in ck_) and any("8.5~15cm" in str(r[1]) for r in ck_))
+    check("서고 환경 NAK 11: 100매=1권·15~20mm 환산, 대형 서고, 검·교정 1년 지남, 점검표", ok_n, on_)
+
+    # 필수기록물(NAK 2-2): 판정 규칙, 보호기간 ≤ 보존기간, 복본·분산·10km
+    xlsx(f"{t}/단위과제.xlsx", [["분류체계", "단위과제명", "업무설명", "보존기간", "기능성", "고유성", "증거성", "보호기간", "판단사유"],
+                             ["안전", "비상연락망 관리", "", "10년", 5, 0, 0, "1년", "즉시"],
+                             ["토지", "지적 관리", "", "영구", 1, 3, 3, "영구", "권리"],
+                             ["총무", "행사 홍보", "", "3년", 3, 1, 1, "", ""],
+                             ["계약", "계약 관리", "", "5년", 3, 3, 0, "10년", "계약"],
+                             ["인사", "인사 관리", "", "준영구", "", 3, "", "", ""]])
+    xlsx(f"{t}/필수철.xlsx", [["단위과제명", "철명", "관리번호", "이중매체", "보호기간(만료일)", "분산장소", "원격거리km"],
+                            ["비상연락망 관리", "연락망", "V-1", "", "2027-01-31", "본관", ""],
+                            ["지적 관리", "지적공부", "V-2", "마이크로필름", "2099-12-31", "본관;분원", "35"],
+                            ["계약 관리", "계약철", "V-3", "광디스크", "2025-12-31", "본관;별관", "2"],
+                            ["행사 홍보", "홍보철", "V-4", "", "", "", ""]])
+    xlsx(f"{t}/필수피해.xlsx", [["관리번호", "피해정도", "피해내용"], ["V-1", "심각", "소실"], ["V-2", "3", "그을림"], ["V-3", "높음", "눌러붙음"], ["X-9", "2", ""]])
+    cvr, ovr = run([S("vital-records", "scripts", "vital_records.py"), f"{t}/단위과제.xlsx", "--files", f"{t}/필수철.xlsx", "--year", "2026",
+                    "--today", "2026-11-20", "--damage", f"{t}/필수피해.xlsx", "--set", "발생일=2026-07-24", "-o", f"{t}/산출/필수.xlsx"])
+    ok_v = False
+    if cvr == 0:
+        wv = openpyxl.load_workbook(f"{t}/산출/필수.xlsx")
+        ev_ = {r[1]: r for r in wv["필수성 평가표"].iter_rows(min_row=3, values_only=True)}
+        pr_ = {r[0]: str(r[6] or "") for r in wv["보호 점검"].iter_rows(min_row=2, values_only=True)}
+        sc_ = " ".join(str(c) for r in wv["일정·기준"].iter_rows(values_only=True) for c in r if c)
+        ok_v = ([ev_[k][6] for k in ("비상연락망 관리", "지적 관리", "행사 홍보", "계약 관리", "인사 관리")] == ["필수", "필수", "해당 없음", "필수", "평가 필요"]
+                and "보존기간 이하" in str(ev_["계약 관리"][10]) and set(pr_) == {"V-1", "V-2", "V-3"}
+                and "복본" in pr_["V-1"] and "두 곳" in pr_["V-1"] and pr_["V-2"] == "" and "10km" in pr_["V-3"] and "만료" in pr_["V-3"]
+                and "2026-10-31" in sc_ and "지남" in sc_)
+        dv_ = {r[2]: r for r in wv["피해 평가표"].iter_rows(min_row=6, values_only=True) if r and r[2]}
+        rc_ = [(r[3], r[4]) for r in wv["업무복구 목록"].iter_rows(min_row=2, values_only=True) if isinstance(r[0], int)]
+        ok_v = ok_v and (dv_["V-1"][4] == "심각(5)" and "복본 없음" in str(dv_["V-1"][9]) and "목록" in str(dv_["X-9"][9])
+                         and rc_ == [("V-1", None), ("V-3", "광디스크"), ("V-2", "마이크로필름")] and "이용 대장" in wv.sheetnames)
+    check("필수기록물: 판정, 보호기간>보존기간, 복본·분산·10km·만료, 10/31, 피해 5단계·업무복구 순위", ok_v, ovr)
+
+    # 재난 응급복구(NAK 38): 곰팡이 우선·48시간·냉동동결·습식 불가, 대피 우선순위 후보
+    xlsx(f"{t}/피해.xlsx", [["관리번호", "제목", "보존기간", "대피등급", "재질", "제본", "훼손유형", "위치", "발견일시", "비고"],
+                          ["R-1", "토지대장", "영구", "1", "낱장", "무", "완전침수", "1서고", "2026-07-15 09:00", ""],
+                          ["R-2", "사진첩", "준영구", "1", "코팅", "유", "부분침수", "1서고", "2026-07-15 09:00", ""],
+                          ["R-3", "회의록", "10년", "2", "서적", "유", "곰팡이", "2서고", "2026-07-15 09:00", ""],
+                          ["R-4", "공문", "3년", "3", "낱장", "무", "부분침수", "3서고", "2026-07-13 09:00", "수용성 잉크"]])
+    cdr, odr = run([S("disaster-recovery", "scripts", "disaster_triage.py"), f"{t}/피해.xlsx", "--now", "2026-07-16 06:00", "--room", "23,68", "-o", f"{t}/산출/응급.xlsx"])
+    cpr, opr = run([S("disaster-recovery", "scripts", "disaster_triage.py"), f"{t}/피해.xlsx", "--prepare", "-o", f"{t}/산출/대피.xlsx"])
+    ok_d = False
+    if cdr == 0 and cpr == 0:
+        rows_ = [r for r in openpyxl.load_workbook(f"{t}/산출/응급.xlsx")["응급복구 순서"].iter_rows(min_row=2, values_only=True)]
+        byid = {r[1]: r for r in rows_}
+        lab_ = {r[0]: r for r in openpyxl.load_workbook(f"{t}/산출/응급.xlsx")["포장 라벨"].iter_rows(min_row=2, values_only=True)}
+        wd_ = openpyxl.load_workbook(f"{t}/산출/응급.xlsx")
+        stD = {r[0]: r for r in wd_["상태 체크리스트(부속서 D)"].iter_rows(min_row=2, values_only=True)}
+        envE = " ".join(str(c) for r in wd_["작업공간(부속서 E)"].iter_rows(values_only=True) for c in r if c)
+        kitA = [r[1] for r in wd_["물품·장비(부속서 A)"].iter_rows(min_row=2, values_only=True)]
+        ok_annex = (stD["R-2"][1] == "③" and stD["R-3"][2] == "E" and stD["R-3"][4] == "○" and stD["R-1"][7] == 3 and stD["R-1"][6] == "1"
+                    and "진공건조 절대 금지" in str(byid["R-2"][11]) and "부적합" in envE and "60%" in envE and "지퍼백" in kitA)
+        ok_d = ok_annex and ([r[1] for r in rows_] == ["R-3", "R-1", "R-2", "R-4"] and byid["R-4"][7] == "지남" and "즉시 냉동동결" in byid["R-4"][8]
+                and "분리" in byid["R-3"][8] and "습식" in byid["R-2"][9] and "습식" in byid["R-4"][9] and lab_["R-3"][5] == "유" and lab_["R-3"][8] == "동결")
+    xlsx(f"{t}/매체피해.xlsx", [["관리번호", "제목", "보존기간", "대피등급", "재질", "훼손유형", "발견일시"],
+                            ["M-1", "필름", "영구", "1", "마이크로필름", "완전침수", "2026-07-13 09:00"],
+                            ["M-2", "사진", "영구", "1", "사진", "침수", "2026-07-15 09:00"],
+                            ["M-3", "테이프", "영구", "2", "자기테이프", "부분침수", "2026-07-13 09:00"]])
+    cmr, omr = run([S("disaster-recovery", "scripts", "disaster_triage.py"), f"{t}/매체피해.xlsx", "--now", "2026-07-16 06:00", "-o", f"{t}/산출/매체.xlsx"])
+    if cmr == 0:
+        mm = {r[1]: r for r in openpyxl.load_workbook(f"{t}/산출/매체.xlsx")["응급복구 순서"].iter_rows(min_row=2, values_only=True)}
+        ok_d = ok_d and (mm["M-1"][6] == "2026-07-16 09:00" and "깨끗한 물" in mm["M-1"][8] and mm["M-2"][7] == "51시간" and "진공건조 금지" in mm["M-2"][8]
+                         and mm["M-3"][7] == "지남" and "-10℃" in mm["M-3"][8])
+    else:
+        ok_d = False
+    check("재난 응급복구: 곰팡이 먼저·등급·심각도 순, 48시간 즉시 동결, 습식 불가, 라벨, 재질별 건조, 부속서 A·D·E, 필름·사진·테이프 72·48시간(NAK 2-1)", ok_d, odr + opr)
+
+    # 보안·재난관리(NAK 2-1): 위험 점수, 연 1회 검토, 임무카드 빈칸, 비상용품 기한, RTO·RPO Tier
+    xlsx(f"{t}/위험.xlsx", [["구분", "위협", "발생가능성", "위험도", "대책"], ["자연재해", "홍수", 4, 5, ""], ["기술적 재해", "정전", 2, 3, "UPS"], ["인적 재해", "해킹", "높음", "매우높음", "망분리"]])
+    xlsx(f"{t}/직원.xlsx", [["이름", "소속", "재난시반", "재난시업무", "대행", "휴대폰"], ["가", "보존과", "통제반", "포장", "나", "010"], ["다", "보존과", "", "", "", ""]])
+    xlsx(f"{t}/용품.xlsx", [["품명", "보존위치", "수량", "유통기한"], ["지퍼백", "출입구", "200", "2030-01-01"], ["마스크", "", "0", "2026-10-01"]])
+    xlsx(f"{t}/업무영향.xlsx", [["업무프로세스", "RTO(시간)", "RPO"], ["보존", "4", "최종시점"], ["열람", "24", "D-1"], ["통계", "10일", "D-1"]])
+    csd, osd = run([S("security-disaster-plan", "scripts", "sd_plan.py"), "--org", "영구", "--risk", f"{t}/위험.xlsx", "--staff", f"{t}/직원.xlsx",
+                    "--supplies", f"{t}/용품.xlsx", "--bia", f"{t}/업무영향.xlsx", "--last-review", "2025-10-01", "--today", "2026-11-20", "-o", f"{t}/산출/보안재난.xlsx"])
+    ok_sd = False
+    if csd == 0:
+        ws_ = openpyxl.load_workbook(f"{t}/산출/보안재난.xlsx")
+        rk_ = [r for r in ws_["위험평가표"].iter_rows(min_row=2, values_only=True) if r[1]]
+        mc_ = {r[0]: r for r in ws_["임무카드(부속서 D)"].iter_rows(min_row=2, values_only=True)}
+        su_ = {r[1]: r for r in ws_["비상용품 대장(표 5)"].iter_rows(min_row=3, values_only=True) if isinstance(r[0], int)}
+        bi_ = {r[0]: (r[3], r[4]) for r in ws_["RTO·RPO(표 7)"].iter_rows(min_row=2, values_only=True)}
+        lastrow = [r for r in ws_["보안 체크리스트"].iter_rows(values_only=True)][-1]
+        ok_sd = (rk_[0][5] == 20 and "대책 없음" in str(rk_[0][8]) and rk_[1][5] == 20 and rk_[2][6] == "낮음" and "빈칸" in str(mc_["다"][8])
+                 and "유통기한 지남" in str(su_["마스크"][7]) and bi_["보존"] == ("Tier 1", "HOT") and bi_["열람"] == ("Tier 4", "WARM")
+                 and bi_["통계"] == ("Tier 6", "없음") and lastrow[2] == "지남")
+    check("보안·재난관리: 위험 점수·정렬, 연 1회 검토 지남, 임무카드 빈칸, 비상용품 기한, RTO·RPO Tier", ok_sd, osd)
+
     # 플러그인 훅 명령: Windows(Git Bash)처럼 python3가 없거나 가짜일 때도 보호가 꺼지지 않는지
     hj = os.path.join(ROOT, "hooks", "hooks.json")
     bash = shutil.which("bash")
