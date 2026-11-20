@@ -97,6 +97,14 @@ def main():
     rows = list(csv.reader(open(f"{t}/산출/pii.csv", encoding="utf-8-sig")))[1:]
     kinds = {r[2] for r in rows}
     leaked = any("1234-5678" in ",".join(r) or fake_rrn() in ",".join(r) for r in rows)
+    with open(f"{t}/민원2.txt", "w", encoding="utf-8") as f:
+        f.write("여권 M12345678 면허 11-23-456789-01 사업자 220-81-62517 법인번호: 110111-2345678 군번 17-71234567 사건 2023가단12345 예시 000-00-00000\n")
+    c2_, o2_ = run([S("pii-redact", "scripts", "pii_scan.py"), f"{t}/민원2.txt", "-o", f"{t}/산출/pii2.csv"])
+    rows2 = list(csv.reader(open(f"{t}/산출/pii2.csv", encoding="utf-8-sig")))[1:]
+    k2 = [r[2] for r in rows2]
+    check("개인정보 추가 6종(2020 연구 제6호 정규식): 여권·면허·사업자(검증식)·법인·군번·사건번호, 법인/주민 중복·더미 제외",
+          {"여권번호", "운전면허번호", "사업자등록번호", "법인등록번호(문맥)", "군번(문맥)", "사건번호"} <= set(k2) and "주민·외국인등록번호" not in k2
+          and k2.count("사업자등록번호") == 1 and not any("2345678" in ",".join(r) for r in rows2), str(rows2))
     check("개인정보: 5종 탐지 + 결과에 원문 없음", {"주민·외국인등록번호", "휴대전화", "이메일", "카드번호", "계좌번호(문맥)"} <= kinds and not leaked, str(kinds))
 
     # 5. 검수 게이트: 실패 목록과 통과 목록
@@ -144,13 +152,32 @@ def main():
     check("포맷 식별: 확장자 불일치 표시", "PDF 아님" in rows.get("fake.pdf", [""])[-1], out.strip())
     os.makedirs(f"{t}/fmt37")
     for n_, data in (("a.hwp", b"\xd0\xcf\x11\xe0x"), ("b.hwpx", b"PK\x03\x04x"), ("c.xlsx", b"PK\x03\x04x"), ("d.pdf", b"%PDF-1.4 <pdfaid:part>1</pdfaid:part>"),
-                     ("e.mkv", b"\x1aE\xdf\xa3"), ("f.csv", b"a,b")):
+                     ("e.mkv", b"\x1aE\xdf\xa3"), ("f.csv", b"a,b"), ("g.docx", b"PK\x03\x04 ... Document SAFER")):
         open(f"{t}/fmt37/{n_}", "wb").write(data)
     run([S("format-identify", "scripts", "identify.py"), f"{t}/fmt37", "-o", f"{t}/산출/fmt37.csv"])
     r37 = {r[0]: r[6] for r in list(csv.reader(open(f"{t}/산출/fmt37.csv", encoding="utf-8-sig")))[1:]}
     check("포맷 NAK 37: 보존포맷(xlsx·csv·PDF/A-1)·수용가능(hwpx·mkv)·권고 외(hwp)",
           r37.get("c.xlsx", "").startswith("보존포맷") and r37.get("f.csv", "").startswith("보존포맷") and "PDF/A-1" in r37.get("d.pdf", "")
-          and r37.get("b.hwpx", "").startswith("수용가능") and r37.get("e.mkv", "").startswith("수용가능") and r37.get("a.hwp", "").startswith("권고 외"), str(r37))
+          and r37.get("b.hwpx", "").startswith("수용가능") and r37.get("e.mkv", "").startswith("수용가능") and r37.get("a.hwp", "").startswith("권고 외")
+          and "마크애니" in {r[0]: r[-1] for r in list(csv.reader(open(f"{t}/산출/fmt37.csv", encoding="utf-8-sig")))[1:]}.get("g.docx", ""), str(r37))
+
+    # 손상 전자기록물 1차 분류(국가기록원 2018 손상파일 복구 연구 손상 코드)
+    import base64
+    os.makedirs(f"{t}/dmg")
+    cfb = b"\xd0\xcf\x11\xe0\xa1\xb1\x1a\xe1" + b"\0" * 22 + (9).to_bytes(2, "little") + b"\0" * 480
+    for n_, data in (("tiny.hwp", b"abc"), ("note.txt", "원문서을 확인할 수 없습니다. 담당자에게 문의 바랍니다.".encode("cp949")),
+                     ("b64.doc", base64.b64encode(b"x" * 120)), ("dfs.hwp", b"#Beginning_of_MetaData_Area_DestinyFS" + b"x" * 50),
+                     ("cut.hwp", cfb + b"\0" * 700), ("ok.hwp", cfb + b"HWP Document File" + b"\0" * (1024 - 17)),
+                     ("bad.hml", b"<HWPML><HEAD></HWPML>"), ("cut.pdf", b"%PDF-1.4 1 0 obj <<>> endobj " + b"x" * 100), ("cut.docx", b"PK\x03\x04broken" + b"\0" * 50)):
+        open(f"{t}/dmg/{n_}", "wb").write(data)
+    cdm, odm = run([S("format-identify", "scripts", "damage_check.py"), f"{t}/dmg", "-o", f"{t}/산출/dmg.csv"])
+    dm = {}
+    for r_ in list(csv.reader(open(f"{t}/산출/dmg.csv", encoding="utf-8-sig")))[1:]:
+        dm.setdefault(r_[0], []).append(r_[1])
+    check("손상파일 분류(2018 연구 코드): B003·S001·E001·E003·B015·B007·B002, PDF·ZIP 뒤 잘림, 정상 HWP 통과", cdm == 1
+          and dm.get("tiny.hwp") == ["B003"] and dm.get("note.txt") == ["S001"] and dm.get("b64.doc") == ["E001"] and dm.get("dfs.hwp") == ["E003"]
+          and dm.get("cut.hwp") == ["B015", "B007"] and "ok.hwp" not in dm and dm.get("bad.hml") == ["B002"]
+          and dm.get("cut.pdf") == ["추가-PDF"] and dm.get("cut.docx") == ["추가-ZIP"], odm + str(dm))
 
     # 9. 비밀기록물 차단: 훅(읽기·검색)과 검수 게이트
     code, _ = run([g], json.dumps({"tool_name": "Read", "tool_input": {"file_path": f"{t}/비밀/보고서.hwp"}}))
@@ -182,6 +209,14 @@ def main():
     rv16 = {r[0]: r for r in wb["검토서(NAK 16-1 부속서 F)"].iter_rows(min_row=2, values_only=True) if r and r[0] and str(r[0]).startswith("R")}
     want = {"30년 경과": ["R1"], "연장 신청 기한": ["R8"], "5년 주기": ["R3"], "6호 유예": ["R2"], "이력 없음": ["R4"], "사유 결함": ["R4"], "제외(비밀)": ["R6"]}
     check("공개 재분류: 7개 분류 정확(연장 신청 기한 제72조③ 포함, R5 공개·R7 주기 전 제외)", got == want, str(got))
+    xlsx(f"{t}/점수목록.xlsx", [["관리번호", "제목", "생산년도", "공개구분", "비공개사유", "재분류일", "비공개확률"],
+        ["S1", "가", "1990", "비공개", "제5호 의사결정 과정", "2021", "0.05"], ["S2", "나", "1990", "비공개", "제5호 의사결정 과정", "2021", "0.5"],
+        ["S3", "다", "1990", "비공개", "제5호 의사결정 과정", "2021", "0.95"], ["S4", "라", "1990", "비공개", "제5호 의사결정 과정", "2021", "x"]])
+    csc, osc = run([S("disclosure-reclass", "scripts", "reclass_candidates.py"), f"{t}/점수목록.xlsx", "--year", "2026", "--score-col", "비공개확률",
+                    "-o", f"{t}/산출/점수.xlsx"])
+    sc = {r[0]: r[-1] for r in openpyxl.load_workbook(f"{t}/산출/점수.xlsx")["30년 경과"].iter_rows(min_row=2, values_only=True)} if csc in (0, 1) else {}
+    check("공개 재분류 --score-col: 0.10·0.90 검토 우선순위 구간(2025 연구 국외 사례), 점수 없음 표시",
+          "공개 쪽 확실" in str(sc.get("S1")) and "검토 필요(0.50)" in str(sc.get("S2")) and "비공개 쪽 확실" in str(sc.get("S3")) and "점수 없음" in str(sc.get("S4")), osc + str(sc))
     check("공개 재분류 NAK 16-1: 검토서 16칸(심의 대상만, 비밀 제외), 기준서·체크리스트 시트",
           sorted(rv16) == ["R1", "R3", "R4", "R8"] and rv16["R1"][9] == "제5호 의사결정 과정" and rv16["R8"][16] == "연장 신청 기한"
           and "공개관리 체크리스트" in wb.sheetnames and "기준서(NAK 16-1 부속서 A)" in wb.sheetnames, str(rv16))
@@ -514,6 +549,15 @@ def main():
           want <= items and not any(k == "U1" for k, _ in items) and notice == {("U1", "보존기간 변경"), ("U2", "신설"), ("U3", "신설"), ("U4", "신설")},
           f"{sorted(items - want)} {sorted(want - items)} {notice}")
 
+    xlsx(f"{t}/기준표유사.xlsx", [sh,
+        ["V1", "민원처리", "민원과", "민원", *good], ["V2", "민원 처리 관리", "민원과", "민원", good[0], "5년", *good[2:]],
+        ["V3", "청사 시설 관리", "총무과", "청사", *good], ["V4", "청사시설관리", "총무과", "청사", *good], ["V5", "예산편성", "기획과", "예산", *good]])
+    cs_, os_ = run([S("records-schedule-check", "scripts", "schedule_check.py"), f"{t}/기준표유사.xlsx", "-o", f"{t}/산출/기준표유사.xlsx"])
+    simr = [r for r in openpyxl.load_workbook(f"{t}/산출/기준표유사.xlsx")["유사 단위과제"].iter_rows(min_row=2, values_only=True)]
+    pairs = {(r[0], r[3]): r[7] for r in simr if r[0]}
+    check("기준표 유사·중복 단위과제(자치단체 기준표 빅데이터 연구): 보존기간 다른 유사 과제·중복 생성 의심", "보존기간 다름" in str(pairs.get(("V1", "V2")))
+          and "중복" in str(pairs.get(("V3", "V4"))) and not any("V5" in k for k in pairs), os_ + str(pairs))
+
     # 국가기록원 공식 생산현황 통보서식 채우기
     form = S("production-status-report", "assets", "2024년도기록물생산현황통보서식.xlsx")
     ps = [["철분류번호", "철제목", "등록번호", "건제목", "생산부서", "처리과코드", "단위과제ID", "단위과제명", "생산연도", "보존기간", "기록물형태", "유형", "공개구분", "비밀구분"]]
@@ -693,7 +737,7 @@ def main():
     os.makedirs(f"{t}/비밀", exist_ok=True)
     code_h, _ = run([g], json.dumps({"tool_name": "Bash", "tool_input": {"command": f"python classified_check.py {t}/비밀/목록.xlsx --year 2025"}}))
     xlsx(f"{t}/비밀/목록.xlsx", [["식별번호", "생산부서", "제목", "유형", "구분", "수량", "면수", "비밀등급", "보존기간", "보호기간", "예고문처리", "원본구분",
-                                "생산일자", "재분류일자", "재분류내용", "변경전등급", "변경전보존기간", "기록관이관일", "영구이관일"],
+                                "생산일자", "재분류일자", "재분류내용", "변경전등급", "변경전보존기간", "기록관이관일", "영구이관일", "합철", "이관시기연장"],
         ["가-1", "가상과", "가상 A", "문서류", "비전자", "1", "12", "2", "30년", "2027-12-31", "이관", "원본", "2025-03-01", "", "", "", "", "", ""],
         ["가-2", "가상과", "가상 B", "문서류", "전자", "1", "", "3", "10년", "처리 후", "이관", "원본", "2025-05-01", "", "", "", "", "", ""],
         ["가-3", "가상과", "가상 사본", "문서류", "비전자", "1", "3", "2", "30년", "2027-12-31", "파기", "사본", "2025-05-01", "", "", "", "", "", ""],
@@ -701,7 +745,9 @@ def main():
         ["가-5", "가상과", "가상 2022", "문서류", "비전자", "1", "20", "2", "영구", "2023-12-31", "일반문서로 재분류", "원본", "2022-02-01", "2025-04-01",
          "일반문서", "2", "영구", "", ""],
         ["가-6", "가상과", "가상 영상", "시청각류", "디지털", "1", "", "3", "30년", "2024-06-30", "이관", "원본", "2022-07-01", "", "", "", "", "2025-03-02", ""],
-        ["가-7", "가상과", "가상 사본2", "문서류", "비전자", "1", "3", "2", "30년", "2027-12-31", "이관", "사본", "2025-05-01", "", "", "", "", "", ""]])
+        ["가-7", "가상과", "가상 사본2", "문서류", "비전자", "1", "3", "2", "30년", "2027-12-31", "이관", "사본", "2025-05-01", "", "", "", "", "", ""],
+        ["가-8", "가상과", "가상 합철", "문서류", "비전자", "1", "3", "3", "10년", "2026-12-31", "일반문서로 재분류", "원본", "2020-05-01", "2025-03-01", "일반문서", "3", "10년", "", "", "Y", ""],
+        ["가-9", "가상과", "가상 특수", "문서류", "전자", "1", "", "2", "영구", "2024-12-31", "이관", "원본", "2010-03-01", "", "", "", "", "2025-02-01", "", "", "Y"]])
     c1, o1 = run([S("classified-records-check", "scripts", "classified_check.py"), f"{t}/비밀/목록.xlsx", "--year", "2025", "--today", "2026-11-20",
                   "-o", f"{t}/비밀/점검.xlsx"])
     cw = openpyxl.load_workbook(f"{t}/비밀/점검.xlsx")
@@ -713,7 +759,7 @@ def main():
     sw = openpyxl.load_workbook(f"{t}/비밀/통보서식.xlsx")
     check("비밀기록물: 훅 차단·사본 제외(사본 '이관' 표시)·불확실 보호기간·보존<보호·원본 파기, 이관 시기(제68조② 기산일+5년), 서식 10 (가)(나)·11 목록",
           code_h == 2 and "가-3" not in cj and "사본 예고문" in cj.get("가-7", "") and "처리 후" in cj["가-2"] and "보존기간 ≥ 보호기간" in cj["가-4"] and "'파기'" in cj["가-4"] and cj["가-1"] == "통과"
-          and ct[("가-5", "처리과→기록관")] == 2026 and ct[("가-6", "기록관→영구")] == 2028
+          and ct[("가-5", "처리과→기록관")] == 2026 and ct[("가-6", "기록관→영구")] == 2028 and ct[("가-9", "기록관→영구")] == 2041 and ct[("가-8", "처리과→기록관")] in ("", None)
           and c10[7][2] == 1 and c10[7][4] == 4 and c10[12][2] == 1 and c10[15][2] == 1
           and sw["서식 10"]["F7"].value == 1 and sw["서식 10"]["I7"].value == 4 and sw["서식 11"]["B6"].value == "가-5" and sw["서식 11"]["B14"].value == "가-6"
           and sw["서식 11"]["A2"].value.startswith("(생산기간 : 2022"), o1 + o2 + str(cj) + str(ct))
@@ -888,11 +934,13 @@ def main():
     hdr = b"\xd0\xcf\x11\xe0\xa1\xb1\x1a\xe1" + b"\0" * 504
     with open(f"{t}/이관폴더/암호.hwp", "wb") as f:
         f.write(hdr + b"HWP Document File" + b"\0" * 15 + b"\x00\x00\x05\x05" + (2).to_bytes(4, "little") + b"\0" * 216)
+    with open(f"{t}/이관폴더/drm.docx", "wb") as f:
+        f.write(b"SCD0003" + b"\0" * 100)
     with open(f"{t}/이관폴더/비밀/x.pdf", "wb") as f:
         f.write(b"%PDF /Encrypt")
     ce, oe = run([S("transfer-schedule", "scripts", "encrypted_scan.py"), f"{t}/이관폴더", "-o", f"{t}/산출/암호화.xlsx"])
     enc = [r[1] for r in openpyxl.load_workbook(f"{t}/산출/암호화.xlsx").worksheets[0].iter_rows(min_row=2, values_only=True)] if ce == 0 else []
-    check("암호화 기록물: PDF·HWP 암호 찾음, 보통 파일·비밀 폴더 제외", ce == 0 and sorted(enc) == ["암호.hwp", "잠김.pdf"], oe + str(enc))
+    check("암호화 기록물: PDF·HWP 암호·문서 DRM 헤더(2018 연구) 찾음, 보통 파일·비밀 폴더 제외", ce == 0 and sorted(enc) == ["drm.docx", "암호.hwp", "잠김.pdf"], oe + str(enc))
 
     # 서고 환경(시행령 별표 6)
     import datetime as _dt
@@ -931,6 +979,17 @@ def main():
         hold_t = " ".join(str(c) for r in openpyxl.load_workbook(f"{t}/산출/폐기금지.xlsx")["서식"].iter_rows(values_only=True) for c in r if c)
         ok_f = (marks == ["1-3", "4", "5-103"] and "103매" in warn_i and "제32조" in warn_c and "국가기록원장 귀하" in hold_t and "별지 제11호의2" in hold_t)
     check("법정 서식: 색인목록 쪽표시·100매, 반출 제한 경고, 폐기 금지 요청서", ok_f, oi + oc + oh)
+    xlsx(f"{t}/연장원본.xlsx", [["처리과코드", "철분류번호", "철제목", "생산연도", "이관희망연도", "연장사유"],
+                              ["1234567", "C-1", "가상 사업철", "2024", "2028", "후속 사업 추진에 따라 업무 참고 필요"],
+                              ["1234567", "C-2", "가상 대장", "2024", "2024", "필요"], ["1234567", "C-3", "", "2024", "2027", ""]])
+    ce, oe = run([S("records-forms", "scripts", "make_form.py"), "extend", "--list", f"{t}/연장원본.xlsx", "--set", "기관명=가상시", "-o", f"{t}/산출/연장.xlsx"])
+    ew = " ".join(str(c) for r in openpyxl.load_workbook(f"{t}/산출/연장.xlsx")["빈칸 점검"].iter_rows(values_only=True) for c in r if c) if ce == 0 else ""
+    ca_, oa_ = run([S("records-forms", "scripts", "make_form.py"), "annotate", "--set", "기관명=가상시", "-o", f"{t}/산출/부기.xlsx"])
+    at = " ".join(str(c) for r in openpyxl.load_workbook(f"{t}/산출/부기.xlsx")["서식"].iter_rows(values_only=True) for c in r if c) if ca_ == 0 else ""
+    check("부기·정정 요청서: 처리 방법(훈령 제224호 3단계·시행규칙 제14조 두 선)·조문 번호 차이 안내", ca_ == 0
+          and "두 선" in at and "보존매체에도" in at and "제62조의3" in at, oa_)
+    check("법정 서식 별지 제1호의2(2027 시행): 이관 기간 연장·일정 연기 목록 빈칸·희망시기·사유", ce == 0
+          and "C-3" in ew and "사유 비어" in ew and "늦지 않음" in ew and "사유가 짧음" in ew and "C-1" not in ew, oe + ew)
 
     # 보존상자 편성·표지(별표 6)
     xlsx(f"{t}/상자원본.xlsx", [["철분류번호", "철제목", "생산연도", "보존기간", "단위과제명", "쪽수", "처리과"],
@@ -1034,7 +1093,7 @@ def main():
         ok_annex = (stD["R-2"][1] == "③" and stD["R-3"][2] == "E" and stD["R-3"][4] == "○" and stD["R-1"][7] == 3 and stD["R-1"][6] == "1"
                     and "진공건조 절대 금지" in str(byid["R-2"][11]) and "부적합" in envE and "60%" in envE and "지퍼백" in kitA)
         ok_d = ok_annex and ([r[1] for r in rows_] == ["R-3", "R-1", "R-2", "R-4"] and byid["R-4"][7] == "지남" and "즉시 냉동동결" in byid["R-4"][8]
-                and "분리" in byid["R-3"][8] and "습식" in byid["R-2"][9] and "습식" in byid["R-4"][9] and lab_["R-3"][5] == "유" and lab_["R-3"][8] == "동결")
+                and "분리" in byid["R-3"][8] and "15 kGy" in byid["R-3"][8] and "kGy" not in str(byid["R-2"][8]) and "습식" in byid["R-2"][9] and "습식" in byid["R-4"][9] and lab_["R-3"][5] == "유" and lab_["R-3"][8] == "동결")
     xlsx(f"{t}/매체피해.xlsx", [["관리번호", "제목", "보존기간", "대피등급", "재질", "훼손유형", "발견일시"],
                             ["M-1", "필름", "영구", "1", "마이크로필름", "완전침수", "2026-07-13 09:00"],
                             ["M-2", "사진", "영구", "1", "사진", "침수", "2026-07-15 09:00"],
@@ -1081,6 +1140,15 @@ def main():
         ar_ = {r[0]: r for r in list(csv.reader(open(f"{t}/산출/av.csv", encoding="utf-8-sig")))[1:]} if os.path.exists(f"{t}/산출/av.csv") else {}
         check("시청각 디지털화 NAK 26: HD FFV1/FLAC 통과, 720p·0.4Mbps·44.1kHz 재작업",
               ar_.get("hd.mkv", [""])[-1] == "통과" and ar_.get("low.mp4", [""])[-1] == "재작업 후보" and "10Mbps" in ar_.get("low.mp4", [""] * 12)[10], oav)
+        av2 = f"{t}/av2"
+        os.makedirs(av2)
+        ff("-f", "lavfi", "-i", "color=black:s=320x240:d=3", "-f", "lavfi", "-i", "testsrc=s=320x240:d=3", "-f", "lavfi", "-i", "anullsrc=r=48000:cl=mono",
+           "-filter_complex", "[0:v][1:v]concat=n=2:v=1:a=0[v]", "-map", "[v]", "-map", "2:a", "-t", "6", "-c:v", "ffv1", "-c:a", "flac", f"{av2}/blk.mkv")
+        ff("-f", "lavfi", "-i", "sine=f=440:r=48000:d=3,volume=20", "-c:a", "flac", "-sample_fmt", "s32", f"{av2}/loud.flac")
+        run([S("scan-qc", "scripts", "av_qc.py"), av2, "--kind", "비디오SD", "--content", "-o", f"{t}/산출/av2.csv"])
+        cc_ = [(r[0], r[1]) for r in list(csv.reader(open(f"{t}/산출/av2_내용검사.csv", encoding="utf-8-sig")))[1:]] if os.path.exists(f"{t}/산출/av2_내용검사.csv") else []
+        check("시청각 내용 검사 --content: 블랙·정지·무음·클리핑과 원인(시청각물 품질오류 연구)",
+              {("blk.mkv", "블랙"), ("blk.mkv", "무음"), ("loud.flac", "클리핑")} <= set(cc_), str(cc_))
 
     # 처분결과 관리·폐기 집행 점검(NAK 5-1 7.5~8.4)
     xlsx(f"{t}/심의결과.xlsx", [["관리번호", "제목", "생산부서", "보존기간", "종료연도", "심의 결과", "재책정 보존기간", "보류기간", "사유", "기록물형태"],
@@ -1157,6 +1225,12 @@ def main():
         ok_rp = ([r[1] for r in rp_][:2] == ["C-3", "C-1"] and byp["C-1"][7] == "심화복원" and byp["C-1"][8] == "대상" and byp["C-2"][7] == "예방복원"
                  and byp["C-5"][7] == "예방복원" and byp["C-4"][7] == "보존 관리" and byp["C-4"][8] == "대상" and byp["C-3"][7] == "응급복원")
     check("복원처리 NAK 25: 응급→심화(3등급·상·상)→예방(3등급·대형), pH 6.5 이하·바스러짐 탈산", ok_rp, orp)
+    xlsx(f"{t}/탈산이력.xlsx", [["관리번호", "제목", "훼손도", "pH", "탈산연도", "상태"],
+                             ["T-1", "가", "2등급", "6.2", "2008", ""], ["T-2", "나", "2등급", "", "2010", "백화"], ["T-3", "다", "2등급", "8.5", "2012", ""]])
+    ctd, otd = run([S("preservation-inspection", "scripts", "restoration_plan.py"), f"{t}/탈산이력.xlsx", "-o", f"{t}/산출/탈산이력.xlsx"])
+    td_ = {r[1]: " ".join(str(c) for c in r if c) for r in openpyxl.load_workbook(f"{t}/산출/탈산이력.xlsx")["복원처리 계획"].iter_rows(min_row=2, values_only=True)} if ctd == 0 else {}
+    check("탈산 처리 기록물 사후평가(국가기록원 탈산 상태평가 연구): pH 6.8 미만 재탈산, 표본 3곳 측정, 백화현상",
+          "6.8" in td_.get("T-1", "") and "1/4" in td_.get("T-2", "") and "백화현상" in td_.get("T-2", "") and "재탈산" not in td_.get("T-3", ""), otd + str(td_))
 
     # 목록 작성·디지털화 검수(NAK 23)
     xlsx(f"{t}/색인검수.xlsx", [["철관리번호", "철제목", "권호", "보존기간", "등록번호", "건제목", "생산일자", "시작쪽", "끝쪽", "작업자", "작업일"],
@@ -1365,6 +1439,43 @@ def main():
     sb = " ".join(r[0] for r in list(csv.reader(open(f"{t}/산출/siard_bad.csv", encoding="utf-8-sig")))[1:]) if os.path.exists(f"{t}/산출/siard_bad.csv") else ""
     check("SIARD NAK 35 부속서 B: 최상위 폴더·버전 폴더·이름 규칙·metadata 대응·열 수", cs == 0 and cb == 1
           and all(k in sb for k in ("P_4.2-1", "P_4.2-4", "P_4.2-6", "P_4.3-1", "P_4.3-2")), os_ + ob + sb)
+
+    # 기록재료(시행규칙 별표 15)
+    xlsx(f"{t}/재료.xlsx", [["철분류번호", "제목", "보존기간", "용지", "필기구", "용기", "용지pH", "탄산칼슘", "내광성"],
+                          ["M-1", "가상 대장", "영구", "보존복사용지", "레이저 토너", "보존용 판지 상자", "8.1", "2.5", "5"],
+                          ["M-2", "가상 도면", "준영구", "재생지", "수성 볼펜", "일반 서류봉투", "6.2", "1", "3"],
+                          ["M-3", "가상 메모", "5년", "재생지", "볼펜", "", "", "", ""],
+                          ["M-4", "가상 서명부", "30년", "한지", "탄소형 사인펜", "", "", "", ""]])
+    cm, om = run([S("preservation-inspection", "scripts", "materials_check.py"), f"{t}/재료.xlsx", "-o", f"{t}/산출/재료.xlsx"])
+    mr = [r for r in openpyxl.load_workbook(f"{t}/산출/재료.xlsx")["점검 결과"].iter_rows(min_row=2, values_only=True)] if os.path.exists(f"{t}/산출/재료.xlsx") else []
+    m2 = " ".join(r[5] for r in mr if r[1] == "M-2")
+    xlsx(f"{t}/재료2.xlsx", [["철분류번호", "제목", "보존기간", "용지", "필기구", "용도", "평량", "백색도", "용지pH", "탄산칼슘", "Kappa", "인열강도", "인장강도", "변색도", "인열강도유지율"],
+                           ["I-1", "협약서", "영구", "보존백상지", "토너", "협약류", "90", "82", "8.2", "3.2", "3", "900", "", "2.1", "90"],
+                           ["I-2", "서한", "영구", "보존백상지", "토너", "공식서한류", "150", "85", "10.5", "3.5", "4", "1100", "120", "4", "92"]])
+    ci2, oi2 = run([S("preservation-inspection", "scripts", "materials_check.py"), f"{t}/재료2.xlsx", "--important", "-o", f"{t}/산출/재료2.xlsx"])
+    mi = {}
+    for r_ in openpyxl.load_workbook(f"{t}/산출/재료2.xlsx")["점검 결과"].iter_rows(min_row=2, values_only=True):
+        mi.setdefault(r_[1], []).append(r_[5])
+    i1, i2 = " ".join(mi.get("I-1", [])), " ".join(mi.get("I-2", []))
+    check("기록용지 중요문서용 규격(안) --important: 협약류 인열 1,200·평량 환산·pH 상한 10·ΔE 3.5", ci2 == 1
+          and "협약류 1200" in i1 and "pH 7.5~10.0 밖" in i2 and "ΔE" in i2 and "초과(4)" in i2 and "인장강도" in i2, oi2 + str(mi))
+    xlsx(f"{t}/생물.xlsx", [["구분", "대상", "측정일", "RLU", "부유세균", "부유곰팡이", "재질", "곰팡이육안"],
+                          ["기록물", "B-1", "2026-10-01", "1500", "", "", "백상지", ""], ["기록물", "B-2", "2026-10-01", "400", "", "", "박엽지", ""],
+                          ["기록물", "B-3", "2026-10-01", "200", "", "", "갱지", "Y"], ["기록물", "B-4", "2026-10-01", "100", "", "", "백상지", ""],
+                          ["서고", "1서고", "2026-03-01", "", "100", "5", "", ""], ["서고", "1서고", "2026-10-01", "", "900", "20", "", ""],
+                          ["서고", "2서고", "2025-06-01", "", "50", "600", "", ""]])
+    cbio, obio = run([S("preservation-inspection", "scripts", "bio_check.py"), f"{t}/생물.xlsx", "--today", "2026-11-20", "-o", f"{t}/산출/생물.xlsx"])
+    bio = {}
+    for r_ in openpyxl.load_workbook(f"{t}/산출/생물.xlsx")["점검 결과"].iter_rows(min_row=2, values_only=True):
+        bio.setdefault((r_[2], r_[3]), []).append(r_[5])
+    bj = lambda k: " ".join(bio.get(k, []))
+    check("생물오염: ATP 1,000 RLU·박엽지 보완·육안 곰팡이·부유세균 800·곰팡이 500·3배 증가·1년 지남(미소독기록물 연구)", cbio == 1
+          and "1000" in bj(("B-1", "2026-10-01")) and "박엽지" in bj(("B-2", "2026-10-01")) and "육안" in bj(("B-3", "2026-10-01"))
+          and ("B-4", "2026-10-01") not in bio and "부유세균" in bj(("1서고", "2026-10-01")) and "3배" in bj(("1서고", "2026-10-01"))
+          and "부유곰팡이 600" in bj(("2서고", "2025-06-01")) and "1년 지남" in bj(("2서고", "2025-06-01")), obio + str(bio))
+    check("기록재료 별표 15: 용지·필기구·용기·pH 7.5·탄산칼슘 2%·내광성 4호, 30년 미만 제외", cm == 1
+          and not any(r[1] in ("M-1", "M-3", "M-4") for r in mr) and all(k in m2 for k in ("재생지", "수성", "pH 6.2", "탄산칼슘 1", "내광성 3", "용기") if k != "용기")
+          and any(r[1] == "M-2" and r[4] == "용기" for r in mr), om + str(mr))
 
     # 플러그인 훅 명령: Windows(Git Bash)처럼 python3가 없거나 가짜일 때도 보호가 꺼지지 않는지
     hj = os.path.join(ROOT, "hooks", "hooks.json")

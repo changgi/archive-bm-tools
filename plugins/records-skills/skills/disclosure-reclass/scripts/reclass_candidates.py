@@ -15,6 +15,8 @@
                그 밖의 비공개·부분공개는 이관 전에 건별 공개여부 재분류(공공기록물법 제35조, 지침 제3장 이관 준비)
   ⑥ 제외(비밀)  비밀 구분이 있거나 비밀 표시가 있는 기록 — 이 도구로 다루지 않음
 검토서(NAK 16-1:2020 부속서 F 16칸)·기준서(부속서 A, 단위과제 열이 있으면 업무별)·공개관리 체크리스트(부속서 J) 시트도 만든다.
+--score-col  다른 도구가 낸 비공개 확률(0~1)이 있으면 '비고'에 검토 우선순위 구간(0.10 이하·검토 필요·0.90 이상)을 붙인다
+             (국가기록원 2025 연구 3.1.3.3 국외 사례 임계값). 구간은 검토 순서를 정하는 데만 쓰고 공개 여부를 정하지 않는다.
 결과는 '후보'일 뿐이다. 공개 여부는 기록물공개심의회가 처리과 의견을 들어 정한다.
 """
 import argparse
@@ -106,6 +108,9 @@ def main() -> int:
     ap.add_argument("table")
     ap.add_argument("--year", type=int, default=dt.datetime.now(KST).year)
     ap.add_argument("--transfer", action="store_true", help="이관 대상 목록: 이관 전 공개여부 재분류가 필요한 것을 따로 표시")
+    ap.add_argument("--score-col", help="다른 도구(AI 분류기 등)가 낸 '비공개 확률' 열 이름(0~1). 주면 검토 우선순위 구간을 붙인다")
+    ap.add_argument("--low", type=float, default=0.10, help="이 값 이하 = 공개 쪽 확실(기본 0.10)")
+    ap.add_argument("--high", type=float, default=0.90, help="이 값 이상 = 비공개 쪽 확실(기본 0.90)")
     ap.add_argument("-o", "--out", default="산출/공개재분류_후보.xlsx")
     a = ap.parse_args()
     head, rows = read_table(a.table)
@@ -120,8 +125,23 @@ def main() -> int:
     for ws in sheets.values():
         ws.append([*head, "분류", "근거", "비고"])
     counts = dict.fromkeys(ORDER, 0)
+
+    def band(r):
+        """국가기록원 「AI를 활용한 비공개기록물 공개재분류 및 비식별화 서비스 모델 연구」(2025) 3.1.3.3 국외 사례(미 국무부 외교전문)의
+        3구간: 0.10 이하 확실한 공개 · 0.10 초과 0.90 미만 검토 필요 · 0.90 이상 확실한 비공개. 어느 구간이든 결정은 심의회가 한다."""
+        if not a.score_col or a.score_col not in r:
+            return ""
+        try:
+            v = float(str(r[a.score_col]).strip())
+        except ValueError:
+            return "점수 없음 — 검토 필요"
+        if not 0 <= v <= 1:
+            return f"점수 {v} — 0~1 밖, 확인"
+        return f"공개 쪽 확실({v:.2f} ≤ {a.low})" if v <= a.low else (f"비공개 쪽 확실({v:.2f} ≥ {a.high})" if v >= a.high else f"검토 필요({v:.2f})")
     for r in rows:
         kinds, note = classify(r, head, a.year)
+        if band(r):
+            note = (note + " · " if note else "") + "검토 우선순위: " + band(r)
         for k in kinds:
             counts[k] += 1
             sheets[k].append([*(r[c] for c in head), k, BASIS[k], note])

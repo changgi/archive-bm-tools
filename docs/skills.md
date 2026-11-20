@@ -225,6 +225,7 @@ python skills/records-qa-gate/scripts/header_check.py 입력/등록정보.xlsx -
 
 ---
 
+- **유사 단위과제**: 이름이 같거나 비슷한 단위과제 쌍과 보존기간 차이(국가기록원 자치단체 기준표 빅데이터 연구).
 - **NAK 4 추가**: 대규모 투자사업(예타·민간투자·총사업비 300억 이상) 단위과제는 준영구 이상, 신설·변경 보존기간은 10월 31일까지 협의.
 
 ## 8. typed-records-check — 회의록·시청각 점검
@@ -368,6 +369,8 @@ python skills/transfer-reconcile/scripts/integrated_transfer.py 등록정보.xls
 # 🛡️ 보존
 
 - **NAK 37:2025 권고 열**: 보존포맷(PDF·PDF/A·DOCX·XLSX·PPTX·TIF·PNG·WAV·MP4·CSV·JSON·XML 등)·수용가능포맷(HWPX·FLAC·MKV·MOV·SIARD 등)·권고 외(HWP·DOC·XLS·PPT 등 변환 검토).
+- **문서 DRM 의심 표시**: 소프트캠프·마크애니·파수 헤더(국가기록원 2018 연구).
+- **손상파일 분류**(`damage_check.py`): 국가기록원 2018 연구 손상 코드와 복구 가능 여부(O·△·X), PDF·ZIP 뒤 잘림.
 
 ## 14. preservation-convert — PDF/A 보존포맷 변환
 
@@ -421,6 +424,9 @@ python skills/preservation-inspection/scripts/inspection_form.py apply 산출/�
 상태검사 결과로 복원처리 계획 세워줘. 탈산할 것도 골라줘.
 ```
 ---
+- **기록재료 점검**(`materials_check.py`, 시행규칙 별표 15): 30년 이상 기록물의 용지·필기구·보존용 판지와 pH·탄산칼슘·내광성. `--important`이면 중요문서용 기록용지 규격(안)(국가기록원 연구 표 80)도 봄.
+- **생물오염 점검**(`bio_check.py`): ATP 1,000 RLU 소독 선별, 서고 부유세균 800·곰팡이 500 CFU/m³, 증가 추세·측정 주기(국가기록원 미소독기록물 연구).
+
 
 ## 16. fixity-check — 변조·사라짐 감시
 
@@ -466,6 +472,7 @@ python skills/fixity-check/scripts/fixity.py verify 보존 산출/기준선.csv 
 ---
 
 # 🔓 공개·활용
+- **시청각 내용 검사**(`av_qc.py --content`): 블랙·정지·무음·클리핑 구간과 원인·해결(국가기록원 시청각물 품질오류 연구).
 
 ## 18. access-request — 정보공개 처리 기한
 
@@ -507,6 +514,7 @@ python skills/fixity-check/scripts/fixity.py verify 보존 산출/기준선.csv 
 
 🆕 **NAK 16-1** 결과에 `검토서(NAK 16-1 부속서 F)`(16칸, 심의 대상만 — ⑪~⑯은 전문요원이 채움), `기준서(NAK 16-1 부속서 A)`(단위과제명 열이 있으면 업무별 비공개 건수·호수), `공개관리 체크리스트`가 함께 나옵니다.
 ---
+- **검토 우선순위**(`--score-col`): 외부 분류기 비공개 확률을 0.10·0.90 구간으로(2025 연구 국외 사례). 결정은 심의회.
 
 ## 20. pii-redact — 개인정보 찾기·부분공개 가림 목록
 
@@ -525,6 +533,7 @@ python skills/fixity-check/scripts/fixity.py verify 보존 산출/기준선.csv 
 ---
 
 # ⚖️ 평가·폐기
+- **추가 유형**: 여권·운전면허·사업자등록(검증식)·법인등록·군번·사건번호(국가기록원 연구 제6호 정규식 10종). 문맥 칸의 다른 개인정보도 가림.
 
 ## 21. retention-review — 보존기간 검토·만료·이관 대상
 
@@ -628,6 +637,7 @@ python skills/dataset-schedule/scripts/dataset_schedule.py 스키마.csv --org "
 ---
 
 - **SIARD 2.1 점검**(`siard_check.py`, NAK 35 부속서 B): ZIP·암호화 금지·content/header만·siardversion/2.1·이름 규칙·metadata↔content 대응·열 수.
+- **재현정보**: 스키마·코드표·XSLT·재현 도구를 함께 받아 패키지에 둠(국가기록원 2025 연구, 표준 확정 전 제안).
 
 ## 26. classified-records-check — 비밀기록물 점검(서식 10·11)
 
@@ -650,6 +660,7 @@ python fill_official_form.py 등록정보.xlsx --form 통보서식.xlsx --year 2
 # 📊 평가·보고
 
 - **NAK 17 6.2**: 사본 예고문에 '이관'이 있으면 표시(사본은 파기·일반문서로 재분류).
+- **NAK 17 8.2.3·8.3.2**: '합철' 열(Y)이면 일반문서철 이관시기를 따르고, '이관시기연장' 열(Y, 특수기록관 비공개 30년 연장)이면 생산 후 30년 지난 다음 연도에 영구 이관.
 
 ## 27. evaluation-readiness — 기록관리 기관평가 준비
 
@@ -730,6 +741,7 @@ python skills/transfer-schedule/scripts/encrypted_scan.py 이관폴더 --list �
 - 해제 정보(비밀번호)는 기관 보안 절차로 따로 전달하세요.
 
 ---
+- **문서 DRM**: encrypted_scan.py가 DRM 헤더 의심 파일도 암호화 목록에 넣음(2018 연구).
 
 ## 30. stack-environment — 서고 환경 점검
 
@@ -789,6 +801,8 @@ python skills/records-forms/scripts/make_form.py hold --info 기관정보.json -
 **알아 둘 점** 제출·결재·직인은 사람이 합니다. 한글 파일이 필요하면 [28번 hwpx-report](#28-hwpx-report--한글hwpx-보고서공문-서식)로 넘기세요.
 
 ---
+- **별지 제1호의2**(`extend`, 2027. 1. 1. 시행): 기록물 이관 기간 연장·일정 연기 목록 — 처리과→기록관, 기록관→영구기록물관리기관 협의에 첨부.
+
 
 ## 32. box-labels — 보존상자 편성·표지
 
@@ -873,6 +887,7 @@ python skills/records-forms/scripts/make_form.py hold --info 기관정보.json -
 **알아 둘 점** 건조 방법 칸은 표 6·8을 옮긴 참고입니다. 코팅지는 진공건조 절대 금지, 가죽 장정본은 자연건조 권장, 드라이기·열풍기는 쓰지 않습니다. 세척·건조·동결 방법의 최종 결정은 보존처리 담당자가 기록물 상태를 보고 합니다. 화재 피해 기록물은 직접 손으로 들지 말고 운반도구를 쓰고, 환기되는 곳에서 작업합니다. 사람 안전이 먼저입니다.
 
 ---
+- **방사선 소독 검토**: 곰팡이 종이 기록물에 15 kGy·25 kGy 이하, 컬러 출력물 10 kGy 색차 안내(국가기록원 2025 연구).
 
 ## 35. security-disaster-plan — 보안·재난관리 대책 점검
 

@@ -1,5 +1,8 @@
 #!/usr/bin/env python3
-"""개인정보 탐지: 주민등록번호·외국인등록번호·전화번호·이메일·카드번호·계좌번호(문맥) 후보를 찾는다.
+"""개인정보 탐지: 주민등록번호·외국인등록번호·전화번호·이메일·카드번호·계좌번호(문맥)·여권번호·운전면허번호·사업자등록번호(검증식)·
+법인등록번호(문맥)·군번(문맥)·사건번호 후보를 찾는다. 추가 유형에서 같은 숫자 5자리 이상(11111·00000)은 더미로 보고 뺀다.
+근거(추가 유형): 국가기록원 「전자기록물 공개재분류를 위한 비공개정보 필터링 및 마스킹 기술 적용방안 연구」 — 제6호 정규식 10종
+(이메일·여권·주민·외국인·사업자·군번·운전면허·카드·주소·소송번호). 주소·인명은 정규식으로 잡지 않는다(연구도 주소DB·기계학습을 씀).
 
 사용:  python pii_scan.py 입력(파일 또는 폴더) -o 산출/개인정보_탐지.csv
 지원:  .txt .csv .tsv .md .xlsx .pdf(텍스트층) .hwpx(본문 XML)
@@ -21,7 +24,23 @@ PATTERNS = {
     "이메일": re.compile(r"[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}"),
     "카드번호": re.compile(r"(?<!\d)(?:\d{4}[-\s]?){3}\d{4}(?!\d)"),
     "계좌번호(문맥)": re.compile(r"(계좌|입금|은행|예금주)[^\n\d]{0,12}(\d{2,6}[-\s]\d{2,6}[-\s]\d{2,8}(?:[-\s]\d{1,4})?)"),
+    # 아래는 국가기록원 「전자기록물 공개재분류를 위한 비공개정보 필터링 및 마스킹 기술 적용방안 연구」의 제6호 정규식 10종에 맞춰 더한 것
+    "여권번호": re.compile(r"(?<![A-Za-z0-9])(?:[MSRODG]\d{8}|[MSRODG]\d{3}[A-Z]\d{4})(?![A-Za-z0-9])"),
+    "운전면허번호": re.compile(r"(?<!\d)(?:1[1-9]|2[0-8])[-\s]?\d{2}[-\s]?\d{6}[-\s]?\d{2}(?!\d)"),
+    "사업자등록번호": re.compile(r"(?<!\d)\d{3}-\d{2}-\d{5}(?!\d)"),
+    "법인등록번호(문맥)": re.compile(r"(법인등록번호|법인번호)[^\n\d]{0,6}(\d{6}\s?-\s?\d{7})"),
+    "군번(문맥)": re.compile(r"(군번)[^\n\d]{0,6}(\d{2}-\d{5,8})"),
+    "사건번호": re.compile(r"(?<!\d)(?:19|20)\d{2}\s?(?:가합|가단|가소|나|다|라|머|드|느|노|도|고합|고단|고정|구합|구단|누|두|호|즈|카|타|하)\s?\d{2,6}(?!\d)"),
 }
+NEW_KINDS = {"여권번호", "운전면허번호", "사업자등록번호", "법인등록번호(문맥)", "군번(문맥)", "사건번호"}
+CONTEXT_KINDS = {"계좌번호(문맥)", "법인등록번호(문맥)", "군번(문맥)"}
+DUMMY = re.compile(r"(\d)\1{4,}")  # 같은 숫자 5자리 이상(11111·00000)은 예시·더미로 보고 뺀다(같은 연구)
+
+
+def bizno_ok(d: str) -> bool:
+    w = [1, 3, 7, 1, 3, 7, 1, 3, 5]
+    s = sum(int(x) * k for x, k in zip(d[:9], w)) + int(d[8]) * 5 // 10
+    return (10 - s % 10) % 10 == int(d[9])
 
 
 def rrn_checksum_ok(digits: str) -> bool:
@@ -41,14 +60,28 @@ def mask(value: str) -> str:
     return value[:keep] + "*" * max(len(value) - keep * 2, 1) + value[-keep:]
 
 
+def mask_all(ctx: str) -> str:
+    """문맥에 함께 걸린 다른 개인정보도 가린다(옆 값이 문맥으로 새지 않게)."""
+    for kind, rx in PATTERNS.items():
+        def rep(m, kind=kind):
+            raw = m.group(2) if kind in CONTEXT_KINDS else m.group(0)
+            return m.group(0).replace(raw, mask(raw))
+        ctx = rx.sub(rep, ctx)
+    return re.sub(r"\d{5,}", lambda m: m.group(0)[:1] + "*" * (len(m.group(0)) - 2) + m.group(0)[-1:], ctx)
+
+
 def scan_text(text: str):
     """(유형, 가린 값, 검증, 앞뒤 문맥) 목록을 돌려준다."""
     found = []
     for kind, rx in PATTERNS.items():
         for m in rx.finditer(text):
-            raw = m.group(2) if kind == "계좌번호(문맥)" else m.group(0)
+            raw = m.group(2) if kind in CONTEXT_KINDS else m.group(0)
             digits = re.sub(r"\D", "", raw)
+            if kind in NEW_KINDS and DUMMY.search(digits):
+                continue
             check = ""
+            if kind == "사업자등록번호":
+                check = "검증식 일치" if bizno_ok(digits) else "검증식 불일치 — 다른 번호일 수 있음"
             if kind == "주민·외국인등록번호":
                 check = "검증식 일치" if rrn_checksum_ok(digits) else "검증식 불일치(2020.10 이후 번호일 수 있음)"
             elif kind == "카드번호":
@@ -56,9 +89,10 @@ def scan_text(text: str):
                     continue  # 카드번호는 Luhn이 표준이라 불일치는 버린다
                 check = "Luhn 일치"
             ctx = text[max(0, m.start() - 12): m.end() + 12].replace("\n", " ")
-            ctx = ctx.replace(raw, mask(raw))
+            ctx = mask_all(ctx.replace(raw, mask(raw)))
             found.append((kind, mask(raw), check, ctx))
-    return found
+    corp = {v for k, v, _, _ in found if k == "법인등록번호(문맥)"}
+    return [f for f in found if not (f[0] == "주민·외국인등록번호" and f[1] in corp)]  # 같은 값이 법인등록번호로 잡혔으면 하나만
 
 
 def read_units(path: str):

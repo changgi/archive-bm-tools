@@ -13,3 +13,8 @@ description: 기록물 파일의 실제 포맷을 내용으로 식별하고 확�
    - 수용가능포맷: HWPX, FLAC·WMA, AVI·MKV·MOV·WMV(코덱 FFV1), SIARD
    - 권고 외(평가했으나 권고 아님): HWP·DOC·TXT·PPT·SHOW·PPS·PPTM·XLS·CELL·XLK·ASC → preservation-convert로 변환 검토
    - 비디오는 컨테이너만 확장자로 본다. 코덱(AVC 권고)은 ffprobe(scan-qc의 av_qc.py)로 확인한다.
+5. 열리지 않는 파일: `python "${CLAUDE_PLUGIN_ROOT}"/skills/format-identify/scripts/damage_check.py 폴더/ -o 산출/손상파일_분류.csv`
+   - 국가기록원 「파일손상 전자기록물 복구 프로토타입 연구」(2018)의 손상 코드로 나누고, 표 18의 복구 가능 여부를 붙인다(O 원상 복구·△ 텍스트 추출·X 불가).
+   - 보는 코드: S001(원본 장애·삭제·감염 안내문만 남음), B002(HML XML 오류), B003(10바이트 이하), B007(HWP 서명 없음), B015(OLE 뒤 잘림), B020(HWP 3.0 헤더), E001(전체 Base64), E002(.hox), E003(DestinyFS), E004(메일 인코딩), E005(DRM), E006(HC20), E007(FSPA).
+   - 연구 밖이지만 같은 방식으로 PDF 끝 %%EOF 없음, ZIP 계열 구조·CRC 손상도 '추가-'로 표시한다.
+   - 복구는 하지 않는다. 연구에서는 복구 가능 코드 2,324개 중 약 78%를 복구 엔진으로 되살렸다. O·△ 파일은 원본 보존 후 국가기록원 복구 엔진·전문 도구에 맡긴다.

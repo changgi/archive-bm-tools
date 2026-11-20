@@ -58,6 +58,18 @@ def nak37(ext, path, sig):
     return ""
 
 
+DRM = [(rb"SCD000[2-4]", "소프트캠프"), (rb"Document SAFER", "마크애니"), (rb"(?i)fasoo", "파수")]  # 국가기록원 2018 연구 헤더 분석
+
+
+def drm(path):
+    try:
+        with open(path, "rb") as f:
+            b = f.read(4096)
+    except OSError:
+        return ""
+    return next((v for rx, v in DRM if __import__("re").search(rx, b)), "")
+
+
 def head_sig(path):
     try:
         with open(path, "rb") as f:
@@ -121,6 +133,9 @@ def main() -> int:
                 flags.append("확장자 불일치(PDF 아님)")
             if ext in ("jpg", "jpeg") and sig != "jpeg":
                 flags.append("확장자 불일치(JPEG 아님)")
+            d = drm(p)
+            if d:
+                flags.append(f"문서 DRM 의심({d}) — 내용 열람 불가, 이관 전 해제(transfer-schedule encrypted_scan.py 목록)")
             if ext in REVIEW:
                 flags.append(REVIEW[ext])
             flagged += bool(flags)
