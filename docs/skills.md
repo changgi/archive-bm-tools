@@ -1,4 +1,4 @@
-# 스킬 40종 사용법
+# 스킬 41종 사용법
 
 > 스킬마다 **언제 쓰는지 · 무엇을 준비하는지 · 어떻게 말하면 되는지 · 무엇을 받는지 · 주의할 점**을 적었습니다.
 > 명령어를 외울 필요는 없습니다. **「이렇게 말하세요」의 문장을 그대로 Claude Code에 입력**하면 Claude가 알맞은 스킬을 골라 실행합니다.
@@ -322,6 +322,8 @@ python skills/transfer-reconcile/scripts/integrated_transfer.py 등록정보.xls
 
 **알아 둘 점** 비밀기록물은 통합이관 대상 계산에서 빠집니다.
 
+
+🆕 **NEO2 장기보존패키지(NAK 31-1)** `python skills/transfer-reconcile/scripts/neo_check.py NEO폴더/` — 필수 요소, 부모 요소별 필수 자식, ComponentData Base64·크기, 전자서명 블록, 압축 패키지의 Metadata.xml·PackagingInformation.xml. 서명 유효성(장기검증)은 보지 않습니다.
 ---
 
 ## 12. transfer-triage — 인수·기증 폴더 첫 진단
@@ -377,6 +379,8 @@ python skills/transfer-reconcile/scripts/integrated_transfer.py 등록정보.xls
 - 한글 글꼴은 **TrueType(.ttf)** 글꼴을 쓰세요. OTF(CFF) 대체 글꼴이 들어가면 6.3.5 조항에서 부적합이 날 수 있습니다.
 - NAK 10:2026에 따라 표준보존패키지 변환은 기산일 후 6년이 되기 전에 합니다.
 
+
+🆕 **veraPDF가 없을 때(NAK 30)** `python skills/preservation-convert/scripts/pdfa_precheck.py 산출/보존포맷/` — 암호화·LZW·내장 파일·OutputIntent·폰트 미내장·부분집합 CharSet/CIDSet·투명도·금지 주석·JavaScript·XMP 선언을 사전 점검합니다. '사전 점검 통과'는 공식 적합이 아닙니다.
 ---
 
 ## 15. preservation-inspection — 정수점검·상태검사
@@ -738,6 +742,8 @@ python skills/transfer-schedule/scripts/encrypted_scan.py 이관폴더 --list �
 
 **알아 둘 점** '조치 필요'(5% 이상 이탈 또는 24시간 넘는 이탈)는 이 킷의 기본 문턱입니다. 법령은 범위만 정하므로 기관 기준이 있으면 그것을 따르세요.
 
+
+🆕 **신축·리모델링(NAK 24)** `--newbuild --completed 2026-08-01` → 부지 6조건·지상 독립 서고·하중 750/1,000~1,200kgf/㎡·P.A.T. 자재 시험·급배수라인·완공 후 6개월 안정화 뒤 입고일. 시청각·작업실·열람실 면적은 `--audio --video --albums --film-cans --workers --seats`.
 ---
 
 ## 31. records-forms — 법정 서식 작성
@@ -995,6 +1001,30 @@ E 드라이브 DVD를 간이 검사해줘. 복사본은 산출/매체검사/DVD-
 **직접 실행** `python skills/official-doc-check/scripts/doc_check.py 기안문.hwpx 보고서.docx -o 산출/공문서점검.xlsx`
 
 **알아 둘 점** 원본은 고치지 않습니다. 규정은 특별한 사유가 있으면 다른 방법도 허용하므로 제안으로 봅니다. 근거: 「행정업무의 운영 및 혁신에 관한 규정」 제7조, 같은 규정 시행규칙 제2조·제4조.
+
+---
+
+## 41. system-requirements — 시스템 기능요건 점검
+
+> 🧾 **비유:** 집 지을 때 쓰는 건축 사양서 체크리스트. "꼭 있어야 하는 기능(M)"이 빠졌는지 한 줄씩 확인합니다.
+
+**이럴 때** 기록관리시스템(RMS) 구축·고도화 과업지시서를 쓸 때, 감리·검수 때, 기관평가에서 시스템 기능을 증빙할 때.
+
+**준비할 것** 없음(빈 점검표부터). 결과를 집계하려면 이행·근거를 채운 점검표.
+
+**대상** 기록관리시스템(NAK 6, 161개) · 영구기록관리시스템(NAK 7, 220개) · 정부산하(NAK 20, 149개) · 생산시스템(NAK 19-1, 83개) · 전자문서시스템(NAK 19-2, 76개) · 업무관리시스템(NAK 19-3, 73개)
+
+**이렇게 말하세요**
+```text
+우리 기록관리시스템 기능요건 점검표 만들어줘. 필수만.
+채운 점검표로 필수요건 충족률이랑 빠진 것 알려줘.
+```
+
+**받는 결과** `요약`(필수 충족률·장별) · `점검표`(원문 요건·M/CM/O·이행 선택 목록) · `필수 미충족`
+
+**직접 실행** `python skills/system-requirements/scripts/req_checklist.py --system 기록관리시스템 [--results 채운점검표.xlsx] -o 산출/기능요건.xlsx`
+
+**알아 둘 점** 요건 문장은 국가기록원 표준 PDF 원문을 옮긴 것입니다(줄바꿈으로 띄어쓰기가 붙은 곳 있음). NAK 19-1·19-2는 원문에 M/O 표시가 없어 '~하여야 한다'=필수, '~할 수 있다'=선택으로 나눴습니다.
 
 ---
 

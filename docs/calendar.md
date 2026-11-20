@@ -18,6 +18,7 @@ flowchart LR
 | **1~2월** | 기록물 정리(등록정보·실물 대조) | [records-register-audit](skills.md#2-records-register-audit--정리-기간-등록정보실물-대조) | "등록정보랑 실물점검표 대조해줘" |
 | | 등록정보 빈칸·오류 미리 고치기 | [production-status-report](skills.md#1-production-status-report--생산현황-통보서식-111), [metadata-autofill](skills.md#4-metadata-autofill--메타데이터-빈칸-채우기), [task-suggest](skills.md#6-task-suggest--단위과제보존기간-추천) | "등록정보 먼저 점검해줘", "단위과제 빈 것 후보 찾아줘" |
 | | 기록관리기준표 정비·고시 대상 | [records-schedule-check](skills.md#7-records-schedule-check--기록관리기준표-점검) | "작년 기준표랑 비교해서 고시 대상 뽑아줘" |
+| **~8월 31일** | 기록관 → 영구기록물관리기관 생산현황 통보(시행령 제42조①) | [production-status-report](skills.md#1-production-status-report--생산현황-통보서식-111) | "생산현황 통보 전에 고칠 것 알려줘" |
 | **3~5월** | 생산현황 통보 서식 1~11 | [production-status-report](skills.md#1-production-status-report--생산현황-통보서식-111) 외 | "입력 폴더로 생산현황 통보서 만들어줘" |
 | | 회의록·시청각·간행물·행정박물 점검 | [typed-records-check](skills.md#8-typed-records-check--회의록시청각-점검), [publications-check](skills.md#9-publications-check--간행물-점검서식-7), [admin-artifacts-check](skills.md#10-admin-artifacts-check--행정박물-점검서식-56) | "간행물 송부 안 한 것 알려줘" |
 | | 비밀기록물 서식 10·11 (담당자 전용 장비) | [classified-records-check](skills.md#26-classified-records-check--비밀기록물-점검서식-1011) | (Claude 밖에서 직접 실행) |

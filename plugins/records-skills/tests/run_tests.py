@@ -960,14 +960,16 @@ def main():
 
     # 서고 환경 NAK 11: 매수·서가 길이 환산, 규모, 검·교정 1년
     cn, on_ = run([S("stack-environment", "scripts", "env_check.py"), f"{t}/온습도.csv", "--pages", "250050", "--shelf-m", "30", "--area", "320",
-                   "--calibrated", "2025-10-01", "--today", "2026-11-20", "-o", f"{t}/산출/서고NAK11.xlsx"])
+                   "--calibrated", "2025-10-01", "--today", "2026-11-20", "--video", "20000", "--workers", "3", "--newbuild", "--completed", "2026-08-01",
+                   "-o", f"{t}/산출/서고NAK11.xlsx"])
     ok_n = False
     if cn == 0:
         wn = openpyxl.load_workbook(f"{t}/산출/서고NAK11.xlsx")
         ar_ = {r[0]: r for r in wn["서고 면적"].iter_rows(values_only=True)}
         ck_ = [r for r in wn["서고 점검표(NAK 11)"].iter_rows(values_only=True)]
         ok_n = (ar_["권 수(매수 환산)"][1] == "2,501권" and ar_["권 수(서가 길이 환산)"][1] == "1,500~2,000권" and ar_["서고 규모"][1] == "대형"
-                and any(r[0] == "검·교정" and r[2] == "부적합" for r in ck_) and any("8.5~15cm" in str(r[1]) for r in ck_))
+                and any(r[0] == "검·교정" and r[2] == "부적합" for r in ck_) and any("8.5~15cm" in str(r[1]) for r in ck_) and ar_["필요 면적(비디오)"][1] == "90.0㎡" and ar_["필요 면적(작업실)"][1] == "21.0㎡"
+                and any(r[0] == "입고 가능" and "2027-02-01" in str(r[1]) and r[2] == "아직 이름" for r in wn["신축 점검표(NAK 24)"].iter_rows(values_only=True)))
     check("서고 환경 NAK 11: 100매=1권·15~20mm 환산, 대형 서고, 검·교정 1년 지남, 점검표", ok_n, on_)
 
     # 필수기록물(NAK 2-2): 판정 규칙, 보호기간 ≤ 보존기간, 복본·분산·10km
@@ -1179,8 +1181,8 @@ def main():
     if cyp == 0:
         icsx = open(f"{t}/산출/일정2027.ics", encoding="utf-8", newline="").read()
         lvv = [r for r in openpyxl.load_workbook(f"{t}/산출/연간2027.xlsx")["수준 체크리스트"].iter_rows(values_only=True)]
-        ok_yp = (icsx.startswith("BEGIN:VCALENDAR") and "DTSTART;VALUE=DATE:20271031" in icsx and icsx.count("BEGIN:VEVENT") >= 15
-                 and "\r\n" in icsx and lvv[-1][2] == "미달" and "2명" in lvv[-1][1])
+        ok_yp = (icsx.startswith("BEGIN:VCALENDAR") and "DTSTART;VALUE=DATE:20271031" in icsx and "DTSTART;VALUE=DATE:20270831" in icsx and icsx.count("BEGIN:VEVENT") >= 15
+                 and "\r\n" in icsx and any(r and r[0] == "인력 배치" and r[2] == "미달" and "2명" in r[1] for r in lvv) and lvv[-1][0] == "교육")
     check("연간 일정 NAK 18: 월별 업무·10/31 기한 .ics, 수준 체크리스트, 전문요원 1/4", ok_yp, oyp)
 
     # 기록물 기술 점검(NAK 13)
@@ -1234,6 +1236,57 @@ def main():
                  and "금육만삼천오백육십원" in txt and "공문.txt:항목 순서:1. 단계 2 다음은 3번째" in txt and "가. 단계 2 다음은 3번째" in txt
                  and "1) 다음 하위 항목은 가)" in txt and "공문.txt:붙임" in txt and "끝." in txt and not any(f_ == "공문2.txt" for f_, _, _ in dk))
     check("공문서 표기: 날짜·시간·금액(한글 대조), 항목 순서·단계, 붙임 구분·수량, 끝 표시 — 바른 문서는 제안 0", ok_dk, odk + txt[:300] if os.path.exists(f"{t}/산출/공문점검.xlsx") else odk)
+
+    # 시스템 기능요건(NAK 6·7·20·19) 점검표와 결과 집계
+    crq, orq = run([S("system-requirements", "scripts", "req_checklist.py"), "--system", "기록관리시스템", "-o", f"{t}/산출/요건.xlsx"])
+    ok_rq = False
+    if crq == 0:
+        wq = openpyxl.load_workbook(f"{t}/산출/요건.xlsx")
+        rq = [list(r) for r in wq["점검표"].iter_rows(min_row=2, values_only=True)]
+        for i, r in enumerate(rq):
+            r[6] = "충족" if i % 10 else "미충족"
+        xlsx(f"{t}/요건결과.xlsx", [["표준", "번호", "장", "절", "요건", "구분", "이행", "근거"]] + rq)
+        crq2, orq2 = run([S("system-requirements", "scripts", "req_checklist.py"), "--system", "기록관리시스템", "--results", f"{t}/요건결과.xlsx",
+                          "-o", f"{t}/산출/요건결과.xlsx"])
+        wq2 = openpyxl.load_workbook(f"{t}/산출/요건결과.xlsx")
+        nm = sum(1 for i, r in enumerate(rq) if i % 10 == 0 and r[5] in ("M", "CM"))
+        miss_ = [r for r in wq2["필수 미충족"].iter_rows(min_row=2, values_only=True)]
+        ok_rq = (len(rq) == 161 and rq[0][1] == "5.1.1" and crq2 == 0 and len(miss_) == nm and nm > 0 and "필수요건 충족" in str([r[0] for r in wq2["요약"].iter_rows(values_only=True)]))
+        orq += orq2
+    check("시스템 기능요건 NAK 6: 점검표 161개(M·O), 채운 결과로 필수 미충족 목록·충족률", ok_rq, orq)
+    # PDF/A-1b 사전 점검(NAK 30)
+    import pikepdf as _pk
+    os.makedirs(f"{t}/pdfa30", exist_ok=True)
+    _p = _pk.new(); _p.add_blank_page()
+    _p.Root.Names = _p.make_indirect(_pk.Dictionary(EmbeddedFiles=_pk.Dictionary(Names=_pk.Array())))
+    _p.Root.OpenAction = _pk.Dictionary(S=_pk.Name.JavaScript, JS=_pk.String("x"))
+    _p.save(f"{t}/pdfa30/bad.pdf")
+    _p.save(f"{t}/pdfa30/enc.pdf", encryption=_pk.Encryption(owner="o", user="u"))
+    cpa, opa = run([S("preservation-convert", "scripts", "pdfa_precheck.py"), f"{t}/pdfa30", "-o", f"{t}/산출/pdfa30.csv"])
+    pa = {r[0]: r for r in list(csv.reader(open(f"{t}/산출/pdfa30.csv", encoding="utf-8-sig")))[1:]} if os.path.exists(f"{t}/산출/pdfa30.csv") else {}
+    check("PDF/A 사전 점검 NAK 30: 선언·OutputIntent·내장 파일·JavaScript·암호화",
+          cpa == 1 and all(k in pa.get("bad.pdf", [""] * 4)[3] for k in ("6.7", "6.2.2", "6.1.11", "6.6")) and "Encrypt" in pa.get("enc.pdf", [""] * 4)[3], opa)
+
+    # NEO2 장기보존패키지 구조(NAK 31-1)
+    import base64 as _b64
+    os.makedirs(f"{t}/neo")
+    body = _b64.b64encode(b"hello").decode()
+    good = ('<neo:NAKEncapsulatedObject xmlns:neo="urn:nak:neo"><neo:NEOFormatDescription>NEO</neo:NEOFormatDescription><neo:Version>2.0</neo:Version>'
+            '<neo:SignedObject><neo:ObjectCreationDate>2026-11-20</neo:ObjectCreationDate><neo:ObjectContent><neo:Record><neo:RecordMetadata>'
+            '<neo:TitleCon><neo:MainTitle>가상</neo:MainTitle></neo:TitleCon><neo:DateTimeCon><neo:DateTimeCreated>2026</neo:DateTimeCreated>'
+            '<neo:DateTimeClosed>2026</neo:DateTimeClosed></neo:DateTimeCon></neo:RecordMetadata><neo:Component><neo:ComponentMetadata>'
+            '<neo:ComponentTitle>본문</neo:ComponentTitle><neo:ComponentType>본문</neo:ComponentType></neo:ComponentMetadata><neo:Encoding>'
+            '<neo:EncodingMetadata><neo:SourceFileIdentifier>a.txt</neo:SourceFileIdentifier><neo:SouceFileFormatName>TXT</neo:SouceFileFormatName>'
+            '<neo:SourceFileExtent>5</neo:SourceFileExtent></neo:EncodingMetadata><neo:ComponentData>' + body + '</neo:ComponentData></neo:Encoding>'
+            '</neo:Component></neo:Record></neo:ObjectContent></neo:SignedObject><neo:SignatureBlock><neo:SignatureFormatDescription>x</neo:SignatureFormatDescription>'
+            '<neo:SignatureDate>2026</neo:SignatureDate><neo:Signer>x</neo:Signer><neo:Signature>x</neo:Signature></neo:SignatureBlock></neo:NAKEncapsulatedObject>')
+    open(f"{t}/neo/good.xml", "w", encoding="utf-8").write(good)
+    open(f"{t}/neo/bad.xml", "w", encoding="utf-8").write(good.replace("<neo:MainTitle>가상</neo:MainTitle>", "").replace(body, "@@@").replace(
+        "<neo:SignatureBlock>", "<neo:X>").replace("</neo:SignatureBlock>", "</neo:X>"))
+    cnc, onc = run([S("transfer-reconcile", "scripts", "neo_check.py"), f"{t}/neo", "-o", f"{t}/산출/neo.csv"])
+    nc = {r[0]: r for r in list(csv.reader(open(f"{t}/산출/neo.csv", encoding="utf-8-sig")))[1:]} if os.path.exists(f"{t}/산출/neo.csv") else {}
+    check("NEO2 NAK 31-1: 필수 요소·부모별 필수, Base64·크기, 서명 블록", cnc == 1 and nc.get("good.xml", [""])[-1] == "통과"
+          and all(k in nc.get("bad.xml", [""] * 6)[4] for k in ("TitleCon→MainTitle", "Base64", "SignatureBlock")), onc + str(nc.get("bad.xml")))
 
     # 플러그인 훅 명령: Windows(Git Bash)처럼 python3가 없거나 가짜일 때도 보호가 꺼지지 않는지
     hj = os.path.join(ROOT, "hooks", "hooks.json")

@@ -135,6 +135,14 @@ def main() -> int:
     ap.add_argument("--shelf-m", type=float, help="서가에 꽂힌 길이 합계(m) — 1권 15~20mm로 권 수 범위 환산(NAK 11:2025)")
     ap.add_argument("--calibrated", help="온습도계 마지막 검·교정일 YYYY-MM-DD — 1년이 지나면 표시(NAK 11:2025 매년 검·교정)")
     ap.add_argument("--today", help="판정일(기본: 오늘)")
+    ap.add_argument("--audio", type=int, help="오디오 매체 수(1만개당 25㎡)")
+    ap.add_argument("--video", type=int, help="비디오 매체 수(1만개당 45㎡)")
+    ap.add_argument("--albums", type=int, help="사진·필름 앨범 권 수(1만권당 145㎡)")
+    ap.add_argument("--film-cans", type=int, help="영화필름 캔 수(1천캔당 30㎡)")
+    ap.add_argument("--workers", type=int, help="작업실 근무 인원(1명당 7㎡, 장비공간 별도)")
+    ap.add_argument("--seats", type=int, help="열람실 근무 인원+열람 좌석(1명당 7㎡)")
+    ap.add_argument("--newbuild", action="store_true", help="보존시설 신축·리모델링 점검표(NAK 24:2023) 시트를 더함")
+    ap.add_argument("--completed", help="신축·리모델링 완공일 YYYY-MM-DD — 6개월 이상 온습도 안정화 후 입고")
     ap.add_argument("-o", "--out", default="산출/서고환경.xlsx")
     a = ap.parse_args()
     mmap = {}
@@ -260,6 +268,10 @@ def main() -> int:
         ar.append(["하중", "고정식 750㎏f/㎡, 이동식 1,000~1,200㎏f/㎡", "미충족 시 기록물·서가 중량 조정(기록관·특수기록관 비고)"])
     else:
         ar.append(["필요 면적", "--books(보존 권 수)를 주면 계산", "종이 1만권당 99㎡"])
+    for lab, val, per, unit in (("오디오", a.audio, 10000, 25), ("비디오", a.video, 10000, 45), ("사진·필름 앨범", a.albums, 10000, 145),
+                                ("영화필름", a.film_cans, 1000, 30), ("작업실", a.workers, 1, 7), ("열람실", a.seats, 1, 7)):
+        if val:
+            ar.append([f"필요 면적({lab})", f"{val / per * unit:.1f}㎡", f"{'1명' if per == 1 else f'{per:,}개(권·캔)'}당 {unit}㎡(시행령 별표 6, NAK 24 부속서)"])
     if a.area:
         size = "대형" if a.area >= 300 else "중형" if a.area >= 150 else "소형"
         ar.append(["서고 규모", size, "대형 300㎡ 이상 · 중형 150~300㎡ · 소형 150㎡ 이하(NAK 11:2025) — 온습도계 대표지점 수 판단에 참고"])
@@ -282,6 +294,33 @@ def main() -> int:
             ck.append(["검·교정", f"날짜를 읽지 못함: {a.calibrated}", "", "YYYY-MM-DD"])
     else:
         ck.append(["검·교정", "온습도계 검·교정일을 --calibrated로 주면 1년 경과를 판정", "", ""])
+    if a.newbuild:
+        nb = wb.create_sheet("신축 점검표(NAK 24)")
+        nb.append(["단계", "점검 항목(NAK 24:2023 「기록물 보존시설 신축 가이드라인」)", "적합/부적합", "비고"])
+        for line in [("부지", "적법성 — 건축 관련 법령 조건에 맞는 곳"), ("부지", "안전성 — 지형·지반·수해·화재로부터 안전(수해 지역은 가능한 피함)"),
+                     ("부지", "접근성 — 이관기관·열람자 접근 쉬움"), ("부지", "확장성 — 향후 서고 확장 가능"), ("부지", "공해와 격리 — 공장·교통 등 유해환경과 떨어짐"),
+                     ("부지", "유사기관 연계 — 박물관·도서관·학술기관과 가까움"),
+                     ("설계", "보존서고는 독립 건축 원칙, 기존 시설 활용 시 부속서(시행령 별표 6) 요구사항 충족"),
+                     ("설계", "서고는 건물 내 독립 위치, 침수 대비 가급적 지상 배치"), ("설계", "서고 크기: 대형 300㎡ 초과 · 중형 150~300㎡ · 소형 150㎡ 미만"),
+                     ("설계", "서고 하중: 고정식 750kgf/㎡ 이상, 이동식 1,000~1,200kgf/㎡(6단 복식서가, 단 길이 85~90㎝) — 설계 초기부터 전문가 협의"),
+                     ("설계", "서가 열 사이 0.7~1m, 중앙통로 확보, 서고 전체에서 등거리 이격"), ("설계", "항온항습·공기정화, 화재감시·가스식 진압, 전기·조명 설비"),
+                     ("공사", "서고 내부 건축자재 P.A.T.(Photographic Activity Test) 사전 실시 — 금속편법·요오드-아지드법"),
+                     ("공사", "사용금지 건축자재를 시공 단계별로 확인"),
+                     ("안정성", "완공 후 6개월 이상 온습도 점검·안정화 확인 뒤 기록물 입고"), ("안정성", "서고 상·하층부에 급·배수라인 통과 금지, 전기배선·전원장치 안전 점검"),
+                     ("안정성", "완공 후 하중 정밀 점검(전문가 의뢰), 설계 하중과 비교")]:
+            nb.append([*line, "", ""])
+        if a.completed:
+            try:
+                c = dt.date.fromisoformat(a.completed)
+                m = c.month + 6
+                ok_day = dt.date(c.year + (m - 1) // 12, (m - 1) % 12 + 1, min(c.day, 28))
+                today_ = dt.date.fromisoformat(a.today) if a.today else dt.date.today()
+                nb.append(["입고 가능", f"완공 {c.isoformat()} + 6개월 = {ok_day.isoformat()} 이후(온습도 안정화 확인 전제)",
+                           "아직 이름" if today_ < ok_day else "기간 지남", ""])
+            except ValueError:
+                nb.append(["입고 가능", f"날짜를 읽지 못함: {a.completed}", "", ""])
+        nb.column_dimensions["A"].width = 10
+        nb.column_dimensions["B"].width = 100
     st = wb.create_sheet("기준")
     st.append(["매체", "온도", "습도", "적용 기관"])
     for m, (tc, tt, hc, ht) in STD.items():

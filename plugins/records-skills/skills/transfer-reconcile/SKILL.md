@@ -28,3 +28,9 @@ description: 이관 목록(엑셀)과 실제 파일·상자 목록을 대조해 
 ## 전자기록물 오프라인 이관(폐쇄망 기관)
 - 지침: 이관매체(WORM 또는 변경 여부를 입증할 수 있는 재사용 매체)에 디스크 이미지로 담고 암호화, 인계·인수 양쪽에서 해시값을 비교, '전자기록물 인수·인계 확인서'(표준시간·도구명·해시 알고리즘·이관작업 시스템정보·이미지정보·인계자·인수자)를 작성.
 - 해시 기준선과 대조는 fixity-check(baseline/verify)로 한다. 매체 수록·암호화·서명은 사람이 기관 승인 도구로 한다.
+
+## 장기보존패키지(NEO2) 구조 점검 (NAK 31-1:2022)
+`python "${CLAUDE_PLUGIN_ROOT}"/skills/transfer-reconcile/scripts/neo_check.py NEO폴더/ -o 산출/NEO점검.csv`
+- 루트 neo:NAKEncapsulatedObject, 필수 요소(Version·SignedObject·ObjectContent·Record·RecordMetadata 등), 부모가 있을 때 필수인 자식(TitleCon→MainTitle, DateTimeCon→DateTimeCreated·DateTimeClosed, RetentionPeriodCon→RetentionPeriod·PreservationPlace 등), ComponentData Base64 해독과 SourceFileExtent 크기, SignatureBlock.
+- 압축 패키지는 최상위에 Metadata.xml과 PackagingInformation.xml이 함께 있어야 한다.
+- 서명·인증서 유효성(장기검증, NAK 32-1)은 보지 않는다 — 시스템·전용 검증기로 한다.

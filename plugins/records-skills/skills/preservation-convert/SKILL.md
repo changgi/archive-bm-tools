@@ -8,7 +8,10 @@ description: 문서·표·발표 파일을 PDF/A-1b 보존포맷으로 변환하
 1. LibreOffice(soffice)가 있는지 확인한다. veraPDF가 있으면 `--verapdf`로 공식 검증까지 한다.
 2. `python "${CLAUDE_PLUGIN_ROOT}"/skills/preservation-convert/scripts/to_pdfa.py 원본폴더/ 산출/보존포맷/ [--verapdf]`
 3. 변환이력.csv의 판정을 요약한다. '확인 필요'(선언 없음·글꼴 미임베딩·veraPDF 부적합)는 원인을 함께 알린다.
-4. veraPDF 없이 나온 '통과'는 "기본 점검 통과, 공식 검증 전"이라고 구분해 말한다. veraPDF 결과는 '적합'·'부적합(조항)'·'검증 오류'로 나뉘며, '검증 오류'는 판정이 아니다.
+4. veraPDF가 없으면 사전 점검: `python "${CLAUDE_PLUGIN_ROOT}"/skills/preservation-convert/scripts/pdfa_precheck.py 산출/보존포맷/ -o 산출/PDFA사전점검.csv`
+   - NAK 30:2022 6장에서 자주 걸리는 것: 암호화, LZW, 내장 파일, OCProperties, OutputIntent(GTS_PDFA1), 폰트 미내장·부분집합 CharSet/CIDSet, 투명도, 금지 주석(FileAttachment·Sound·Movie), JavaScript·Launch 행위, XMP pdfaid(part=1, conformance=B).
+   - '사전 점검 통과'는 공식 적합이 아니다.
+5. veraPDF 없이 나온 '통과'는 "기본 점검 통과, 공식 검증 전"이라고 구분해 말한다. veraPDF 결과는 '적합'·'부적합(조항)'·'검증 오류'로 나뉘며, '검증 오류'는 판정이 아니다.
    - veraPDF 설치(공식 배포 software.verapdf.org의 verapdf-gf-installer.zip, Java 11+): 압축을 풀고 `java -jar verapdf-izpack-installer-*.jar -options 설정.properties`(내용 `INSTALL_PATH=/설치경로`)로 무인 설치한 뒤 PATH에 넣는다. 2026-11-20 veraPDF 1.30.4로 이 스크립트 결과를 검증했다.
    - 한글 파일명은 Java 환경에 따라 veraPDF가 못 읽어 '파일 없음'이 나므로, 스크립트가 영문 이름 임시 사본으로 검증한다.
 4-1. 한글 글꼴: LibreOffice가 문서 글꼴을 못 찾아 Noto CJK 같은 OTF(CFF) 글꼴로 대체하면 Type1 부분집합에 CharSet이 빠져 PDF/A-1b 6.3.5를 어긴다. 글꼴 칸에 'CharSet 없음(6.3.5)'이 나오면 변환하는 PC에 원문서 글꼴(맑은 고딕·바탕·나눔고딕 등 TrueType)을 설치하거나 원문서 글꼴을 TrueType으로 바꿔 다시 변환한다. 확인한 결과 TrueType 한글 글꼴이면 PASS, OTF 대체면 FAIL.
