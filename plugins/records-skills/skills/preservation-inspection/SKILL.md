@@ -3,6 +3,8 @@ name: preservation-inspection
 description: 보존 중인 기록물의 정수점검(2년)·상태검사(유형·등급별 2~30년) 다음 연도를 시행규칙 별표 14로 계산하고, 지난 점검·기록 없음·등급 누락을 찾을 때 사용. "정수점검", "상태검사 주기", "서고 점검 일정", "보존기록물 점검 계획" 요청에서 트리거.
 ---
 
+> 복원처리 계획(NAK 25:2026): `python "${CLAUDE_PLUGIN_ROOT}"/skills/preservation-inspection/scripts/restoration_plan.py 상태검사결과.xlsx -o 산출/복원처리계획.xlsx` — 훼손도·중요도·활용도로 심화·예방·응급복원 후보와 우선순위, pH 6.5 이하·바스러짐·심한 황변은 탈산 대상(목표 pH 7.5~10.0), 복원처리 기록 대장(처리 전·후 상태·사진·처리자·재료). 처리 방법은 관리자와 복원 전문가가 정한다.
+
 # 정수점검·상태검사 일정
 
 1. `python "${CLAUDE_PLUGIN_ROOT}"/skills/preservation-inspection/scripts/inspection_schedule.py 보존목록.xlsx --year 2026 -o 산출/점검일정.xlsx`
