@@ -83,14 +83,22 @@ def main() -> int:
     wb = openpyxl.Workbook()
     s = wb.active
     s.title = "지표별 준비"
-    s.append(["지표", "지표명", "배점", "구분", "증빙 후보 수", "증빙 후보(앞 3건)", "요구 증빙(설명자료)", "판정"])
+    avg = {}
+    ap_ = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "assets", "eval2026_indicator_avg.csv")
+    if os.path.exists(ap_):
+        import csv
+        with open(ap_, encoding="utf-8-sig") as fh:
+            for r in csv.DictReader(fh):
+                if r["평가유형"] == a.type:
+                    avg[r["지표"]] = r["정부산하 공공기관 평균"] if a.type == "공공기관" else f"교육청 {r['시·도교육청 평균'] or '-'} / 지원청 {r['교육지원청 평균'] or '-'}"
+    s.append(["지표", "지표명", "배점", "구분", "증빙 후보 수", "증빙 후보(앞 3건)", "요구 증빙(설명자료)", "판정", "2026 평가 전국 평균(100점 환산)"])
     missing = 0
     for i in targets:
         c = links.get(i["id"], [])
         if not c:
             missing += 1
         s.append([i["id"], i["name"], i["pts"], "필수" if i["id"][0] in "12" else "선택", len(c), " / ".join(t for _, t in c[:3]),
-                  i["evidence"], "후보 있음 — 내용 확인" if c else "증빙 없음"])
+                  i["evidence"], "후보 있음 — 내용 확인" if c else "증빙 없음", avg.get(i["id"], "")])
     f = wb.create_sheet("증빙 형식 점검")
     f.append(["원본 행", "제목", "연결 지표", "점검"])
     for r in fmt:
@@ -103,7 +111,8 @@ def main() -> int:
     for rule in spec["_제출원칙"]:
         p.append(["제출 원칙", rule])
     p.append(["출처", spec["_출처"]])
-    for sh, wd in ((s, (7, 40, 6, 6, 8, 60, 50, 18)), (f, (8, 50, 16, 60)), (p, (12, 70, 20))):
+    p.append(["전국 평균", "「2026년 기록관리 기관평가 결과」(국가기록원 기록협력과, 2026. 11.) 붙임3 기관 유형별·지표별 평가점수 — 평균이 낮은 지표(예: 교육지원청 인력배치 67.0·이관 76.1, 공공기관 대체 '처리과 기록물 이관' 64.6)는 증빙을 먼저 챙긴다"])
+    for sh, wd in ((s, (7, 40, 6, 6, 8, 60, 50, 18, 22)), (f, (8, 50, 16, 60)), (p, (12, 70, 20))):
         for k, w in enumerate(wd):
             sh.column_dimensions[chr(65 + k)].width = w
     os.makedirs(os.path.dirname(a.out) or ".", exist_ok=True)

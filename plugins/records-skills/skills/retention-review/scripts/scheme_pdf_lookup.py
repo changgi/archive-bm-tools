@@ -24,9 +24,9 @@ import sys
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 INDEX = os.path.join(HERE, "..", "assets", "legacy", "scheme_pdf_index.csv")
-ROW = re.compile(r"^(\d{7})\s*(.*?)\s*([A-Z]{1,2}[A-Z0-9]\d{5,6}|\d{8})\s*(.+?)\s+(영구|준영구?|\d+년)(?=\s|$)")
+ROW = re.compile(r"^([A-Z0-9]\d{6})\s*(.*?)\s*([A-Z]{1,2}[A-Z0-9]\d{5,6}|\d{8})\s*(.+?)\s+(영구|준영구?|\d+년)(?=\s|$)")
 RANK = {"영구": 9, "준영구": 8, "30년": 7, "20년": 6, "10년": 5, "5년": 4, "3년": 3, "2년": 2.5, "1년": 2}
-ROW2 = re.compile(r"^(\d{7})\s*(.*?)\s*([A-Z]{1,2}[A-Z0-9]\d{5,6}|\d{8})\s*(.+?)(?:\s+(\d{1,2}))?\s+(원본|병행|전자|복제|사본)(?=\s|$)")
+ROW2 = re.compile(r"^([A-Z0-9]\d{6})\s*(.*?)\s*([A-Z]{1,2}[A-Z0-9]\d{5,6}|\d{8})\s*(.+?)(?:\s+(\d{1,2}))?\s+(원본|병행|전자|복제|사본)(?=\s|$)")
 GARBLE = ("보졲", "기갂", "기죾", "젂문")
 
 
@@ -79,8 +79,13 @@ def read_pdf(path):
                 if per:
                     rows.append([pno, m[1], m[2], m[3], m[4].strip(), per, "줄 넘김 복원"])
                     continue
-            if re.match(r"^\d{7}", ln):
+            if re.match(r"^[A-Z0-9]\d{6}\s", ln):
                 miss.append([pno, ln])
+    for r in rows:  # 2005판처럼 대·중·소기능 코드(B0000131 등)가 이름 사이에 있으면 마지막 코드를 단위업무코드로
+        parts = re.split(r"\s*([A-Z]{1,2}[A-Z0-9]\d{5,7}|\d{8})\s*", r[4])
+        if len(parts) > 1:
+            r[2] = " ".join(x for x in [r[2], r[3]] + parts[:-2] if x).strip()
+            r[3], r[4] = parts[-2], parts[-1]
     return rows, miss, fixed
 
 
