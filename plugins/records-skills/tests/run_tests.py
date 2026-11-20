@@ -1294,7 +1294,7 @@ def main():
     # 과거 공문서 분류번호 → 당시 보존기간(1985·1992·1997 표)
     xlsx(f"{t}/옛철.xlsx", [["관리번호", "분류번호", "생산연도", "제목", "보존기간"],
                           ["L-1", "01000", "1988", "기본정책방침 관계철", "10년"], ["L-2", "02110", "1994", "한국표준산업분류 개정", "10년"],
-                          ["L-3", "20112", "1998", "임차대장", "5년"], ["L-4", "99999", "1993", "가상", "3년"], ["L-5", "01000", "1980", "옛 철", ""], ["L-7", "127", "1970", "보존문서 기록대장", "10년"],
+                          ["L-3", "20112", "1998", "임차대장", "5년"], ["L-4", "99999", "1993", "가상", "3년"], ["L-5", "01000", "1980", "옛 철", ""], ["L-7", "127", "1970", "보존문서 기록대장", "10년"], ["L-8", "111", "1981", "장기계획관계문서", "3년"],
                           ["L-6", "01000", "2005", "새 철", ""]])
     clg, olg = run([S("retention-review", "scripts", "legacy_lookup.py"), f"{t}/옛철.xlsx", "-o", f"{t}/산출/옛철.xlsx"])
     lg = {r[1]: r for r in openpyxl.load_workbook(f"{t}/산출/옛철.xlsx")["대조"].iter_rows(min_row=2, values_only=True)} if os.path.exists(f"{t}/산출/옛철.xlsx") else {}
@@ -1302,7 +1302,7 @@ def main():
           clg == 1 and lg["L-1"][5] == "1985" and "영구" in str(lg["L-1"][10]) and "짧음" in str(lg["L-1"][10])
           and lg["L-2"][5] == "1992" and "10년" in str(lg["L-2"][10]) and "짧음" not in str(lg["L-2"][10])
           and lg["L-3"][5] == "1997" and "짧음" in str(lg["L-3"][10]) and "없음" in str(lg["L-4"][10])
-          and "1979~1984" in str(lg["L-5"][10]) and lg["L-7"][5] == "1964" and "영구" in str(lg["L-7"][10]) and "짧음" in str(lg["L-7"][10]) and "2000년 이후" in str(lg["L-6"][10]), olg + str({k: v[10] for k, v in lg.items()}))
+          and lg["L-5"][5] == "1979" and "10년" in str(lg["L-8"][8]) and "짧음" in str(lg["L-8"][10]) and lg["L-7"][5] == "1964" and "영구" in str(lg["L-7"][10]) and "짧음" in str(lg["L-7"][10]) and "2000년 이후" in str(lg["L-6"][10]), olg + str({k: v[10] for k, v in lg.items()}))
 
     # 중앙행정기관 고유업무 보존기간 준칙(2021) 대조
     xlsx(f"{t}/환경기준표.xlsx", [["단위과제코드", "단위과제명", "보존기간"], ["X1", "기본계획 추진실적 작성", "10년"],
@@ -1311,6 +1311,10 @@ def main():
     uq = {r[1]: r for r in openpyxl.load_workbook(f"{t}/산출/고유대조.xlsx")["대조"].iter_rows(min_row=2, values_only=True)} if os.path.exists(f"{t}/산출/고유대조.xlsx") else {}
     check("중앙행정기관 고유업무 준칙(2021) 대조: 이름 맞춤·짧은 보존기간 표시·같음·안 맞는 과제 제외", cuq == 1
           and "짧음" in str(uq.get("X1", [""] * 10)[9]) and uq.get("X2", [""] * 10)[9] == "같음" and "X3" not in uq, ouq + str(uq))
+    xlsx(f"{t}/감사기준표.xlsx", [["단위과제코드", "단위과제명", "보존기간"], ["Y1", "공공기관 결산검사 보고", "10년"]])
+    cu12, ou12 = run([S("retention-review", "scripts", "unique_task_lookup.py"), f"{t}/감사기준표.xlsx", "--org", "감사원", "--edition", "2012", "-o", f"{t}/산출/고유대조12.xlsx"])
+    u12 = {r[1]: r for r in openpyxl.load_workbook(f"{t}/산출/고유대조12.xlsx")["대조"].iter_rows(min_row=2, values_only=True)} if os.path.exists(f"{t}/산출/고유대조12.xlsx") else {}
+    check("중앙행정기관 고유업무 준칙 2012판(--edition 2012) 대조", cu12 == 1 and u12.get("Y1", [""] * 10)[6] == "영구" and "짧음" in str(u12.get("Y1", [""] * 10)[9]), ou12 + str(u12))
 
     # 2026 지침 수행업무 리스트 점검표
     ctk, otk = run([S("evaluation-readiness", "scripts", "task_checklist.py"), "--role", "처리과", "-o", f"{t}/산출/수행업무.xlsx"])

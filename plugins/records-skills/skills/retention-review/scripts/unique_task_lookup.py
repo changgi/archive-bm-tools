@@ -4,6 +4,9 @@
 
 근거: 국가기록원 기록관리 자료실 > 기록물분류기준 > 보존기간 책정기준 「중앙행정기관 기록물 보존기간 준칙(2021년)」(고유, 시행 2021. 1. 1.,
       2026-11-20 내려받아 표 741개에서 추출) → assets/common/central_unique_2021.csv(44개 기관, 단위과제 4,128개: 영구 2,427·30년 939·준영구 752)
+      --edition 2012: 「(2012년판) 중앙행정기관(소속기관포함) 기록물 보존기간 준칙」(시행 2012. 1. 1., 표 693개)
+      → assets/common/central_unique_2012.csv(41개 기관, 4,141과제: 영구 2,428·30년 858·준영구 821·34 빈칸)
+      두 판을 같은 기관·과제명으로 맞추면 2,868과제 중 96과제가 바뀜(준영구→30년 61건 등 — 2020년 준영구 폐지 반영)
       준칙 적용범위: 기관 고유기능 단위과제. 공통기능은 공통업무 보존기간 준칙을 따르고, 준칙에 없는 과제는 유사 과제의 보존기간을 따르며,
       다른 법령에 특별히 정한 경우는 그 법령을 따른다(준칙 1. 일반사항).
       원자력안전위원회·개인정보보호위원회·검찰청·새만금개발청·질병관리청 등은 '추후 제정 예정'으로 빠져 있다.
@@ -20,7 +23,9 @@ import os
 import re
 import sys
 
-ASSET = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "assets", "common", "central_unique_2021.csv")
+ASSET_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "assets", "common")
+SOURCE = {"2021": "「중앙행정기관 기록물 보존기간 준칙」(2021. 1. 1. 시행)",
+          "2012": "「(2012년판) 중앙행정기관(소속기관포함) 기록물 보존기간 준칙」(2012. 1. 1. 시행)"}
 RANK = {"영구": 9, "준영구": 8, "30년": 7, "20년": 6, "10년": 5, "5년": 4, "3년": 3, "1년": 2}
 
 
@@ -33,14 +38,16 @@ def main() -> int:
     ap.add_argument("table", nargs="?")
     ap.add_argument("--org", help="준칙의 기관명(예: 환경부). --list-orgs로 확인")
     ap.add_argument("--list-orgs", action="store_true")
+    ap.add_argument("--edition", choices=["2021", "2012"], default="2021",
+                    help="준칙 판(기본 2021). 2012~2020 생산 기록물이나 옛 부처명(교육과학기술부·국토해양부 등)은 2012")
     ap.add_argument("--threshold", type=float, default=0.8, help="이름 유사도 기준(기본 0.8)")
     ap.add_argument("-o", "--out", default="산출/고유업무_준칙대조.xlsx")
     a = ap.parse_args()
-    with open(ASSET, encoding="utf-8-sig") as f:
+    with open(os.path.join(ASSET_DIR, f"central_unique_{a.edition}.csv"), encoding="utf-8-sig") as f:
         crit = list(csv.DictReader(f))
     orgs = sorted({c["기관"] for c in crit})
     if a.list_orgs or not a.table:
-        print("준칙(2021) 기관 44곳: " + ", ".join(orgs))
+        print(f"준칙({a.edition}) 기관 {len(orgs)}곳: " + ", ".join(orgs))
         return 0
     org = next((o for o in orgs if a.org and re.sub(r"\s", "", a.org) in re.sub(r"\s", "", o)), None)
     if not org:
@@ -94,8 +101,8 @@ def main() -> int:
             miss.append([c["코드"], c["중기능"], c["단위과제"], c["보존기간"], c["근거"], c["설명"][:200]])
     s = wb.create_sheet("요약")
     for row in (["기관", org], ["준칙 단위과제", len(mine)], ["기준표와 맞춘 과제", len(matched)], ["준칙보다 짧은 과제", short],
-                ["근거", "국가기록원 「중앙행정기관 기록물 보존기간 준칙」(2021. 1. 1. 시행) — 30년 이상 책정 고유업무"],
-                ["주의", "2021년 기준이므로 그 뒤 직제·업무 변경을 반영하지 않았다. '준칙에만 있는 과제'는 기준표에 빠졌는지, 이름이 달라 못 맞췄는지 확인한다."]):
+                ["근거", f"국가기록원 {SOURCE[a.edition]} — 30년 이상 책정 고유업무"],
+                ["주의", f"{a.edition}년 기준이므로 그 뒤 직제·업무 변경을 반영하지 않았다. '준칙에만 있는 과제'는 기준표에 빠졌는지, 이름이 달라 못 맞췄는지 확인한다."]):
         s.append(row)
     os.makedirs(os.path.dirname(a.out) or ".", exist_ok=True)
     wb.save(a.out)
