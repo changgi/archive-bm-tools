@@ -46,6 +46,25 @@ EQUIP = {
             "조명: 서고 100~300럭스(자외선 차단등), 전시관 50~200럭스", "하중 미충족 시 기록물·서가 중량 조정", "신축·개축: 불연재료·유해물질 미방출 자재"],
 }
 
+# NAK 11:2025(v2.0) 기록물관리기관 보존환경 기준 — 국가기록원, 2026-11-20 내려받아 확인
+NAK11_CHECK = [
+    ["위치·구조", "서고에 창문이 없는가(있으면 밀폐·자외선 차단 처리)"],
+    ["위치·구조", "서고 안이나 바로 위·옆에 물을 쓰는 공간(화장실·배관·급수)이 없는가"],
+    ["위치·구조", "내화 구조·불연 자재로 되어 있는가"],
+    ["위치·구조", "출입문 잠금장치가 있고 출입을 관리하는가"],
+    ["위치·구조", "자기매체 서고는 전자파 차폐가 되어 있는가(해당 시)"],
+    ["서가", "최하단이 바닥에서 8.5~15cm 떨어져 있는가"],
+    ["서가", "외벽에서 떨어져 설치했는가"],
+    ["서가", "통로 폭 0.7~1m, 중앙통로 1.5~2m를 확보했는가"],
+    ["서가", "서고 면적 대비 서가 면적 비율이 40~70%인가"],
+    ["온습도 측정", "온습도계 분해능이 1℃·1% 이하인가"],
+    ["온습도 측정", "기류 0.3m/s 이하, 벽·서가에서 30cm 떨어진 곳에 두었는가"],
+    ["온습도 측정", "서고 대표지점과 외벽 가까운 극단지점을 함께 재는가"],
+    ["온습도 측정", "디지털 측정기는 3회 측정해 평균을 쓰는가"],
+    ["온습도 측정", "측정 때 날씨·실외 온습도·측정자를 기록하는가"],
+    ["온습도 측정", "온습도가 급격히 바뀌지 않게 관리하는가(하루 변동)"],
+]
+
 
 def num(v):
     m = re.search(r"-?\d+(?:\.\d+)?", str(v or "").replace(",", "."))
@@ -112,6 +131,10 @@ def main() -> int:
     ap.add_argument("--books", type=int, help="보존 권 수(종이) — 필요 서고 면적 계산")
     ap.add_argument("--shelving", choices=["고정식", "이동식"], default="고정식")
     ap.add_argument("--area", type=float, help="실제 서고 면적(㎡)")
+    ap.add_argument("--pages", type=int, help="보존 매수(종이) — 100매 = 1권으로 권 수 환산(NAK 11:2025)")
+    ap.add_argument("--shelf-m", type=float, help="서가에 꽂힌 길이 합계(m) — 1권 15~20mm로 권 수 범위 환산(NAK 11:2025)")
+    ap.add_argument("--calibrated", help="온습도계 마지막 검·교정일 YYYY-MM-DD — 1년이 지나면 표시(NAK 11:2025 매년 검·교정)")
+    ap.add_argument("--today", help="판정일(기본: 오늘)")
     ap.add_argument("-o", "--out", default="산출/서고환경.xlsx")
     a = ap.parse_args()
     mmap = {}
@@ -214,6 +237,15 @@ def main() -> int:
         worst.append((p_any, stack))
     ar = wb.create_sheet("서고 면적")
     ar.append(["항목", "값", "근거"])
+    if not a.books and a.pages:
+        a.books = -(-a.pages // 100)
+        ar.append(["권 수(매수 환산)", f"{a.books:,}권", f"{a.pages:,}매 ÷ 100매(A4 100매 = 1권, NAK 11:2025)"])
+    if a.shelf_m:
+        lo, hi = int(a.shelf_m * 1000 / 20), int(a.shelf_m * 1000 / 15)
+        ar.append(["권 수(서가 길이 환산)", f"{lo:,}~{hi:,}권", f"{a.shelf_m:g}m ÷ 1권 15~20mm(NAK 11:2025)"])
+        if not a.books:
+            a.books = hi
+            ar.append(["면적 계산에 쓴 권 수", f"{hi:,}권", "범위의 큰 값(보수적)"])
     if a.books:
         fixed = a.books / 10000 * 99
         if a.shelving == "고정식":
@@ -228,17 +260,35 @@ def main() -> int:
         ar.append(["하중", "고정식 750㎏f/㎡, 이동식 1,000~1,200㎏f/㎡", "미충족 시 기록물·서가 중량 조정(기록관·특수기록관 비고)"])
     else:
         ar.append(["필요 면적", "--books(보존 권 수)를 주면 계산", "종이 1만권당 99㎡"])
+    if a.area:
+        size = "대형" if a.area >= 300 else "중형" if a.area >= 150 else "소형"
+        ar.append(["서고 규모", size, "대형 300㎡ 이상 · 중형 150~300㎡ · 소형 150㎡ 이하(NAK 11:2025) — 온습도계 대표지점 수 판단에 참고"])
     eq = wb.create_sheet("시설·장비 점검표")
     eq.append([f"{a.org} 시설·장비 기준(시행령 별표 6)", "있음/없음", "비고"])
     for item in EQUIP[a.org]:
         eq.append([item, "", ""])
+    ck = wb.create_sheet("서고 점검표(NAK 11)")
+    ck.append(["구분", "점검 항목(NAK 11:2025 「기록물관리기관 보존환경 기준」)", "적합/부적합", "비고"])
+    for line in NAK11_CHECK:
+        ck.append([*line, "", ""])
+    today = dt.date.fromisoformat(a.today) if a.today else dt.date.today()
+    if a.calibrated:
+        try:
+            cal = dt.date.fromisoformat(a.calibrated)
+            due = cal.replace(year=cal.year + 1) if not (cal.month == 2 and cal.day == 29) else dt.date(cal.year + 1, 3, 1)
+            ck.append(["검·교정", f"마지막 검·교정 {cal.isoformat()} → 다음 {due.isoformat()}", "부적합" if today > due else "적합",
+                       "1년이 지남 — 공인 교정기관 검·교정 필요" if today > due else f"{(due - today).days}일 남음"])
+        except ValueError:
+            ck.append(["검·교정", f"날짜를 읽지 못함: {a.calibrated}", "", "YYYY-MM-DD"])
+    else:
+        ck.append(["검·교정", "온습도계 검·교정일을 --calibrated로 주면 1년 경과를 판정", "", ""])
     st = wb.create_sheet("기준")
     st.append(["매체", "온도", "습도", "적용 기관"])
     for m, (tc, tt, hc, ht) in STD.items():
         st.append([m, f"{tc}±{tt}℃", f"{hc}±{ht}%", "영구·특수기록관" + (", 기록관" if m in ("종이", "전자") else "")])
     st.append(["비고", "흑백 사진필름·마이크로필름은 자기매체 기준", "", "시행령 별표 6 <2026. 8. 25.>"])
     for ws, widths in ((sm, (14, 8, 10, 10, 8, 24, 10, 10, 10, 10, 12, 12, 8, 60)), (ev, (14, 17, 17, 10, 14, 14, 12)),
-                       (eq, (70, 12, 30)), (ar, (20, 34, 50)), (st, (12, 12, 12, 40))):
+                       (eq, (70, 12, 30)), (ar, (20, 34, 50)), (ck, (12, 90, 12, 40)), (st, (12, 12, 12, 40))):
         for i, w in enumerate(widths):
             ws.column_dimensions[openpyxl.utils.get_column_letter(i + 1)].width = w
     os.makedirs(os.path.dirname(a.out) or ".", exist_ok=True)

@@ -35,9 +35,11 @@ flowchart LR
 | | 행정정보 데이터세트 | [dataset-schedule](skills.md#25-dataset-schedule--행정정보-데이터세트) | "시스템 목록으로 관리대상 유형 분류해줘" |
 | **매월·분기** | 서고 온습도 점검 | [stack-environment](skills.md#30-stack-environment--서고-환경-점검) | "서고온습도.csv 기준으로 점검해줘" |
 | **분기마다** | 보존 파일 무결성 대조 | [fixity-check](skills.md#16-fixity-check--변조사라짐-감시) | "보존 폴더를 기준선이랑 대조해줘" |
-| **9~10월** | 기록관리 기관평가 증빙 | [evaluation-readiness](skills.md#27-evaluation-readiness--기록관리-기관평가-준비) | "평가 증빙 지표별로 점검해줘" |
+| **9~10월** | 필수기록물 필수성·보호기간 검토(10월 31일까지 확정) | [vital-records](skills.md#33-vital-records--필수기록물-선별보호) | "단위과제표로 필수기록물 평가표 만들어줘" |
+| | 기록관리 기관평가 증빙 | [evaluation-readiness](skills.md#27-evaluation-readiness--기록관리-기관평가-준비) | "평가 증빙 지표별로 점검해줘" |
 | **10~12월** | 보존기간 만료 기록 평가 | [retention-review](skills.md#21-retention-review--보존기간-검토만료이관-대상) → [disposal-dossier](skills.md#22-disposal-dossier--평가심의서의견조회표) | "만료 목록으로 평가심의서·의견조회표 만들어줘" |
 | | 보고서를 한글 문서로 | [hwpx-report](skills.md#28-hwpx-report--한글hwpx-보고서공문-서식) | "이 결과 한글 보고서로 만들어줘" |
+| **재난이 났을 때** | 침수·화재 피해 기록물 응급복구 순서·냉동동결 대상 | [disaster-recovery](skills.md#34-disaster-recovery--재난-피해-종이기록물-응급복구) | "피해목록으로 응급복구 순서 정해줘" |
 | **자료가 들어올 때** | 인수·기증 자료 첫 진단 | [transfer-triage](skills.md#12-transfer-triage--인수기증-폴더-첫-진단), [format-identify](skills.md#13-format-identify--진짜-파일-형식-식별), [email-appraisal](skills.md#23-email-appraisal--이메일-기록-평가) | "인수자료 폴더 뭐가 들었는지 봐줘" |
 | | 스캔·보존포맷 | [scan-qc](skills.md#17-scan-qc--스캔-품질-점검), [preservation-convert](skills.md#14-preservation-convert--pdfa-보존포맷-변환) | "스캔본 재스캔 대상 알려줘", "PDF/A로 바꿔줘" |
 
