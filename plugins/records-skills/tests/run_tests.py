@@ -1315,6 +1315,35 @@ def main():
     cu12, ou12 = run([S("retention-review", "scripts", "unique_task_lookup.py"), f"{t}/감사기준표.xlsx", "--org", "감사원", "--edition", "2012", "-o", f"{t}/산출/고유대조12.xlsx"])
     u12 = {r[1]: r for r in openpyxl.load_workbook(f"{t}/산출/고유대조12.xlsx")["대조"].iter_rows(min_row=2, values_only=True)} if os.path.exists(f"{t}/산출/고유대조12.xlsx") else {}
     check("중앙행정기관 고유업무 준칙 2012판(--edition 2012) 대조", cu12 == 1 and u12.get("Y1", [""] * 10)[6] == "영구" and "짧음" in str(u12.get("Y1", [""] * 10)[9]), ou12 + str(u12))
+    # 기관별 기록물분류기준표(2005~2012 PDF) 색인·읽기·대조
+    csp, osp = run([S("retention-review", "scripts", "scheme_pdf_lookup.py"), "--org", "강릉시", "--year", "2009"])
+    sp_find = csp == 0 and "2008-01-31" in osp and "2009년 말 시행 중" in osp.split("2008-01-31")[1].split("\n")[0]
+    try:
+        from reportlab.pdfgen import canvas as _cv
+        from reportlab.pdfbase import pdfmetrics as _pm
+        from reportlab.pdfbase.cidfonts import UnicodeCIDFont as _cf
+        import pdfplumber  # noqa: F401
+        _pm.registerFont(_cf("HYSMyeongJo-Medium"))
+        cv = _cv.Canvas(f"{t}/분류기준표.pdf")
+        cv.setFont("HYSMyeongJo-Medium", 9)
+        for k, ln in enumerate(["가상시 기록물분류기준표 보졲 기갂",
+                                "4200075 가상시 민원과 총무행정 행정관리 행정관리기타 ZA000017 관인관리 영구 원본 자료관",
+                                "4200075 가상시 민원과 지방자치 주민참여 읍면동주민자치 PA214533 젂세확정일자부여 10년 원본 자료관",
+                                "4200075 가상시 민원과 지방자치 지방산업 지역산업 PA001210 가스안젂관리 20 원본 기록관 없음"]):
+            cv.drawString(40, 800 - 14 * k, ln)
+        cv.save()
+        xlsx(f"{t}/분류목록.xlsx", [["단위업무코드", "단위업무명", "보존기간"], ["PA214533", "전세확정일자부여", "5년"], ["ZA000017", "관인관리", "영구"], ["PA999999", "가상", "3년"]])
+        csp2, osp2 = run([S("retention-review", "scripts", "scheme_pdf_lookup.py"), "--pdf", f"{t}/분류기준표.pdf", "--list", f"{t}/분류목록.xlsx", "-o", f"{t}/산출/분류기준표대조.xlsx"])
+        wsp = openpyxl.load_workbook(f"{t}/산출/분류기준표대조.xlsx") if os.path.exists(f"{t}/산출/분류기준표대조.xlsx") else None
+        dz = {r[1]: r for r in wsp["대조"].iter_rows(min_row=2, values_only=True)} if wsp else {}
+        rd = {r[3]: r for r in wsp["분류기준표"].iter_rows(min_row=2, values_only=True)} if wsp else {}
+        sp_pdf = (csp2 == 1 and "짧음" in str(dz.get("PA214533", [""] * 7)[6]) and dz.get("ZA000017", [""] * 7)[6] == "같음"
+                  and "없음" in str(dz.get("PA999999", [""] * 7)[6]) and rd.get("PA214533", [""] * 7)[4] == "전세확정일자부여"
+                  and rd.get("PA001210", [""] * 7)[5] == "20년")
+        osp += osp2 + str(dz) + str(rd)
+    except ImportError:
+        sp_pdf = True  # reportlab·pdfplumber 없으면 PDF 부분은 건너뜀
+    check("기록물분류기준표 PDF: 판 찾기(그해 말 시행 판)·읽기(글자 보정·줄 넘김)·목록 대조", sp_find and sp_pdf, osp)
 
     # 2026 지침 수행업무 리스트 점검표
     ctk, otk = run([S("evaluation-readiness", "scripts", "task_checklist.py"), "--role", "처리과", "-o", f"{t}/산출/수행업무.xlsx"])
