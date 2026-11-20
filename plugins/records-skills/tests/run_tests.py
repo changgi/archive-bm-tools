@@ -142,6 +142,15 @@ def main():
     code, out = run([S("format-identify", "scripts", "identify.py"), f"{t}/원본/files", "-o", f"{t}/산출/fmt.csv"])
     rows = {r[0]: r for r in list(csv.reader(open(f"{t}/산출/fmt.csv", encoding="utf-8-sig")))[1:]}
     check("포맷 식별: 확장자 불일치 표시", "PDF 아님" in rows.get("fake.pdf", [""])[-1], out.strip())
+    os.makedirs(f"{t}/fmt37")
+    for n_, data in (("a.hwp", b"\xd0\xcf\x11\xe0x"), ("b.hwpx", b"PK\x03\x04x"), ("c.xlsx", b"PK\x03\x04x"), ("d.pdf", b"%PDF-1.4 <pdfaid:part>1</pdfaid:part>"),
+                     ("e.mkv", b"\x1aE\xdf\xa3"), ("f.csv", b"a,b")):
+        open(f"{t}/fmt37/{n_}", "wb").write(data)
+    run([S("format-identify", "scripts", "identify.py"), f"{t}/fmt37", "-o", f"{t}/산출/fmt37.csv"])
+    r37 = {r[0]: r[6] for r in list(csv.reader(open(f"{t}/산출/fmt37.csv", encoding="utf-8-sig")))[1:]}
+    check("포맷 NAK 37: 보존포맷(xlsx·csv·PDF/A-1)·수용가능(hwpx·mkv)·권고 외(hwp)",
+          r37.get("c.xlsx", "").startswith("보존포맷") and r37.get("f.csv", "").startswith("보존포맷") and "PDF/A-1" in r37.get("d.pdf", "")
+          and r37.get("b.hwpx", "").startswith("수용가능") and r37.get("e.mkv", "").startswith("수용가능") and r37.get("a.hwp", "").startswith("권고 외"), str(r37))
 
     # 9. 비밀기록물 차단: 훅(읽기·검색)과 검수 게이트
     code, _ = run([g], json.dumps({"tool_name": "Read", "tool_input": {"file_path": f"{t}/비밀/보고서.hwp"}}))
@@ -491,7 +500,8 @@ def main():
         ["U1", "가상 민원처리", "민원과", "민원", *good],
         ["U2", "가상 토지대장", "지적과", "지적", "가상 토지 소유·지목 변동을 대장으로 관리하는 업무", "영구", "필요", "비치", "", "7년",
          "기록관", "원본 보존", "비공개", "개인정보", "", "목록만 열람"],
-        ["U3", "가상 회의", "", "회의", "회의", "7년", "", "미비치", "", "", "기록관", "스캔", "공개", "", "", "전부"]])
+        ["U3", "가상 회의", "", "회의", "회의", "7년", "", "미비치", "", "", "기록관", "스캔", "공개", "", "", "전부"],
+        ["U4", "가상 도로 민간투자사업", "도로과", "도로", *good]])
     xlsx(f"{t}/기준표_전년.xlsx", [sh, ["U1", "가상 민원처리", "민원과", "민원", good[0], "5년", *good[2:]]])
     code, out = run([S("records-schedule-check", "scripts", "schedule_check.py"), f"{t}/기준표.xlsx", "--previous", f"{t}/기준표_전년.xlsx",
                      "-o", f"{t}/산출/기준표점검.xlsx"])
@@ -499,9 +509,9 @@ def main():
     items = {(r[1], r[3]) for r in wb["점검 결과"].iter_rows(min_row=2, values_only=True)}
     notice = {(r[0], r[2]) for r in wb["고시 대상"].iter_rows(min_row=2, values_only=True) if r[0] and r[2]}
     want = {("U2", "책정 사유"), ("U2", "비치사유"), ("U2", "비치기간"), ("U2", "보존장소"), ("U2", "공개여부"),
-            ("U3", "보존기간"), ("U3", "책정 사유"), ("U3", "업무설명"), ("U3", "처리과"), ("U3", "보존방법"), ("U3", "접근권한")}
-    check("기준표 점검(NAK 4): 관리항목 7개·보존장소 30년 규칙·고시 대상(신설·변경)",
-          want <= items and not any(k == "U1" for k, _ in items) and notice == {("U1", "보존기간 변경"), ("U2", "신설"), ("U3", "신설")},
+            ("U3", "보존기간"), ("U3", "책정 사유"), ("U3", "업무설명"), ("U3", "처리과"), ("U3", "보존방법"), ("U3", "접근권한"), ("U4", "보존기간")}
+    check("기준표 점검(NAK 4): 관리항목 7개·보존장소 30년 규칙·대규모 투자사업 준영구·고시 대상(신설·변경)",
+          want <= items and not any(k == "U1" for k, _ in items) and notice == {("U1", "보존기간 변경"), ("U2", "신설"), ("U3", "신설"), ("U4", "신설")},
           f"{sorted(items - want)} {sorted(want - items)} {notice}")
 
     # 국가기록원 공식 생산현황 통보서식 채우기
@@ -690,7 +700,8 @@ def main():
         ["가-4", "가상과", "가상 지도", "도면카드류", "비전자", "4", "", "2", "3년", "2035-12-31", "파기", "원본", "2025-06-01", "", "", "", "", "", ""],
         ["가-5", "가상과", "가상 2022", "문서류", "비전자", "1", "20", "2", "영구", "2023-12-31", "일반문서로 재분류", "원본", "2022-02-01", "2025-04-01",
          "일반문서", "2", "영구", "", ""],
-        ["가-6", "가상과", "가상 영상", "시청각류", "디지털", "1", "", "3", "30년", "2024-06-30", "이관", "원본", "2022-07-01", "", "", "", "", "2025-03-02", ""]])
+        ["가-6", "가상과", "가상 영상", "시청각류", "디지털", "1", "", "3", "30년", "2024-06-30", "이관", "원본", "2022-07-01", "", "", "", "", "2025-03-02", ""],
+        ["가-7", "가상과", "가상 사본2", "문서류", "비전자", "1", "3", "2", "30년", "2027-12-31", "이관", "사본", "2025-05-01", "", "", "", "", "", ""]])
     c1, o1 = run([S("classified-records-check", "scripts", "classified_check.py"), f"{t}/비밀/목록.xlsx", "--year", "2025", "--today", "2026-11-20",
                   "-o", f"{t}/비밀/점검.xlsx"])
     cw = openpyxl.load_workbook(f"{t}/비밀/점검.xlsx")
@@ -700,8 +711,8 @@ def main():
     c2, o2 = run([S("production-status-report", "scripts", "fill_official_form.py"), f"{t}/생산등록.xlsx", "--form", form, "--year", "2025",
                   "--secret", f"{t}/비밀/점검.xlsx", "-o", f"{t}/비밀/통보서식.xlsx"])
     sw = openpyxl.load_workbook(f"{t}/비밀/통보서식.xlsx")
-    check("비밀기록물: 훅 차단·사본 제외·불확실 보호기간·보존<보호·원본 파기, 이관 시기(제68조② 기산일+5년), 서식 10 (가)(나)·11 목록",
-          code_h == 2 and "가-3" not in cj and "처리 후" in cj["가-2"] and "보존기간 ≥ 보호기간" in cj["가-4"] and "'파기'" in cj["가-4"] and cj["가-1"] == "통과"
+    check("비밀기록물: 훅 차단·사본 제외(사본 '이관' 표시)·불확실 보호기간·보존<보호·원본 파기, 이관 시기(제68조② 기산일+5년), 서식 10 (가)(나)·11 목록",
+          code_h == 2 and "가-3" not in cj and "사본 예고문" in cj.get("가-7", "") and "처리 후" in cj["가-2"] and "보존기간 ≥ 보호기간" in cj["가-4"] and "'파기'" in cj["가-4"] and cj["가-1"] == "통과"
           and ct[("가-5", "처리과→기록관")] == 2026 and ct[("가-6", "기록관→영구")] == 2028
           and c10[7][2] == 1 and c10[7][4] == 4 and c10[12][2] == 1 and c10[15][2] == 1
           and sw["서식 10"]["F7"].value == 1 and sw["서식 10"]["I7"].value == 4 and sw["서식 11"]["B6"].value == "가-5" and sw["서식 11"]["B14"].value == "가-6"
@@ -1287,6 +1298,73 @@ def main():
     nc = {r[0]: r for r in list(csv.reader(open(f"{t}/산출/neo.csv", encoding="utf-8-sig")))[1:]} if os.path.exists(f"{t}/산출/neo.csv") else {}
     check("NEO2 NAK 31-1: 필수 요소·부모별 필수, Base64·크기, 서명 블록", cnc == 1 and nc.get("good.xml", [""])[-1] == "통과"
           and all(k in nc.get("bad.xml", [""] * 6)[4] for k in ("TitleCon→MainTitle", "Base64", "SignatureBlock")), onc + str(nc.get("bad.xml")))
+    import hashlib as _hl
+    import zipfile as _zf
+    rec = b"record-body"
+    pi = ('<PackagingInformation xmlns="http://www.archives.go.kr/2020/RMS/3.0"><Version>3.0</Version><PackageManifest>'
+          '<ManifestItem HashAlgorithm="SHA2-256"><HashValue>' + _hl.sha256(rec).hexdigest() + '</HashValue><Path>Record/a.pdf</Path></ManifestItem>'
+          '</PackageManifest></PackagingInformation>')
+    def _mk(name, first="mimetype", mt="application/neo3+zip", body=rec):
+        with _zf.ZipFile(f"{t}/{name}", "w", _zf.ZIP_DEFLATED) as z:
+            if first == "mimetype":
+                z.writestr(_zf.ZipInfo("mimetype"), mt, compress_type=_zf.ZIP_STORED)
+            for n_ in ("Metadata.xml", "Metadata.xsd", "PackagingInformation.xsd"):
+                z.writestr(n_, "<x/>")
+            z.writestr("PackagingInformation.xml", pi)
+            z.writestr("Record/a.pdf", body)
+            if first != "mimetype":
+                z.writestr("mimetype", mt)
+    _mk("neo3ok.zip")
+    _mk("neo3bad.zip", first="late", body=b"tampered")
+    c3, o3 = run([S("transfer-reconcile", "scripts", "neo_check.py"), f"{t}/neo3ok.zip", "-o", f"{t}/산출/neo3ok.csv"])
+    c3b, o3b = run([S("transfer-reconcile", "scripts", "neo_check.py"), f"{t}/neo3bad.zip", "-o", f"{t}/산출/neo3bad.csv"])
+    bad3 = " ".join(r[1] for r in list(csv.reader(open(f"{t}/산출/neo3bad.csv", encoding="utf-8-sig")))[1:]) if os.path.exists(f"{t}/산출/neo3bad.csv") else ""
+    check("NEO3 NAK 31-2: mimetype 첫 항목·비압축, 최상위 4파일, Manifest 해시 대조", c3 == 0 and c3b == 1
+          and "첫 항목" in bad3 and "압축돼" in bad3 and "해시 불일치" in bad3, o3 + o3b + bad3)
+
+    # NAK 8 메타데이터 필수 요소
+    hdr = ["1.1 생산자유형", "1.2 기관명", "1.6 개인명", "2 기록계층", "3.1 기본식별자", "4.1 제목", "7 전자기록물여부", "8.1 기록유형", "9.1 포맷명",
+           "11.1 용량", "11.2 단위", "12.1 분류체계유형", "12.2.2 분류명", "13.1 생산일시", "13.2 종료일시", "15.1 보존기간", "16 보존장소",
+           "17.3.1 공개구분", "17.3.2 비공개사유", "5.2 기술내용"]
+    good_r = ["기안자", "가상기관", "홍길동", "건", "A-1", "가상 보고", "Y", "일반문서", "PDF", "10", "KB", "기록관리기준표", "가상과제",
+              "2026-01-02", "2026-01-02", "10년", "기록관", "공개", "", ""]
+    bad_r = list(good_r)
+    bad_r[0], bad_r[2], bad_r[3], bad_r[4], bad_r[8], bad_r[14], bad_r[17], bad_r[19] = "결재자", "", "", "A-2", "", "2025-12-31", "비공개", "요약"
+    with open(f"{t}/nak8.csv", "w", encoding="utf-8-sig", newline="") as f:
+        csv.writer(f).writerows([hdr, good_r, bad_r])
+    old_r = list(good_r); old_r[5] = "옛 제목"
+    with open(f"{t}/nak8_old.csv", "w", encoding="utf-8-sig", newline="") as f:
+        csv.writer(f).writerows([hdr, old_r])
+    c8, o8 = run([S("metadata-autofill", "scripts", "nak8_check.py"), f"{t}/nak8.csv", "--before", f"{t}/nak8_old.csv", "-o", f"{t}/산출/nak8.csv"])
+    r8 = {r[1]: r for r in list(csv.reader(open(f"{t}/산출/nak8.csv", encoding="utf-8-sig")))[1:]} if os.path.exists(f"{t}/산출/nak8.csv") else {}
+    b8, g8 = r8.get("A-2", [""] * 5)[3], r8.get("A-1", [""] * 5)[3]
+    check("메타데이터 NAK 8: 필수·세트·비공개사유·부속서 D 개인명·종료<생산·포맷·변경 불가", c8 == 1
+          and all(k in b8 for k in ("기록계층", "기술유형", "비공개사유", "개인명", "종료일시", "포맷명")) and "변경 불가" in g8, o8 + b8 + g8)
+
+    # SIARD 2.1(NAK 35 부속서 B)
+    meta = ('<siardArchive xmlns="http://www.bar.admin.ch/xmlns/siard/2/metadata.xsd"><schemas><schema><name>S</name><folder>schema0</folder>'
+            '<tables><table><name>T</name><folder>table0</folder><columns><column><name>A</name></column><column><name>B</name></column></columns>'
+            '</table></tables></schema></schemas></siardArchive>')
+    xsd = ('<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"><xs:element name="table"><xs:complexType><xs:sequence>'
+           '<xs:element name="row"><xs:complexType><xs:sequence><xs:element name="c1"/><xs:element name="c2"/></xs:sequence></xs:complexType></xs:element>'
+           '</xs:sequence></xs:complexType></xs:element></xs:schema>')
+    def _sd(name, ok=True):
+        with _zf.ZipFile(f"{t}/{name}", "w", _zf.ZIP_DEFLATED) as z:
+            if ok:
+                z.writestr("header/siardversion/2.1/", "")
+            z.writestr("header/metadata.xml", meta)
+            z.writestr("header/metadata.xsd", "<x/>")
+            z.writestr("content/schema0/table0/table0.xml", "<table/>")
+            z.writestr("content/schema0/table0/table0.xsd", xsd if ok else xsd.replace('<xs:element name="c2"/>', ""))
+            if not ok:
+                z.writestr("extra.txt", "x")
+                z.writestr("content/schema0/1표/1표.xml", "x")
+    _sd("ok.siard"); _sd("bad.siard", ok=False)
+    cs, os_ = run([S("dataset-schedule", "scripts", "siard_check.py"), f"{t}/ok.siard", "-o", f"{t}/산출/siard_ok.csv"])
+    cb, ob = run([S("dataset-schedule", "scripts", "siard_check.py"), f"{t}/bad.siard", "-o", f"{t}/산출/siard_bad.csv"])
+    sb = " ".join(r[0] for r in list(csv.reader(open(f"{t}/산출/siard_bad.csv", encoding="utf-8-sig")))[1:]) if os.path.exists(f"{t}/산출/siard_bad.csv") else ""
+    check("SIARD NAK 35 부속서 B: 최상위 폴더·버전 폴더·이름 규칙·metadata 대응·열 수", cs == 0 and cb == 1
+          and all(k in sb for k in ("P_4.2-1", "P_4.2-4", "P_4.2-6", "P_4.3-1", "P_4.3-2")), os_ + ob + sb)
 
     # 플러그인 훅 명령: Windows(Git Bash)처럼 python3가 없거나 가짜일 때도 보호가 꺼지지 않는지
     hj = os.path.join(ROOT, "hooks", "hooks.json")

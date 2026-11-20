@@ -34,3 +34,10 @@ description: 이관 목록(엑셀)과 실제 파일·상자 목록을 대조해 
 - 루트 neo:NAKEncapsulatedObject, 필수 요소(Version·SignedObject·ObjectContent·Record·RecordMetadata 등), 부모가 있을 때 필수인 자식(TitleCon→MainTitle, DateTimeCon→DateTimeCreated·DateTimeClosed, RetentionPeriodCon→RetentionPeriod·PreservationPlace 등), ComponentData Base64 해독과 SourceFileExtent 크기, SignatureBlock.
 - 압축 패키지는 최상위에 Metadata.xml과 PackagingInformation.xml이 함께 있어야 한다.
 - 서명·인증서 유효성(장기검증, NAK 32-1)은 보지 않는다 — 시스템·전용 검증기로 한다.
+
+## 장기보존패키지(NEO3, 디렉토리 방식) 점검 (NAK 31-2:2022 부속서 A)
+`python "${CLAUDE_PLUGIN_ROOT}"/skills/transfer-reconcile/scripts/neo_check.py 패키지.zip(또는 NEO3 폴더) -o 산출/NEO3점검.csv`
+- 최상위에 Metadata.xml·PackagingInformation.xml·Metadata.xsd·PackagingInformation.xsd(이름 고정).
+- ZIP이면 첫 항목 `mimetype`, 비압축, 내용 `application/neo3+zip`.
+- PackagingInformation.xml Version 3.0, PackageManifest/ManifestItem의 Path 파일이 있고 HashValue가 HashAlgorithm(SHA2-256 등)으로 맞는지. MD5·SHA1은 '검토'로 표시, 목록에 없는 파일도 '검토'.
+- UniqueID만 있는 외부(원격) 항목은 패키지 안에서 확인할 수 없어 건너뛴다.

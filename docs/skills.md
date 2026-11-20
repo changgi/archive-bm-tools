@@ -164,6 +164,8 @@ python skills/records-qa-gate/scripts/header_check.py 입력/등록정보.xlsx -
 
 ---
 
+- **NAK 8 필수 요소 점검**(`nak8_check.py`): 등록부의 필수·세트·해당시 필수(부속서 D 개인명), 종료일시≥생산일시, `--before`로 등록 후 변경 불가 요소(생산자·제목·생산일시) 대조. 비밀 열은 값을 읽지 않음.
+
 ## 5. docno-extract — 문서번호 추출·범위 펼치기
 
 > 🔢 **비유:** "3~7번"이라고 적힌 쪽지를 3, 4, 5, 6, 7 다섯 장으로 나눠 주는 일.
@@ -222,6 +224,8 @@ python skills/records-qa-gate/scripts/header_check.py 입력/등록정보.xlsx -
 **직접 실행** `python skills/records-schedule-check/scripts/schedule_check.py 기준표_2026.xlsx --previous 기준표_2025.xlsx -o 산출/기준표점검.xlsx`
 
 ---
+
+- **NAK 4 추가**: 대규모 투자사업(예타·민간투자·총사업비 300억 이상) 단위과제는 준영구 이상, 신설·변경 보존기간은 10월 31일까지 협의.
 
 ## 8. typed-records-check — 회의록·시청각 점검
 
@@ -326,6 +330,8 @@ python skills/transfer-reconcile/scripts/integrated_transfer.py 등록정보.xls
 🆕 **NEO2 장기보존패키지(NAK 31-1)** `python skills/transfer-reconcile/scripts/neo_check.py NEO폴더/` — 필수 요소, 부모 요소별 필수 자식, ComponentData Base64·크기, 전자서명 블록, 압축 패키지의 Metadata.xml·PackagingInformation.xml. 서명 유효성(장기검증)은 보지 않습니다.
 ---
 
+- **NEO3(NAK 31-2)**: `neo_check.py 패키지.zip` — 최상위 Metadata.xml·PackagingInformation.xml·각 xsd, mimetype 첫 항목·비압축·`application/neo3+zip`, Manifest 해시 대조.
+
 ## 12. transfer-triage — 인수·기증 폴더 첫 진단
 
 > 🩺 **비유:** 응급실 초진. 무엇이 들었는지, 위험한 것은 없는지 한 장으로 먼저 봅니다.
@@ -360,6 +366,8 @@ python skills/transfer-reconcile/scripts/integrated_transfer.py 등록정보.xls
 ---
 
 # 🛡️ 보존
+
+- **NAK 37:2025 권고 열**: 보존포맷(PDF·PDF/A·DOCX·XLSX·PPTX·TIF·PNG·WAV·MP4·CSV·JSON·XML 등)·수용가능포맷(HWPX·FLAC·MKV·MOV·SIARD 등)·권고 외(HWP·DOC·XLS·PPT 등 변환 검토).
 
 ## 14. preservation-convert — PDF/A 보존포맷 변환
 
@@ -619,6 +627,8 @@ python skills/dataset-schedule/scripts/dataset_schedule.py 스키마.csv --org "
 
 ---
 
+- **SIARD 2.1 점검**(`siard_check.py`, NAK 35 부속서 B): ZIP·암호화 금지·content/header만·siardversion/2.1·이름 규칙·metadata↔content 대응·열 수.
+
 ## 26. classified-records-check — 비밀기록물 점검(서식 10·11)
 
 > 🔐 **비유:** 금고 열쇠는 담당자만. 이 스킬은 **금고 밖에서 쓰는 사용 설명서**만 주고, 계산기는 담당자가 금고 안(비밀 전용 장비)에서 직접 돌립니다.
@@ -638,6 +648,8 @@ python fill_official_form.py 등록정보.xlsx --form 통보서식.xlsx --year 2
 ---
 
 # 📊 평가·보고
+
+- **NAK 17 6.2**: 사본 예고문에 '이관'이 있으면 표시(사본은 파기·일반문서로 재분류).
 
 ## 27. evaluation-readiness — 기록관리 기관평가 준비
 
