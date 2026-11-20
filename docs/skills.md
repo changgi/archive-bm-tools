@@ -529,6 +529,7 @@ python skills/fixity-check/scripts/fixity.py verify 보존 산출/기준선.csv 
 ---
 
 # ⚖️ 평가·폐기
+- **추가 유형**: 여권·운전면허·사업자등록(검증식)·법인등록·군번·사건번호(국가기록원 연구 제6호 정규식 10종). 문맥 칸의 다른 개인정보도 가림.
 
 ## 21. retention-review — 보존기간 검토·만료·이관 대상
 

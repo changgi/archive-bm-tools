@@ -97,6 +97,14 @@ def main():
     rows = list(csv.reader(open(f"{t}/산출/pii.csv", encoding="utf-8-sig")))[1:]
     kinds = {r[2] for r in rows}
     leaked = any("1234-5678" in ",".join(r) or fake_rrn() in ",".join(r) for r in rows)
+    with open(f"{t}/민원2.txt", "w", encoding="utf-8") as f:
+        f.write("여권 M12345678 면허 11-23-456789-01 사업자 220-81-62517 법인번호: 110111-2345678 군번 17-71234567 사건 2023가단12345 예시 000-00-00000\n")
+    c2_, o2_ = run([S("pii-redact", "scripts", "pii_scan.py"), f"{t}/민원2.txt", "-o", f"{t}/산출/pii2.csv"])
+    rows2 = list(csv.reader(open(f"{t}/산출/pii2.csv", encoding="utf-8-sig")))[1:]
+    k2 = [r[2] for r in rows2]
+    check("개인정보 추가 6종(2020 연구 제6호 정규식): 여권·면허·사업자(검증식)·법인·군번·사건번호, 법인/주민 중복·더미 제외",
+          {"여권번호", "운전면허번호", "사업자등록번호", "법인등록번호(문맥)", "군번(문맥)", "사건번호"} <= set(k2) and "주민·외국인등록번호" not in k2
+          and k2.count("사업자등록번호") == 1 and not any("2345678" in ",".join(r) for r in rows2), str(rows2))
     check("개인정보: 5종 탐지 + 결과에 원문 없음", {"주민·외국인등록번호", "휴대전화", "이메일", "카드번호", "계좌번호(문맥)"} <= kinds and not leaked, str(kinds))
 
     # 5. 검수 게이트: 실패 목록과 통과 목록
