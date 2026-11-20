@@ -421,7 +421,7 @@ python skills/preservation-inspection/scripts/inspection_form.py apply 산출/�
 상태검사 결과로 복원처리 계획 세워줘. 탈산할 것도 골라줘.
 ```
 ---
-- **기록재료 점검**(`materials_check.py`, 시행규칙 별표 15): 30년 이상 기록물의 용지·필기구·보존용 판지와 pH·탄산칼슘·내광성.
+- **기록재료 점검**(`materials_check.py`, 시행규칙 별표 15): 30년 이상 기록물의 용지·필기구·보존용 판지와 pH·탄산칼슘·내광성. `--important`이면 중요문서용 기록용지 규격(안)(국가기록원 연구 표 80)도 봄.
 
 
 ## 16. fixity-check — 변조·사라짐 감시

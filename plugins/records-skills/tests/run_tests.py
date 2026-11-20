@@ -1396,6 +1396,16 @@ def main():
     cm, om = run([S("preservation-inspection", "scripts", "materials_check.py"), f"{t}/재료.xlsx", "-o", f"{t}/산출/재료.xlsx"])
     mr = [r for r in openpyxl.load_workbook(f"{t}/산출/재료.xlsx")["점검 결과"].iter_rows(min_row=2, values_only=True)] if os.path.exists(f"{t}/산출/재료.xlsx") else []
     m2 = " ".join(r[5] for r in mr if r[1] == "M-2")
+    xlsx(f"{t}/재료2.xlsx", [["철분류번호", "제목", "보존기간", "용지", "필기구", "용도", "평량", "백색도", "용지pH", "탄산칼슘", "Kappa", "인열강도", "인장강도", "변색도", "인열강도유지율"],
+                           ["I-1", "협약서", "영구", "보존백상지", "토너", "협약류", "90", "82", "8.2", "3.2", "3", "900", "", "2.1", "90"],
+                           ["I-2", "서한", "영구", "보존백상지", "토너", "공식서한류", "150", "85", "10.5", "3.5", "4", "1100", "120", "4", "92"]])
+    ci2, oi2 = run([S("preservation-inspection", "scripts", "materials_check.py"), f"{t}/재료2.xlsx", "--important", "-o", f"{t}/산출/재료2.xlsx"])
+    mi = {}
+    for r_ in openpyxl.load_workbook(f"{t}/산출/재료2.xlsx")["점검 결과"].iter_rows(min_row=2, values_only=True):
+        mi.setdefault(r_[1], []).append(r_[5])
+    i1, i2 = " ".join(mi.get("I-1", [])), " ".join(mi.get("I-2", []))
+    check("기록용지 중요문서용 규격(안) --important: 협약류 인열 1,200·평량 환산·pH 상한 10·ΔE 3.5", ci2 == 1
+          and "협약류 1200" in i1 and "pH 7.5~10.0 밖" in i2 and "ΔE" in i2 and "초과(4)" in i2 and "인장강도" in i2, oi2 + str(mi))
     check("기록재료 별표 15: 용지·필기구·용기·pH 7.5·탄산칼슘 2%·내광성 4호, 30년 미만 제외", cm == 1
           and not any(r[1] in ("M-1", "M-3", "M-4") for r in mr) and all(k in m2 for k in ("재생지", "수성", "pH 6.2", "탄산칼슘 1", "내광성 3", "용기") if k != "용기")
           and any(r[1] == "M-2" and r[4] == "용기" for r in mr), om + str(mr))
