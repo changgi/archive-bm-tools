@@ -138,9 +138,11 @@ def main() -> int:
             tr.append([x.get("번호", ""), "처리과→기록관", why, to_rec, "늦음" if to_rec < today.year else ("올해" if to_rec == today.year else "예정")])
         # 기록관 → 영구기록물관리기관(시행령 제68조②, 2026.8.25. 개정)
         if moved1 and p in LONG and not d(x.get("영구")) and made:
-            y = max(moved1.year + 1, made.year + 1 + 5)
-            tr.append([x.get("번호", ""), "기록관→영구", "30년 이상, 인수한 다음 연도(기산일부터 5년 전이면 그때까지 보존)", y,
-                       "늦음" if y < today.year else ("올해" if y == today.year else "예정")])
+            legacy = made.year + 1 + 5 <= 2026 and moved1 <= dt.date(2026, 8, 25)   # 부칙 제19조: 시행 당시 기록관 보유·기산일+5년 경과
+            y = max(moved1.year + 1, made.year + 1 + (10 if legacy else 5))
+            why = ("30년 이상, 개정 시행령 시행(2026. 8. 25.) 당시 기산일부터 5년이 지난 것 — 종전 규정(10년) 적용(부칙 제19조, 종전 제68조② 원문 확인)"
+                   if legacy else "30년 이상, 인수한 다음 연도(기산일부터 5년 전이면 그때까지 보존)")
+            tr.append([x.get("번호", ""), "기록관→영구", why, y, "늦음" if y < today.year else ("올해" if y == today.year else "예정")])
         # 서식 10 (가) 생산현황: 해당 연도 생산분
         q = int(re.sub(r"\D", "", x.get("수량", "")) or 1)
         if made and made.year == a.year and k and g and p:

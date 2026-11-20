@@ -8,6 +8,7 @@
          원고 확정 후 인쇄 전에 발간등록번호 신청, 앞표지 좌측 상단에 표기
          발간 주기(번호 뒤 2자리): 단행본 01, 연속간행물 02~15. 연속간행물은 제목·발행기관·발간주기가 바뀌면 새 번호
          책자형태 간행물은 국가기록원에 책자 3부와 같은 내용의 전자파일(PDF) 1점을 함께 송부(관할 기록관·영구기록물관리기관에도 따로 송부)
+         송부 기한: 발간 후 15일이 지나기 전까지(시행령 제55조④, 국가기록포털 발간등록 안내 2026-11-20 확인)
          발간등록 생략대상(수첩·팸플릿·리플릿·속보·만화·기관신문·추록, 홍보자료·소식지·안내지·지도, 장학·학습·교육원 교재·교과서, 관보·보도자료 등)은 신청·송부 생략
          비밀기록물을 책자로 만든 것은 간행물이 아니라 비밀기록물 절차
        생산현황 통보서식 서식 7: 생산량·송부량은 부수가 아닌 종(철) 수, 생략대상 제외, 없으면 0
@@ -28,12 +29,26 @@ ALIAS = {"제목": ["제목", "간행물명"], "번호": ["발간등록번호"],
          "공개": ["공개구분"], "비밀": ["비밀구분"]}
 
 
+def _d(v):
+    import datetime as _dt
+    t = re.sub(r"\s", "", str(v or ""))[:10].rstrip(".")
+    for f in ("%Y-%m-%d", "%Y%m%d", "%Y.%m.%d", "%Y/%m/%d"):
+        try:
+            return _dt.datetime.strptime(t, f).date()
+        except ValueError:
+            pass
+    return None
+
+
 def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("listing")
     ap.add_argument("--year", type=int, required=True)
+    ap.add_argument("--today", help="송부 기한 판정일(기본: 오늘)")
     ap.add_argument("-o", "--out", default="산출/간행물_점검.xlsx")
     a = ap.parse_args()
+    import datetime as _dt
+    _today = _dt.date.fromisoformat(a.today) if a.today else _dt.date.today()
     import openpyxl
     ws0 = openpyxl.load_workbook(a.listing, read_only=True, data_only=True).worksheets[0]
     rows = [["" if v is None else str(v).strip() for v in r] for r in ws0.iter_rows(values_only=True)]
@@ -89,6 +104,12 @@ def main() -> int:
                 send = f"전자파일 {'있음' if pdf else '없음'}"
                 if not pdf:
                     issues.append("전자간행물은 전자파일 1점을 업로드")
+        if no and not skip:
+            pd_, sd_ = _d(x.get("발행일")), _d(x.get("송부일"))
+            if pd_ and sd_ and (sd_ - pd_).days > 15:
+                issues.append(f"발간 후 {(sd_ - pd_).days}일 만에 송부 — 발간 후 15일이 지나기 전까지(시행령 제55조④)")
+            elif pd_ and not sd_ and (_today - pd_).days > 15:
+                issues.append(f"발간 후 {(_today - pd_).days}일 지났는데 송부일 없음 — 15일 안 3부(관할 기록관·관할 영구기록물관리기관·중앙기록물관리기관)")
         year_ok = str(a.year) in x.get("발행일", "")
         if year_ok and m and not skip:
             produced.add(no)

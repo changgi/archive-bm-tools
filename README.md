@@ -1,15 +1,15 @@
 <div align="center">
 
-<img src=".github/assets/banner.svg" alt="archive-bm-tools — 기록관리 담당자를 위한 Claude 스킬 28종" width="100%">
+<img src=".github/assets/banner.svg" alt="archive-bm-tools — 기록관리 담당자를 위한 Claude 스킬 32종" width="100%">
 
 **공공기관 기록관리 담당자를 위한 Claude 플러그인 마켓플레이스**
 
 생산현황 통보부터 이관·보존·공개·평가·폐기까지 —<br>
 반복되는 점검과 서식 작성은 스크립트가, 판단과 제출은 사람이.
 
-![version](https://img.shields.io/badge/records--skills-v2.12.2-1f6feb)
-![skills](https://img.shields.io/badge/스킬-28종-2da44e)
-![tests](https://img.shields.io/badge/시험-49%2F49%20통과-2da44e)
+![version](https://img.shields.io/badge/records--skills-v2.13.0-1f6feb)
+![skills](https://img.shields.io/badge/스킬-32종-2da44e)
+![tests](https://img.shields.io/badge/시험-57%2F57%20통과-2da44e)
 ![python](https://img.shields.io/badge/Python-3.10%2B-3776ab?logo=python&logoColor=white)
 ![law](https://img.shields.io/badge/근거-시행령%202026.8.25.-8250df)
 ![license](https://img.shields.io/badge/코드-MIT-lightgrey)
@@ -36,12 +36,29 @@
 
 ---
 
+## ⚠️ 2027년 1월 1일부터 바뀌는 것
+
+개정 시행령(2026. 8. 25. 공포)·시행규칙(2026. 9. 11.)의 일부 조문이 **2027. 1. 1.** 시행됩니다. [transfer-schedule](plugins/records-skills/skills/transfer-schedule)이 두 규정을 나란히 계산합니다.
+
+| 무엇 | 지금(2026. 12. 31.까지) | 2027. 1. 1.부터 |
+|---|---|---|
+| 처리과 → 기록관 이관 | 매년 전년도분, 비전자는 기산일부터 2년 범위 보관 후 | **기산일부터 1년 안** |
+| 이관 연장 | 기록관 미설치·수시 참고 시 기산일부터 10년 범위 | **기록관과 협의해 1년 범위**, 별지 제1호의2 목록 첨부(미설치 기관은 5년) |
+| 암호화 기록물 | — | 이관 때 **암호화 기록물 목록과 해제 정보 첨부**(시행령 제31조의2) |
+
+**경과조치(부칙):**
+- 2027. 1. 1. 당시 2년 범위로 보관 중인 비전자기록물과 그 전에 받은 연장은 **종전 규정**을 따릅니다.
+- 2026. 8. 25. 당시 기산일부터 5년이 이미 지난 30년 이상 기록물(종료연도 2020년 이전)의 영구 이관은 **종전 10년** 기준입니다.
+- 2028. 1. 1.부터는 자체 보존하는 **영구** 기록물도 70년 경과 후 평가합니다.
+
+---
+
 ## 🧭 기록물 생애주기와 스킬
 
 ```mermaid
 flowchart LR
-    A["📝 생산·등록<br/>10종"] --> B["📦 이관·인수<br/>3종"]
-    B --> C["🛡️ 보존<br/>4종"]
+    A["📝 생산·등록<br/>11종"] --> B["📦 이관·인수<br/>4종"]
+    B --> C["🛡️ 보존<br/>6종"]
     C --> D["🔓 공개·활용<br/>3종"]
     D --> E["⚖️ 평가·폐기<br/>3종"]
     N["🌐 새 유형<br/>기록 3종"] -.-> A
@@ -87,12 +104,12 @@ flowchart LR
 
 ---
 
-## 🧰 스킬 28종
+## 🧰 스킬 32종
 
-> 스킬마다 준비할 파일·말하는 법·받는 결과·주의할 점은 **[스킬 28종 사용법](docs/skills.md)**, 언제 무엇을 쓰는지는 **[연간 업무 달력](docs/calendar.md)** 에 있습니다.
+> 스킬마다 준비할 파일·말하는 법·받는 결과·주의할 점은 **[스킬 32종 사용법](docs/skills.md)**, 언제 무엇을 쓰는지는 **[연간 업무 달력](docs/calendar.md)** 에 있습니다.
 
 <details open>
-<summary><b>📝 생산·등록 (10)</b></summary>
+<summary><b>📝 생산·등록 (11)</b></summary>
 
 | 스킬 | 하는 일 |
 |---|---|
@@ -106,14 +123,16 @@ flowchart LR
 | [typed-records-check](plugins/records-skills/skills/typed-records-check) | 회의록 구성 요소 8가지, 시청각 생산정보 |
 | [publications-check](plugins/records-skills/skills/publications-check) | 발간등록번호·발간주기·송부 책자 3부 |
 | [admin-artifacts-check](plugins/records-skills/skills/admin-artifacts-check) | 행정박물 기본정보 11항목·유형 7·재질 13종·이관 기한(별표 4·5) |
+| 🆕 [records-forms](plugins/records-skills/skills/records-forms) | 시행규칙 별지 서식 작성 — 색인목록(쪽표시 자동), 반출·반입서, 보존·복원처리서, 전자매체 수록계획서, 발간등록 신청, 폐기 금지 요청·해제·연장, 부기·정정 요청 |
 
 </details>
 
 <details>
-<summary><b>📦 이관·인수 (3)</b></summary>
+<summary><b>📦 이관·인수 (4)</b></summary>
 
 | 스킬 | 하는 일 |
 |---|---|
+| 🆕 [transfer-schedule](plugins/records-skills/skills/transfer-schedule) | 이관 기한 계산 — 현행·2027. 1. 1. 시행 규정(기산일부터 1년), 비치기록물 연장 신청 기한, 영구 이관 연도, 별지 제1호의2 연장 목록, 암호화 기록물 목록 |
 | [transfer-reconcile](plugins/records-skills/skills/transfer-reconcile) | 이관 목록과 파일·상자 대조, 통합(전자+비전자) 이관 붙임 후보 |
 | [transfer-triage](plugins/records-skills/skills/transfer-triage) | 인수·기증 폴더 첫 진단 — 포맷 분포·중복·위험 파일 |
 | [format-identify](plugins/records-skills/skills/format-identify) | 내용으로 실제 포맷 식별, 확장자 불일치 |
@@ -121,7 +140,7 @@ flowchart LR
 </details>
 
 <details>
-<summary><b>🛡️ 보존 (4)</b></summary>
+<summary><b>🛡️ 보존 (6)</b></summary>
 
 | 스킬 | 하는 일 |
 |---|---|
@@ -129,6 +148,8 @@ flowchart LR
 | [preservation-inspection](plugins/records-skills/skills/preservation-inspection) | 정수점검·상태검사 주기, 별지 제7호서식 작업지 |
 | [fixity-check](plugins/records-skills/skills/fixity-check) | SHA-256 기준선과 정기 대조 |
 | [scan-qc](plugins/records-skills/skills/scan-qc) | 스캔 이미지 DPI·기울기·빈 면·밝기 |
+| 🆕 [stack-environment](plugins/records-skills/skills/stack-environment) | 서고 온습도 기록을 시행령 별표 6 기준(매체별)에 견줌, 이탈 시간, 서고 면적, 장비 점검표 |
+| 🆕 [box-labels](plugins/records-skills/skills/box-labels) | 보존상자 편성(생산연도·보존기간·단위과제별), 별표 6 상자 표지 PDF·HTML, 철당 100매 분권 후보 |
 
 </details>
 
@@ -208,6 +229,8 @@ flowchart LR
 | 「2026년 기록물관리 지침」 | 국가기록원(archives.go.kr) |
 | 생산현황 통보서식, 공통업무 보존기간 준칙 | 국가기록원 공개 자료 |
 | NAK 10:2026(v1.5) 확정 · NAK 17:2026(v1.4)안 · NAK 39:2026(v1.0) 제정(안) | 국가기록원 고시·예고 |
+| 시행령 별표 1~6(보존기간·보존방법·상태검사·행정박물·시설환경) · 시행규칙 별표 1~16·별지 제1~25호 | 국가법령정보센터 별표·서식 원문(2026-11-20 확인 — [기록](plugins/records-skills/skills/records-qa-gate/references/law-forms-2026-11-20.md)) |
+| 국가기록원 행정규칙(고시 제2025-10호로 재고시된 NAK 표준, 부기·정정 처리 기준 훈령 제224호 등) · 간행물 발간등록 안내 | 국가법령정보센터 행정규칙, 국가기록포털 |
 
 지침에 남은 개정 전 문구(예: 비밀기록물 이관 10년)는 **개정 법령과 표준을 따릅니다.** 차이는 [`guideline-2024-notes.md`](plugins/records-skills/skills/records-qa-gate/references/guideline-2024-notes.md)에 정리했습니다.
 
@@ -219,7 +242,7 @@ flowchart LR
 python plugins/records-skills/tests/run_tests.py
 ```
 
-49개(veraPDF가 PATH에 있으면 50개) — 스킬 28종의 주요 계산과, 보호 훅이 Windows처럼 `python3`가 없거나 가짜일 때도 꺼지지 않는지까지 확인합니다. 필요 패키지: `openpyxl` `pypdf` `pikepdf` `pillow` `numpy` (선택: `python-docx` `python-hwpx` `holidays`, LibreOffice). Python 3.11·3.12·3.13에서 확인했고, [GitHub Actions](.github/workflows/test.yml)로 3.10~3.13을 돌립니다.
+57개(veraPDF가 PATH에 있으면 58개) — 스킬 32종의 주요 계산과, 보호 훅이 Windows처럼 `python3`가 없거나 가짜일 때도 꺼지지 않는지까지 확인합니다. 필요 패키지: `openpyxl` `pypdf` `pikepdf` `pillow` `numpy` (선택: `python-docx` `python-hwpx` `holidays`, LibreOffice). Python 3.11·3.12·3.13에서 확인했고, [GitHub Actions](.github/workflows/test.yml)로 3.10~3.13을 돌립니다.
 
 ---
 
