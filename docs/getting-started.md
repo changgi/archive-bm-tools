@@ -21,7 +21,7 @@
 ```mermaid
 flowchart LR
     A["① Python<br/>설치"] --> B["② Claude Code<br/>설치·로그인"]
-    B --> C["③ 저장소<br/>접근 권한"]
+    B --> C["③ 저장소<br/>(공개, 선택)"]
     C --> D["④ 플러그인<br/>설치"]
     D --> E["⑤ 작업 폴더<br/>준비"]
     E --> F["⑥ 첫 요청"]
@@ -30,7 +30,7 @@ flowchart LR
 **준비물**
 - Windows 10·11 또는 macOS 컴퓨터
 - Claude 유료 구독(Pro·Max·Team·Enterprise) 또는 Anthropic Console 계정 — Claude Code를 쓰려면 필요합니다
-- 이 저장소에 접근할 수 있는 GitHub 계정(비공개 저장소)
+- 인터넷 연결(저장소는 공개라 GitHub 계정은 없어도 됩니다)
 - 기관 보안 규정상 외부 AI 사용이 허용되는지 먼저 확인하세요. **비밀기록물·비공개 원문은 처음부터 이 컴퓨터에서 다루지 않습니다.**
 
 ---
@@ -98,18 +98,15 @@ claude --version
 
 ## 3단계: 저장소 접근 권한
 
-이 저장소는 **비공개**입니다. 플러그인을 받으려면:
+이 저장소는 **공개**(2026. 11. 21.부터)라서 초대나 로그인 없이 바로 플러그인을 받을 수 있습니다. 이 단계는 건너뛰어도 됩니다.
 
-1. 저장소 관리자([chgsong@naver.com](mailto:chgsong@naver.com))에게 GitHub 아이디를 알려 **협업자(Collaborator) 초대**를 받습니다.
-2. 컴퓨터에 GitHub 로그인 정보를 저장합니다. 가장 쉬운 방법은 [GitHub CLI](https://cli.github.com/)를 설치하고:
+GitHub에 이슈를 남기거나 저장소를 포크하려면 GitHub 계정이 필요합니다. 기관 네트워크에서 내려받기가 막히면 [GitHub CLI](https://cli.github.com/)를 설치하고 로그인해 둡니다.
 
 ```bash
 gh auth login
 ```
 
 → `GitHub.com` → `HTTPS` → `Login with a web browser`를 고르고 화면의 코드를 브라우저에 입력합니다.
-
-> Claude Code는 비공개 저장소를 받을 때 컴퓨터에 저장된 git 로그인 정보를 그대로 씁니다. 로그인 창을 따로 띄우지 않으므로 이 단계를 먼저 해야 합니다.
 
 ---
 

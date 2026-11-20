@@ -86,7 +86,7 @@ footer{border-top:1px solid var(--line)}
 /plugin install records-skills@changgi-archive-bm-tools</pre>
     <button id="copy" type="button">설치 명령 복사</button>
   </div>
-  <p class="small" id="copied" aria-live="polite">Claude Code 안에서 입력합니다. 저장소 접근 권한이 필요합니다.</p>
+  <p class="small" id="copied" aria-live="polite">Claude Code 안에서 입력합니다. 공개 저장소라 따로 권한을 받지 않아도 됩니다.</p>
 </div></section>
 
 <div class="shelfband"><div class="wrap fig" id="shelf" role="img" aria-label="서가에 꽂힌 보존상자 7개: 생산·등록 14, 이관·인수 6, 보존 10, 공개·활용 3, 평가·폐기 3, 새 유형 기록 3, 기관평가·보고 3"><svg id="shelfsvg"></svg></div><p class="legend wrap">왼쪽부터 생산·등록 14 · 이관·인수 6 · 보존 10 · 공개·활용 3 · 평가·폐기 3 · 새 유형 기록 3 · 기관평가·보고 3</p></div>
@@ -113,7 +113,7 @@ footer{border-top:1px solid var(--line)}
 
 <section class="band" id="examples"><div class="wrap">
   <h2>여섯 가지 업무 장면, 실제 결과 파일 그대로</h2>
-  <p class="lead">저장소 <code>examples/시나리오/</code>에 입력 자료와 결과 엑셀이 있습니다. 결과는 <code>python examples/시나리오/만들기.py</code>로 다시 만들 수 있습니다.</p>
+  <p class="lead">저장소 <a href="https://github.com/changgi/archive-bm-tools/tree/main/examples/%EC%8B%9C%EB%82%98%EB%A6%AC%EC%98%A4"><code>examples/시나리오/</code></a>에 입력 자료와 결과 엑셀이 있습니다. 결과는 <code>python examples/시나리오/만들기.py</code>로 다시 만들 수 있습니다.</p>
   <p class="small">아래 기관·자료는 모두 지어낸 것이고, 스킬이 무엇을 잡는지 보이려고 일부러 틀린 곳을 넣었습니다.</p>
   <div class="scen" id="scen"></div>
 </div></section>
@@ -133,12 +133,12 @@ footer{border-top:1px solid var(--line)}
   <ol class="steps">
     <li><div><h3>Python 3.10 이상 설치</h3><p><code>python -m pip install openpyxl pypdf pikepdf pillow numpy python-docx python-hwpx holidays</code> (Windows는 Git for Windows도)</p></div></li>
     <li><div><h3>Claude Code 설치·로그인</h3><p>Windows <code>irm https://claude.ai/install.ps1 | iex</code>, macOS <code>curl -fsSL https://claude.ai/install.sh | bash</code></p></div></li>
-    <li><div><h3>저장소 접근 권한 받기</h3><p>비공개 저장소입니다. 권한을 받은 뒤 <code>gh auth login</code>.</p></div></li>
+    <li><div><h3>저장소는 공개</h3><p>초대나 로그인 없이 받을 수 있습니다. 기관 방화벽이 막으면 <code>gh auth login</code> 뒤 다시 시도합니다.</p></div></li>
     <li><div><h3>플러그인 설치</h3><p>위 설치 명령 두 줄을 Claude Code에 입력하고 설치 범위는 <b>Install for you (user scope)</b>.</p></div></li>
     <li><div><h3>작업 폴더 준비</h3><p><code>templates/</code>의 <code>CLAUDE.md</code>와 <code>.claude/settings.json</code>을 작업 폴더에 복사합니다.</p></div></li>
     <li><div><h3>보호 장치 확인</h3><p><code>비밀/시험.txt 읽어줘</code>라고 해 보고, <b>차단되면 정상</b>입니다.</p></div></li>
   </ol>
-  <p class="small">자세한 그림 안내는 저장소 <code>docs/getting-started.md</code>에 있습니다.</p>
+  <p class="small">자세한 그림 안내: <a href="https://github.com/changgi/archive-bm-tools/blob/main/docs/getting-started.md">처음 시작하기</a> · 저장소 <a href="https://github.com/changgi/archive-bm-tools">github.com/changgi/archive-bm-tools</a></p>
 </div></section>
 
 <section class="band" id="sources" style="background:var(--panel)"><div class="wrap">
