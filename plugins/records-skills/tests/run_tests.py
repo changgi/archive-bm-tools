@@ -983,16 +983,22 @@ def main():
                           ["R-2", "사진첩", "준영구", "1", "코팅", "유", "부분침수", "1서고", "2026-07-15 09:00", ""],
                           ["R-3", "회의록", "10년", "2", "서적", "유", "곰팡이", "2서고", "2026-07-15 09:00", ""],
                           ["R-4", "공문", "3년", "3", "낱장", "무", "부분침수", "3서고", "2026-07-13 09:00", "수용성 잉크"]])
-    cdr, odr = run([S("disaster-recovery", "scripts", "disaster_triage.py"), f"{t}/피해.xlsx", "--now", "2026-07-16 06:00", "-o", f"{t}/산출/응급.xlsx"])
+    cdr, odr = run([S("disaster-recovery", "scripts", "disaster_triage.py"), f"{t}/피해.xlsx", "--now", "2026-07-16 06:00", "--room", "23,68", "-o", f"{t}/산출/응급.xlsx"])
     cpr, opr = run([S("disaster-recovery", "scripts", "disaster_triage.py"), f"{t}/피해.xlsx", "--prepare", "-o", f"{t}/산출/대피.xlsx"])
     ok_d = False
     if cdr == 0 and cpr == 0:
         rows_ = [r for r in openpyxl.load_workbook(f"{t}/산출/응급.xlsx")["응급복구 순서"].iter_rows(min_row=2, values_only=True)]
         byid = {r[1]: r for r in rows_}
         lab_ = {r[0]: r for r in openpyxl.load_workbook(f"{t}/산출/응급.xlsx")["포장 라벨"].iter_rows(min_row=2, values_only=True)}
-        ok_d = ([r[1] for r in rows_] == ["R-3", "R-1", "R-2", "R-4"] and byid["R-4"][7] == "지남" and "즉시 냉동동결" in byid["R-4"][8]
+        wd_ = openpyxl.load_workbook(f"{t}/산출/응급.xlsx")
+        stD = {r[0]: r for r in wd_["상태 체크리스트(부속서 D)"].iter_rows(min_row=2, values_only=True)}
+        envE = " ".join(str(c) for r in wd_["작업공간(부속서 E)"].iter_rows(values_only=True) for c in r if c)
+        kitA = [r[1] for r in wd_["물품·장비(부속서 A)"].iter_rows(min_row=2, values_only=True)]
+        ok_annex = (stD["R-2"][1] == "③" and stD["R-3"][2] == "E" and stD["R-3"][4] == "○" and stD["R-1"][7] == 3 and stD["R-1"][6] == "1"
+                    and "진공건조 절대 금지" in str(byid["R-2"][11]) and "부적합" in envE and "60%" in envE and "지퍼백" in kitA)
+        ok_d = ok_annex and ([r[1] for r in rows_] == ["R-3", "R-1", "R-2", "R-4"] and byid["R-4"][7] == "지남" and "즉시 냉동동결" in byid["R-4"][8]
                 and "분리" in byid["R-3"][8] and "습식" in byid["R-2"][9] and "습식" in byid["R-4"][9] and lab_["R-3"][5] == "유" and lab_["R-3"][8] == "동결")
-    check("재난 응급복구: 곰팡이 먼저·등급·심각도 순, 48시간 지나면 즉시 동결, 습식 불가 재질, 라벨", ok_d, odr + opr)
+    check("재난 응급복구: 곰팡이 먼저·등급·심각도 순, 48시간 즉시 동결, 습식 불가, 라벨, 재질별 건조, 부속서 A·D·E", ok_d, odr + opr)
 
     # 플러그인 훅 명령: Windows(Git Bash)처럼 python3가 없거나 가짜일 때도 보호가 꺼지지 않는지
     hj = os.path.join(ROOT, "hooks", "hooks.json")
