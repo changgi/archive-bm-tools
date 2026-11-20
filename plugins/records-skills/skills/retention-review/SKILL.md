@@ -36,6 +36,12 @@ description: 기록물 목록의 보존기간을 기관 기록관리기준표와
 - 근거: 국가기록원 기록관리 자료실 > 기록물분류기준 > 보존기간 책정기준 「중앙행정기관 기록물 보존기간 준칙(2021년)」 → `assets/common/central_unique_2021.csv`(44개 기관, 4,128과제, 별표 1 호 근거 포함). 2021 기준이라 그 뒤 직제 변경은 반영되지 않았다.
 - `--edition 2012`: 「(2012년판) 중앙행정기관(소속기관포함) 기록물 보존기간 준칙」(시행 2012. 1. 1.) → `assets/common/central_unique_2012.csv`(41개 기관, 4,141과제). 2012~2020 생산 기록물이나 옛 부처명(교육과학기술부·국토해양부·지식경제부 등)에 쓴다. 두 판에서 같은 기관·과제명 2,868건 중 96건이 바뀌었다(준영구→30년 61건 등). 34과제는 원문 표에 보존기간이 없어 빈칸이다.
 
+## 옛 공통업무 보존기간표(2008·2022) → 지금 준칙
+`python "${CLAUDE_PLUGIN_ROOT}"/skills/retention-review/scripts/common_history_lookup.py 목록.xlsx [--edition 2008|2022] -o 산출/공통업무_이력대조.xlsx`
+- 목록의 단위과제명을 「처리과공통업무·기관공통업무 보존기간표(2008년)」(20·386과제)와 「지방자치단체 처리과·기관공통업무 보존기간표(2022년)」(14·190과제)에서 찾아, 개정구분(통합·명칭 변경·폐지·보존기간 조정)과 지금 이어진 공통업무 과제(중앙 2022 준칙 ATG·ANG 분류번호, 지자체 2025 준칙 PNG 분류번호)·지금 보존기간을 보여 준다.
+- 목록 보존기간이 옛 기준이나 지금 기준보다 짧으면 표시한다. 폐지된 과제는 개정내용(폐지 사유)을 적는다.
+- 근거: 같은 메뉴 보존기간 책정기준 탭 5~8번 자료(2026-11-20 내려받음) → `assets/common/common_task_history.csv`(610행).
+
 ## 기관별 기록물분류기준표(2005~2012) 찾기·읽기·대조
 `python "${CLAUDE_PLUGIN_ROOT}"/skills/retention-review/scripts/scheme_pdf_lookup.py --org 강릉시 --year 2009` → 그 기관의 판(시행일)과 원문 PDF 주소, 그해 말 시행 중이던 판 표시
 `python "${CLAUDE_PLUGIN_ROOT}"/skills/retention-review/scripts/scheme_pdf_lookup.py --pdf 받은.pdf [--list 목록.xlsx] -o 산출/분류기준표_대조.xlsx`

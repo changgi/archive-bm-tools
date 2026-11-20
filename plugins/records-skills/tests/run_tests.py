@@ -1344,6 +1344,15 @@ def main():
     except ImportError:
         sp_pdf = True  # reportlab·pdfplumber 없으면 PDF 부분은 건너뜀
     check("기록물분류기준표 PDF: 판 찾기(그해 말 시행 판)·읽기(글자 보정·줄 넘김)·목록 대조", sp_find and sp_pdf, osp)
+    # 옛 공통업무 보존기간표(2008·2022 지자체) → 지금 공통업무 준칙
+    xlsx(f"{t}/공통이력.xlsx", [["단위과제명", "보존기간"], ["부내 부분감사", "5년"], ["감사카드", "10년"], ["사무분장", "5년"],
+                               ["(기관공통)감사결과처리", "10년"], ["가상 전혀 다른 과제", "3년"]])
+    cch, och = run([S("retention-review", "scripts", "common_history_lookup.py"), f"{t}/공통이력.xlsx", "-o", f"{t}/산출/공통이력.xlsx"])
+    ch = {r[1]: r for r in openpyxl.load_workbook(f"{t}/산출/공통이력.xlsx")["대조"].iter_rows(min_row=2, values_only=True)} if os.path.exists(f"{t}/산출/공통이력.xlsx") else {}
+    check("옛 공통업무 보존기간표(2008·2022) 개정 이력 → 지금 준칙 과제·보존기간", cch == 1
+          and "ANG0001" in str(ch.get("부내 부분감사", [""] * 12)[8]) and "짧음" in str(ch.get("부내 부분감사", [""] * 12)[11])
+          and "폐지" in str(ch.get("감사카드", [""] * 12)[11]) and ch.get("사무분장", [""] * 12)[11] == "같은 흐름"
+          and "PNG0001" in str(ch.get("(기관공통)감사결과처리", [""] * 12)[8]) and "가상 전혀 다른 과제" not in ch, och + str(ch))
 
     # 2026 지침 수행업무 리스트 점검표
     ctk, otk = run([S("evaluation-readiness", "scripts", "task_checklist.py"), "--role", "처리과", "-o", f"{t}/산출/수행업무.xlsx"])
