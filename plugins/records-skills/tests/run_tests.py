@@ -1266,9 +1266,25 @@ def main():
     if cyp == 0:
         icsx = open(f"{t}/산출/일정2027.ics", encoding="utf-8", newline="").read()
         lvv = [r for r in openpyxl.load_workbook(f"{t}/산출/연간2027.xlsx")["수준 체크리스트"].iter_rows(values_only=True)]
-        ok_yp = (icsx.startswith("BEGIN:VCALENDAR") and "DTSTART;VALUE=DATE:20271031" in icsx and "DTSTART;VALUE=DATE:20270831" in icsx and icsx.count("BEGIN:VEVENT") >= 15
+        ok_yp = (icsx.startswith("BEGIN:VCALENDAR") and "DTSTART;VALUE=DATE:20271031" in icsx and "DTSTART;VALUE=DATE:20270831" in icsx and "DTSTART;VALUE=DATE:20270531" in icsx and "DTSTART;VALUE=DATE:20270630" in icsx and icsx.count("BEGIN:VEVENT") >= 18
                  and "\r\n" in icsx and any(r and r[0] == "인력 배치" and r[2] == "미달" and "2명" in r[1] for r in lvv) and lvv[-1][0] == "교육")
-    check("연간 일정 NAK 18: 월별 업무·10/31 기한 .ics, 수준 체크리스트, 전문요원 1/4", ok_yp, oyp)
+    check("연간 일정 NAK 18: 월별 업무·5/31(제33조)·6/30·8/31·10/31 기한 .ics, 수준 체크리스트, 전문요원 1/4", ok_yp, oyp)
+
+    # 2026 지침 수행업무 리스트 점검표
+    ctk, otk = run([S("evaluation-readiness", "scripts", "task_checklist.py"), "--role", "처리과", "-o", f"{t}/산출/수행업무.xlsx"])
+    tk_ok = False
+    if ctk == 0:
+        wtk = openpyxl.load_workbook(f"{t}/산출/수행업무.xlsx")
+        ws_ = wtk["점검표"]
+        rows_ = [r for r in ws_.iter_rows(min_row=3)]
+        for i, r in enumerate(rows_):
+            r[4].value = "O" if i % 2 == 0 else ("X" if i % 3 else None)
+        wtk.save(f"{t}/산출/수행업무_채움.xlsx")
+        crk, ork = run([S("evaluation-readiness", "scripts", "task_checklist.py"), "--results", f"{t}/산출/수행업무_채움.xlsx", "-o", f"{t}/산출/수행업무_결과.xlsx"])
+        sm = [r for r in openpyxl.load_workbook(f"{t}/산출/수행업무_결과.xlsx")["요약"].iter_rows(values_only=True)]
+        notes_ = {r[2].value: r[6].value for r in rows_}
+        tk_ok = (len(rows_) == 28 and crk == 1 and sm[1][0] == "처리과" and sm[1][1] == 28 and sm[1][2] == 14 and "2027" in str(notes_.get("3-5")))
+    check("2026 지침 수행업무 점검표: 처리과 28항목·O/X 결과 수행률·미수행, 법령 변경 비고(3-5 이관 연장)", tk_ok, otk)
 
     # 기록물 기술 점검(NAK 13)
     xlsx(f"{t}/기술목록.xlsx", [["참조코드", "상위참조코드", "제목", "일자", "기술계층", "생산자명", "범위와내용", "규모", "종류"],

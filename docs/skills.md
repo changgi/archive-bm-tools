@@ -393,6 +393,7 @@ python skills/transfer-reconcile/scripts/integrated_transfer.py 등록정보.xls
 
 🆕 **veraPDF가 없을 때(NAK 30)** `python skills/preservation-convert/scripts/pdfa_precheck.py 산출/보존포맷/` — 암호화·LZW·내장 파일·OutputIntent·폰트 미내장·부분집합 CharSet/CIDSet·투명도·금지 주석·JavaScript·XMP 선언을 사전 점검합니다. '사전 점검 통과'는 공식 적합이 아닙니다.
 ---
+- **변환 시기**: 시행령 제36조②(기산일+5년 이상 보존 → 6년 전 표준보존패키지), 부칙 제9조 2016~2020년분 연도별 특례.
 
 ## 15. preservation-inspection — 정수점검·상태검사
 
@@ -682,6 +683,7 @@ python fill_official_form.py 등록정보.xlsx --form 통보서식.xlsx --year 2
 내년 기록관리 연간 일정 만들어서 캘린더에 넣을 수 있게 해줘. 기관장 보고용 점검표도.
 ```
 ---
+- **수행업무 점검표**(`task_checklist.py`): 「2026년 기록물관리 지침」 처리과 28·기록관 24 수행업무를 O·X로, 수행률·미수행과 도움 되는 스킬, 법령 변경 비고.
 
 ## 28. hwpx-report — 한글(HWPX) 보고서·공문 서식
 
