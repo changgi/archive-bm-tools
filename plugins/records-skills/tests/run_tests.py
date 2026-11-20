@@ -1477,6 +1477,19 @@ def main():
           and not any(r[1] in ("M-1", "M-3", "M-4") for r in mr) and all(k in m2 for k in ("재생지", "수성", "pH 6.2", "탄산칼슘 1", "내광성 3", "용기") if k != "용기")
           and any(r[1] == "M-2" and r[4] == "용기" for r in mr), om + str(mr))
 
+    # 광디스크 오류율(국가기록원 매체 기준 연구: ISO/IEC 29121·JIIMA BD·DA/T 38)
+    xlsx(f"{t}/디스크.xlsx", [["매체번호", "종류", "검사구분", "측정일", "PI sum 8", "R-SER", "Burst", "BLER", "수정불가"],
+                            ["D1", "DVD-R", "초기", "2026-01-10", "120", "", "", "", ""], ["D2", "DVD-R", "정기", "2023-01-10", "90", "", "", "", ""],
+                            ["D3", "DVD-R", "정기", "2026-05-01", "300", "", "", "", ""], ["B1", "BD-R", "정기", "2026-05-01", "", "7E-4", "500", "", ""],
+                            ["C1", "CD-R", "정기", "2026-05-01", "", "", "", "230", ""], ["D4", "DVD-R", "정기", "2026-05-01", "50", "", "", "", "1"]])
+    cdk, odk = run([S("media-check", "scripts", "disc_errors.py"), f"{t}/디스크.xlsx", "--today", "2026-11-20", "-o", f"{t}/산출/디스크.xlsx"])
+    dk = {r[1]: r for r in openpyxl.load_workbook(f"{t}/산출/디스크.xlsx")["판정"].iter_rows(min_row=2, values_only=True)} if os.path.exists(f"{t}/산출/디스크.xlsx") else {}
+    cdc, _ = run([S("media-check", "scripts", "disc_errors.py"), f"{t}/디스크.xlsx", "--standard", "china", "--today", "2026-11-20", "-o", f"{t}/산출/디스크중국.xlsx"])
+    dkc = {r[1]: r for r in openpyxl.load_workbook(f"{t}/산출/디스크중국.xlsx")["판정"].iter_rows(min_row=2, values_only=True)} if os.path.exists(f"{t}/산출/디스크중국.xlsx") else {}
+    check("광디스크 오류율: DVD 초기 100·정기 140/280(ISO 29121), 3년 주기 지남, BD R-SER, CD BLER 220, 수정불가 즉시, 중국 기준 초기 80",
+          cdk == 1 and dk["D1"][6] == 2 and dk["D2"][6] == 1 and "지남" in str(dk["D2"][9]) and dk["D3"][6] == 3 and dk["B1"][6] == 2
+          and dk["C1"][6] == 3 and dk["D4"][6] == 3 and dkc["D1"][6] == 2 and dkc["D2"][6] == 1, odk + str(dk))
+
     # 플러그인 훅 명령: Windows(Git Bash)처럼 python3가 없거나 가짜일 때도 보호가 꺼지지 않는지
     hj = os.path.join(ROOT, "hooks", "hooks.json")
     bash = shutil.which("bash")
