@@ -21,4 +21,10 @@ description: 행정정보시스템의 테이블·컬럼 정의(스키마 csv 또
 5. 보존기간은 task-suggest로 후보를 보고, 관할 영구기록물관리기관과 협의해 정한다(시행령 제26조①2·제34조의3).
 
 근거 서식: 국가기록원 누리집 업무안내·자료 > 기록관리 자료실 > 행정정보 데이터세트 > '관리기준표 서식(한글) 및 작성방법'. 표준: NAK 35:2020(v1.0) 행정정보 데이터세트 기록관리 기준. 시행령 제25조⑥(관리기관·법령·시스템·데이터·업무·기록관리 정보).
+## 2. SIARD 이관 파일 구조 점검 (NAK 35 부속서 B, SIARD 2.1)
+`python "${CLAUDE_PLUGIN_ROOT}"/skills/dataset-schedule/scripts/siard_check.py 데이터세트.siard -o 산출/SIARD점검.csv`
+- ZIP(비압축·deflate만, 암호화 금지, .siard), 최상위 content/·header/만, header/siardversion/2.1/ 빈 폴더, header/metadata.xml·metadata.xsd.
+- content 폴더·파일 이름 규칙(영문자로 시작, 영문·숫자·_), 테이블 폴더의 tableN.xml·xsd, metadata.xml 스키마·테이블 폴더와 content가 같은지, 열 수가 xsd와 같은지.
+- 테이블 값은 열지 않는다. SIARD는 NAK 37:2025 데이터베이스형 '수용가능포맷'(보존포맷은 CSV·JSON·XML)이고 스키마(구조정보)를 함께 보존하도록 권장된다.
+
 이관·삭제는 국가기록원 SIARD_KR 지원도구(같은 게시판 '지원도구 설치 파일 및 매뉴얼')를 쓰며, 이 스킬은 실행하지 않는다.

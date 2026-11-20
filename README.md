@@ -1,6 +1,6 @@
 <div align="center">
 
-<img src=".github/assets/banner.svg" alt="archive-bm-tools — 기록관리 담당자를 위한 Claude 스킬 37종" width="100%">
+<img src=".github/assets/banner.svg" alt="archive-bm-tools — 기록관리 담당자를 위한 Claude 스킬 41종" width="100%">
 
 **공공기관 기록관리 담당자를 위한 Claude 플러그인 마켓플레이스**
 
@@ -8,8 +8,8 @@
 반복되는 점검과 서식 작성은 스크립트가, 판단과 제출은 사람이.
 
 ![version](https://img.shields.io/badge/records--skills-v2.13.0-1f6feb)
-![skills](https://img.shields.io/badge/스킬-37종-2da44e)
-![tests](https://img.shields.io/badge/시험-68%2F68%20통과-2da44e)
+![skills](https://img.shields.io/badge/스킬-41종-2da44e)
+![tests](https://img.shields.io/badge/시험-76%2F76%20통과-2da44e)
 ![python](https://img.shields.io/badge/Python-3.10%2B-3776ab?logo=python&logoColor=white)
 ![law](https://img.shields.io/badge/근거-시행령%202026.8.25.-8250df)
 ![license](https://img.shields.io/badge/코드-MIT-lightgrey)
@@ -57,12 +57,12 @@
 
 ```mermaid
 flowchart LR
-    A["📝 생산·등록<br/>11종"] --> B["📦 이관·인수<br/>5종"]
+    A["📝 생산·등록<br/>14종"] --> B["📦 이관·인수<br/>5종"]
     B --> C["🛡️ 보존<br/>10종"]
     C --> D["🔓 공개·활용<br/>3종"]
     D --> E["⚖️ 평가·폐기<br/>3종"]
     N["🌐 새 유형<br/>기록 3종"] -.-> A
-    R["📊 기관평가<br/>보고 2종"] -.-> E
+    R["📊 기관평가<br/>보고 3종"] -.-> E
 ```
 
 ---
@@ -104,12 +104,12 @@ flowchart LR
 
 ---
 
-## 🧰 스킬 37종
+## 🧰 스킬 41종
 
-> 스킬마다 준비할 파일·말하는 법·받는 결과·주의할 점은 **[스킬 37종 사용법](docs/skills.md)**, 언제 무엇을 쓰는지는 **[연간 업무 달력](docs/calendar.md)** 에 있습니다.
+> 스킬마다 준비할 파일·말하는 법·받는 결과·주의할 점은 **[스킬 41종 사용법](docs/skills.md)**, 언제 무엇을 쓰는지는 **[연간 업무 달력](docs/calendar.md)** 에 있습니다.
 
 <details open>
-<summary><b>📝 생산·등록 (11)</b></summary>
+<summary><b>📝 생산·등록 (14)</b></summary>
 
 | 스킬 | 하는 일 |
 |---|---|
@@ -120,6 +120,9 @@ flowchart LR
 | [docno-extract](plugins/records-skills/skills/docno-extract) | 문서번호 추출, 물결표(~) 범위를 낱개로 펼치기 |
 | [task-suggest](plugins/records-skills/skills/task-suggest) | 제목으로 공통업무 단위과제·보존기간 후보 |
 | [records-schedule-check](plugins/records-skills/skills/records-schedule-check) | 기록관리기준표 관리항목 점검(NAK 4:2025) |
+| 🆕 [listing-qa](plugins/records-skills/skills/listing-qa) | 목록 작성·디지털화 사업 검수 — 면표시·편철 순서·쪽수↔이미지·작업자별 표본 3%·99.9% — NAK 23 |
+| 🆕 [official-doc-check](plugins/records-skills/skills/official-doc-check) | 공문서 표기 점검 — 날짜·시간·금액(한글 대조)·항목 기호·붙임·끝 표시 — 행정업무규정 제7조·시행규칙 제2·4조 |
+| 🆕 [archival-description](plugins/records-skills/skills/archival-description) | 기록물 기술 점검 — 필수요소 6개, 일자 표기·연호 환산, 계층별 일자 — NAK 13 |
 | [typed-records-check](plugins/records-skills/skills/typed-records-check) | 회의록 구성 요소 8가지, 시청각 생산정보 |
 | [publications-check](plugins/records-skills/skills/publications-check) | 발간등록번호·발간주기·송부 책자 3부 |
 | [admin-artifacts-check](plugins/records-skills/skills/admin-artifacts-check) | 행정박물 기본정보 11항목·유형 7·재질 13종·이관 기한(별표 4·5) |
@@ -163,7 +166,7 @@ flowchart LR
 
 | 스킬 | 하는 일 |
 |---|---|
-| [access-request](plugins/records-skills/skills/access-request) | 정보공개 결정·연장·이의신청 기한(공휴일 반영) |
+| [access-request](plugins/records-skills/skills/access-request) | 정보공개 결정·연장·이의신청 기한(공휴일 반영), 🆕 처리대장·이의신청대장·운영실태(별지 4·11·12)·별표 수수료 계산 |
 | [disclosure-reclass](plugins/records-skills/skills/disclosure-reclass) | 공개 재분류 심의 대상, 비공개 사유 결함, 이관 전 재분류, 🆕 검토서(16칸)·기준서·체크리스트 — NAK 16-1 |
 | [pii-redact](plugins/records-skills/skills/pii-redact) | 주민등록번호·전화번호 등 개인정보 후보와 부분공개용 가림 목록 |
 
@@ -192,11 +195,12 @@ flowchart LR
 </details>
 
 <details>
-<summary><b>📊 기관평가·보고 (2)</b></summary>
+<summary><b>📊 기관평가·보고 (3)</b></summary>
 
 | 스킬 | 하는 일 |
 |---|---|
-| [evaluation-readiness](plugins/records-skills/skills/evaluation-readiness) | 기록관리 기관평가 지표별 증빙 점검 |
+| 🆕 [system-requirements](plugins/records-skills/skills/system-requirements) | 기록관리·영구·정부산하·생산시스템 기능요건 점검표(원문 762개), 필수 충족률·미충족 — NAK 6·7·20·19 |
+| [evaluation-readiness](plugins/records-skills/skills/evaluation-readiness) | 기록관리 기관평가 지표별 증빙 점검, 🆕 연간 업무 일정·캘린더(.ics)·기관장 보고 점검표 — NAK 18 |
 | [hwpx-report](plugins/records-skills/skills/hwpx-report) | 마크다운 → 한글(HWPX) 보고서, 기관 서식 채움 |
 
 </details>
@@ -233,7 +237,7 @@ flowchart LR
 | 공공기록물 관리에 관한 법률·시행령(2026. 8. 25. 개정)·시행규칙(2026. 9. 11. 개정) | 국가법령정보센터(law.go.kr) 원문 |
 | 「2026년 기록물관리 지침」 | 국가기록원(archives.go.kr) |
 | 생산현황 통보서식, 공통업무 보존기간 준칙 | 국가기록원 공개 자료 |
-| NAK 26:2023(v2.1) 디지털화 기준 · NAK 25:2026(v2.1) 종이기록물 보존·복원 · NAK 16-1:2020(v1.2) 공개관리(생산부서·기록관) · NAK 5-1:2014(v2.2) 평가·폐기(기록관용) · NAK 12:2022(v3.1) 기록매체 요건 · NAK 15:2021(v2.0) 한시·폐지기관 · NAK 2-1:2024(v1.2) 보안 및 재난관리 기준 · NAK 2-2:2025(v1.2) 필수기록물 선별·보호 · NAK 38:2024(v1.0) 재난 피해 종이기록물 응급복구 · NAK 11:2025(v2.0) 보존시설·장비·환경 기준 | 국가기록원 표준 원문 PDF (2026-11-20 내려받아 확인) |
+| NAK 6·7·19-1~3·20 시스템 기능요건 · NAK 30 PDF/A-1b · NAK 31-1 NEO2 · NAK 24 보존시설 신축 · NAK 32-1·16-2·5-2·9(참고) · NAK 23:2017(v1.2) 목록 작성·디지털화 작업 · NAK 13:2022(v2.1) 영구기록물 기술규칙 · NAK 18:2022(v1.1) 기관장 책임과 역할 · NAK 21:2018(v1.1) 서비스 표준 · NAK 26:2023(v2.1) 디지털화 기준 · NAK 25:2026(v2.1) 종이기록물 보존·복원 · NAK 16-1:2020(v1.2) 공개관리(생산부서·기록관) · NAK 5-1:2014(v2.2) 평가·폐기(기록관용) · NAK 12:2022(v3.1) 기록매체 요건 · NAK 15:2021(v2.0) 한시·폐지기관 · NAK 2-1:2024(v1.2) 보안 및 재난관리 기준 · NAK 2-2:2025(v1.2) 필수기록물 선별·보호 · NAK 38:2024(v1.0) 재난 피해 종이기록물 응급복구 · NAK 11:2025(v2.0) 보존시설·장비·환경 기준 | 국가기록원 표준 원문 PDF (2026-11-20 내려받아 확인) |
 | NAK 10:2026(v1.5) 확정 · NAK 17:2026(v1.4)안 · NAK 39:2026(v1.0) 제정(안) | 국가기록원 고시·예고 |
 | 시행령 별표 1~6(보존기간·보존방법·상태검사·행정박물·시설환경) · 시행규칙 별표 1~16·별지 제1~25호 | 국가법령정보센터 별표·서식 원문(2026-11-20 확인 — [기록](plugins/records-skills/skills/records-qa-gate/references/law-forms-2026-11-20.md)) |
 | 국가기록원 행정규칙(고시 제2025-10호로 재고시된 NAK 표준, 부기·정정 처리 기준 훈령 제224호 등) · 간행물 발간등록 안내 | 국가법령정보센터 행정규칙, 국가기록포털 |
@@ -248,7 +252,7 @@ flowchart LR
 python plugins/records-skills/tests/run_tests.py
 ```
 
-68개(veraPDF가 PATH에 있으면 69개, ffmpeg가 없으면 1개 적음) — 스킬 37종의 주요 계산과, 보호 훅이 Windows처럼 `python3`가 없거나 가짜일 때도 꺼지지 않는지까지 확인합니다. 필요 패키지: `openpyxl` `pypdf` `pikepdf` `pillow` `numpy` (선택: `python-docx` `python-hwpx` `holidays`, LibreOffice). Python 3.11·3.12·3.13에서 확인했고, [GitHub Actions](.github/workflows/test.yml)로 3.10~3.13을 돌립니다.
+76개(veraPDF가 PATH에 있으면 77개, ffmpeg가 없으면 1개 적음) — 스킬 41종의 주요 계산과, 보호 훅이 Windows처럼 `python3`가 없거나 가짜일 때도 꺼지지 않는지까지 확인합니다. 필요 패키지: `openpyxl` `pypdf` `pikepdf` `pillow` `numpy` (선택: `python-docx` `python-hwpx` `holidays`, LibreOffice). Python 3.11·3.12·3.13에서 확인했고, [GitHub Actions](.github/workflows/test.yml)로 3.10~3.13을 돌립니다.
 
 ---
 

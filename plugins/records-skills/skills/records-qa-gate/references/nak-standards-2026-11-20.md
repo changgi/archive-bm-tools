@@ -16,3 +16,28 @@
 | NAK 15:2021(v2.0) 한시·폐지기관 | 34 | agency-closure | 5장 유형별 주체, 부속서 A·B·C, 9.3 3개월 통보 |
 
 아직 원문을 읽지 않은 표준(승인 필요): NAK 13 기술규칙, 18 기관장 책임, 21 서비스, 23 목록 작성·디지털화 작업, 16-2·5-2(영구기관용), 6·7·19·20 시스템 기능요건, 30·31·32 기술규격, 24 보존시설 신축, 9 영구기관 업무절차.
+
+## 2차 반영 (2.16.0)
+| NAK 23:2017(v1.2) 목록 작성·디지털화 작업 | 38 | listing-qa | 5.3.6 면표시, 표 2 편철 순서, 5.5 색인 2차 전수검사, 5.6.2 쪽수↔이미지, 5.7.1 표본 3%, 5.7.2 99.9%, 부속서 서식 |
+| NAK 13:2022(v2.1) 영구기록물 기술규칙 | 70 | archival-description | 필수요소 6, 4.3.3 일자 표기, 계층별 일자, 4.3.5 규모 |
+| NAK 18:2022(v1.1) 기관장 책임과 역할 | 28 | evaluation-readiness (yearly_plan.py) | 부속서 D 월별 일정, E 수준 체크리스트, F 전문요원 1/4 |
+| NAK 21:2018(v1.1) 공공기록물 서비스 | 51 | (스크립트 없음) | 열람 서비스 원칙·운영규정 예시 — 영구기관 중심. 기록관 열람 응대는 access-request로 충분하다고 판단 |
+
+## 3차 반영 (2.16.0, 2026-11-20 승인 "계속 다운로드해서 분석해")
+| NAK 6:2022(v1.5) 기록관리시스템 기능 요건 | 41 | system-requirements | 요건 161(M 123·O 38) |
+| NAK 7:2022(v1.5) 영구기록관리시스템 기능 요건 | 45 | system-requirements | 220(M 180·O 40) |
+| NAK 20:2022(v1.3) 정부산하 기록관리 시스템 | 52 | system-requirements | 149(M 109·CM 7·O 33) |
+| NAK 19-1:2012 / 19-2:2013 / 19-3:2015 생산시스템 | 40/39/34 | system-requirements | 83 / 76 / 73 (19-1·19-2는 문장 끝으로 M/O 판별) |
+| NAK 30:2022(v1.1) PDF/A-1b | 45 | preservation-convert (pdfa_precheck.py) | 6.1~6.9 금지·필수 항목 |
+| NAK 31-1:2022(v2.3) NEO2 | 111 | transfer-reconcile (neo_check.py) | 6장 요소 244개 중 필수·부모별 필수 |
+| NAK 24:2023(v1.1) 보존시설 신축 | 24 | stack-environment | 부지 6조건, 하중, P.A.T., 6개월 안정화, 면적 |
+| NAK 32-1:2022(v1.2) 전자서명 장기검증 | 40 | (스크립트 없음) | 검증은 시스템·전용 검증기 영역 |
+| NAK 16-2:2024·5-2:2022·9:2026 영구기록물관리기관용 | 41/24/77 | (스크립트 없음) | 기록관 업무와 거리 — 참고 |
+
+## 3차 내려받기 (2026-11-20, 승인 "계속 다운로드해서 분석해")
+- NAK 37:2025(v2.0) 전자기록물 보존포맷 선정기준: 공통기준 75점 이상 후보, 고유기준 1레벨=보존·2레벨(50~75)=수용가능. 권고포맷 표 1(텍스트 보존 PDF·DOCX·PDF/A-1·2·ODT·EPUB / 수용 HWPX), 표 4(발표 보존 PDF·PDF/A-1·2·PPTX·ODP), 표 7(표 XLSX·ODS), 표 10(이미지 TIF·PNG), 표 13(오디오 보존 WAV(BWF)·MP3·AAC / 수용 FLAC·WMA), 표 16(비디오 컨테이너 보존 MPG/MPEG·MP4·MXF / 수용 AVI·MKV·MOV·WMV), 표 19(코덱 보존 AVC / 수용 FFV1), 표 22(DB 보존 CSV·JSON·XML / 수용 SIARD, 스키마 함께 보존 권장), 표 25(구조화 보존 CSV·JSON·XML). → format-identify
+- NAK 31-2:2022(v1.1) NEO3: 부속서 A 필수 조건 1~4(최상위 Metadata.xml·PackagingInformation.xml, 각 xsd, mimetype 첫 항목·비압축·application/neo3+zip), PackageManifest/ManifestItem(HashValue·Path|UniqueID, HashAlgorithm SHA2-512 등), 수정 시 Change History에 이전 판 보존. → transfer-reconcile neo_check.py
+- NAK 8:2022(v2.3) 메타데이터: 23 상위·66 하위·58 세부, 상위 필수 12개, 등록 후 변경 불가(생산자·기본식별자·제목·생산일시·생산경로), 부속서 C 요소표·D 생산자 유형별 필수. → metadata-autofill nak8_check.py
+- NAK 35:2020(v1.0) 데이터세트: 표 2 관리기준표 M/O, 부속서 B SIARD 2.1 G_4.1·P_4.2·P_4.3. → dataset-schedule siard_check.py
+- NAK 4:2025(v2.3): 대규모 투자사업(예타 통과·민투심 심의·지자체 총사업비 300억 이상)은 '사업' 단위 단위과제·준영구 이상, 신설·변경 보존기간 10/31 협의, 영구기록물관리기관 12/31 회신. → records-schedule-check
+- NAK 17:2021(v1.3) 6.2: 원본 예고문 이관·일반문서로 재분류, 사본 파기·일반문서로 재분류, 원본 '이관'이면 사본 '파기', 재분류 시기 예측 불가 시 통상 생산일부터 1년 이내 일자. → classified-records-check(규칙만, 목록 열람 없음)

@@ -48,6 +48,10 @@ body:
         - security-disaster-plan
         - media-check
         - agency-closure
+        - listing-qa
+        - archival-description
+        - official-doc-check
+        - system-requirements
         - 훅(비밀·원본 보호)
         - 잘 모름
     validations:

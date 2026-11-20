@@ -1,4 +1,4 @@
-# 스킬 37종 사용법
+# 스킬 41종 사용법
 
 > 스킬마다 **언제 쓰는지 · 무엇을 준비하는지 · 어떻게 말하면 되는지 · 무엇을 받는지 · 주의할 점**을 적었습니다.
 > 명령어를 외울 필요는 없습니다. **「이렇게 말하세요」의 문장을 그대로 Claude Code에 입력**하면 Claude가 알맞은 스킬을 골라 실행합니다.
@@ -164,6 +164,8 @@ python skills/records-qa-gate/scripts/header_check.py 입력/등록정보.xlsx -
 
 ---
 
+- **NAK 8 필수 요소 점검**(`nak8_check.py`): 등록부의 필수·세트·해당시 필수(부속서 D 개인명), 종료일시≥생산일시, `--before`로 등록 후 변경 불가 요소(생산자·제목·생산일시) 대조. 비밀 열은 값을 읽지 않음.
+
 ## 5. docno-extract — 문서번호 추출·범위 펼치기
 
 > 🔢 **비유:** "3~7번"이라고 적힌 쪽지를 3, 4, 5, 6, 7 다섯 장으로 나눠 주는 일.
@@ -222,6 +224,8 @@ python skills/records-qa-gate/scripts/header_check.py 입력/등록정보.xlsx -
 **직접 실행** `python skills/records-schedule-check/scripts/schedule_check.py 기준표_2026.xlsx --previous 기준표_2025.xlsx -o 산출/기준표점검.xlsx`
 
 ---
+
+- **NAK 4 추가**: 대규모 투자사업(예타·민간투자·총사업비 300억 이상) 단위과제는 준영구 이상, 신설·변경 보존기간은 10월 31일까지 협의.
 
 ## 8. typed-records-check — 회의록·시청각 점검
 
@@ -322,7 +326,11 @@ python skills/transfer-reconcile/scripts/integrated_transfer.py 등록정보.xls
 
 **알아 둘 점** 비밀기록물은 통합이관 대상 계산에서 빠집니다.
 
+
+🆕 **NEO2 장기보존패키지(NAK 31-1)** `python skills/transfer-reconcile/scripts/neo_check.py NEO폴더/` — 필수 요소, 부모 요소별 필수 자식, ComponentData Base64·크기, 전자서명 블록, 압축 패키지의 Metadata.xml·PackagingInformation.xml. 서명 유효성(장기검증)은 보지 않습니다.
 ---
+
+- **NEO3(NAK 31-2)**: `neo_check.py 패키지.zip` — 최상위 Metadata.xml·PackagingInformation.xml·각 xsd, mimetype 첫 항목·비압축·`application/neo3+zip`, Manifest 해시 대조.
 
 ## 12. transfer-triage — 인수·기증 폴더 첫 진단
 
@@ -359,6 +367,8 @@ python skills/transfer-reconcile/scripts/integrated_transfer.py 등록정보.xls
 
 # 🛡️ 보존
 
+- **NAK 37:2025 권고 열**: 보존포맷(PDF·PDF/A·DOCX·XLSX·PPTX·TIF·PNG·WAV·MP4·CSV·JSON·XML 등)·수용가능포맷(HWPX·FLAC·MKV·MOV·SIARD 등)·권고 외(HWP·DOC·XLS·PPT 등 변환 검토).
+
 ## 14. preservation-convert — PDF/A 보존포맷 변환
 
 > 🧊 **비유:** 음식을 진공 포장해 냉동하는 일. 수십 년 뒤에도 똑같이 열리도록 글꼴까지 문서 안에 넣습니다.
@@ -377,6 +387,8 @@ python skills/transfer-reconcile/scripts/integrated_transfer.py 등록정보.xls
 - 한글 글꼴은 **TrueType(.ttf)** 글꼴을 쓰세요. OTF(CFF) 대체 글꼴이 들어가면 6.3.5 조항에서 부적합이 날 수 있습니다.
 - NAK 10:2026에 따라 표준보존패키지 변환은 기산일 후 6년이 되기 전에 합니다.
 
+
+🆕 **veraPDF가 없을 때(NAK 30)** `python skills/preservation-convert/scripts/pdfa_precheck.py 산출/보존포맷/` — 암호화·LZW·내장 파일·OutputIntent·폰트 미내장·부분집합 CharSet/CIDSet·투명도·금지 주석·JavaScript·XMP 선언을 사전 점검합니다. '사전 점검 통과'는 공식 적합이 아닙니다.
 ---
 
 ## 15. preservation-inspection — 정수점검·상태검사
@@ -469,6 +481,11 @@ python skills/fixity-check/scripts/fixity.py verify 보존 산출/기준선.csv 
 
 **직접 실행** `python skills/access-request/scripts/foi_deadlines.py 청구목록.xlsx --warn-days 3 -o 산출/정보공개기한.xlsx`
 
+
+🆕 **서식·통계(정보공개법 시행규칙)** `python skills/access-request/scripts/foi_forms.py 청구목록.xlsx --year 2026` — 별지 제4호 정보공개 처리대장(별표 수수료 계산 포함), 제11호 이의신청 처리대장, 제12호 운영실태(총괄·청구방법·공개/수령방법·결정기간·비공개 사유별), 제7호 결정 통지서 기재 점검. 청구인 이름은 옮기지 않습니다.
+```text
+올해 정보공개 청구 목록으로 처리대장이랑 운영실태 통계 만들어줘. 수수료도 계산해줘.
+```
 ---
 
 ## 19. disclosure-reclass — 공개 재분류 심의 대상
@@ -610,6 +627,8 @@ python skills/dataset-schedule/scripts/dataset_schedule.py 스키마.csv --org "
 
 ---
 
+- **SIARD 2.1 점검**(`siard_check.py`, NAK 35 부속서 B): ZIP·암호화 금지·content/header만·siardversion/2.1·이름 규칙·metadata↔content 대응·열 수.
+
 ## 26. classified-records-check — 비밀기록물 점검(서식 10·11)
 
 > 🔐 **비유:** 금고 열쇠는 담당자만. 이 스킬은 **금고 밖에서 쓰는 사용 설명서**만 주고, 계산기는 담당자가 금고 안(비밀 전용 장비)에서 직접 돌립니다.
@@ -630,6 +649,8 @@ python fill_official_form.py 등록정보.xlsx --form 통보서식.xlsx --year 2
 
 # 📊 평가·보고
 
+- **NAK 17 6.2**: 사본 예고문에 '이관'이 있으면 표시(사본은 파기·일반문서로 재분류).
+
 ## 27. evaluation-readiness — 기록관리 기관평가 준비
 
 > 🎓 **비유:** 시험 전날 과목별 준비물 점검표. "이 과목은 교과서가 없어요"를 먼저 알려 줍니다.
@@ -644,6 +665,11 @@ python fill_official_form.py 등록정보.xlsx --form 통보서식.xlsx --year 2
 
 **직접 실행** `python skills/evaluation-readiness/scripts/eval_readiness.py 증빙목록.xlsx --type 공공기관 --from 2025-01-01 --to 2025-12-31 -o 산출/평가준비.xlsx`
 
+
+🆕 **연간 일정·기관장 보고(NAK 18)** `python skills/evaluation-readiness/scripts/yearly_plan.py --year 2027 --staff 5 --experts 1 --ics 산출/기록관리일정_2027.ics` — 월별 업무(1월 정리·지침 교육 … 5월 이관·생산현황 … 10월 기준표 협의·필수기록물 10/31 … 11월 다음 연도 이관 대상)를 표와 캘린더 파일(.ics)로 만들고, 기관장 보고용 수준 체크리스트와 전문요원 1/4 배치를 판정합니다.
+```text
+내년 기록관리 연간 일정 만들어서 캘린더에 넣을 수 있게 해줘. 기관장 보고용 점검표도.
+```
 ---
 
 ## 28. hwpx-report — 한글(HWPX) 보고서·공문 서식
@@ -728,6 +754,8 @@ python skills/transfer-schedule/scripts/encrypted_scan.py 이관폴더 --list �
 
 **알아 둘 점** '조치 필요'(5% 이상 이탈 또는 24시간 넘는 이탈)는 이 킷의 기본 문턱입니다. 법령은 범위만 정하므로 기관 기준이 있으면 그것을 따르세요.
 
+
+🆕 **신축·리모델링(NAK 24)** `--newbuild --completed 2026-08-01` → 부지 6조건·지상 독립 서고·하중 750/1,000~1,200kgf/㎡·P.A.T. 자재 시험·급배수라인·완공 후 6개월 안정화 뒤 입고일. 시청각·작업실·열람실 면적은 `--audio --video --albums --film-cans --workers --seats`.
 ---
 
 ## 31. records-forms — 법정 서식 작성
@@ -914,6 +942,101 @@ E 드라이브 DVD를 간이 검사해줘. 복사본은 산출/매체검사/DVD-
 **직접 실행** `python skills/agency-closure/scripts/closure_handover.py 기록물목록.xlsx --type 폐지-승계없음 --org "○○위원회" --to "○○기록원" --done 2026-12-15 -o 산출/인계인수.xlsx`
 
 **알아 둘 점** 승계기관이 없으면 보존기간 10년 이하 기록물도 영구기록물관리기관으로 이관합니다. 협의 없이 폐기하면 안 됩니다. 처리과 사무실 보유 기록물의 임의 폐기 금지부터 알립니다.
+
+---
+
+# 🆕 2.16에서 추가
+
+## 38. listing-qa — 목록 작성·디지털화 사업 검수
+
+> 🔢 **비유:** 책 제본소의 낙장·파본 검사. 쪽 번호가 끊기거나 겹치지 않는지, 순서가 맞는지, 스캔 장수가 쪽수와 같은지 봅니다.
+
+**이럴 때** 기록물 정리·색인목록 입력·스캔(DB 구축) 용역 결과를 받기 전 검수할 때, 정리 기간에 처리과 정리 결과를 볼 때.
+
+**준비할 것** 색인목록(철관리번호·철제목·권호·보존기간·등록번호·건제목·생산일자·시작쪽·끝쪽·작업자·작업일). 있으면 스캔 이미지 폴더.
+
+**기준(NAK 23)** 면표시는 철마다 1쪽부터 빈틈·겹침 없이, 분권은 앞 권 다음 번호부터 · 영구·준영구·30년은 오래된 문서가 위, 10년 이하는 최근 문서가 위 · 쪽수와 이미지 수가 다르면 재스캔 · 표본 최소 3% · 품질 수준 99.9%.
+
+**이렇게 말하세요**
+```text
+용역 업체가 넘긴 색인목록이랑 스캔 폴더 검수해줘. 작업자별로 표본도 3% 뽑아줘.
+```
+
+**받는 결과** `검수 결과`(구분·내용·고칠 사람) · `표본`(작업자·작업일별) · `품질 수준` · `서식 목록(부속서)`
+
+**직접 실행** `python skills/listing-qa/scripts/listing_qa.py 색인목록.xlsx --images 스캔폴더 --sample 3 --checked 2000 --errors 1 -o 산출/목록검수.xlsx`
+
+**알아 둘 점** 오류는 검증 담당자가 직접 고치지 않고 작업자에게 돌려 고치게 합니다(재발 방지). 표본은 시드를 고정해 같은 표본을 다시 뽑을 수 있습니다.
+
+---
+
+## 39. archival-description — 기록물 기술 점검
+
+> 🏷️ **비유:** 도서관 목록 카드 규칙 점검. 같은 형식으로 적어야 다른 기관과 바꿔 쓸 수 있습니다.
+
+**이럴 때** 수집 기록·기증 컬렉션·행정박물의 검색도구(목록·해제)를 만들 때, 영구기록물관리기관과 기술정보를 주고받을 때.
+
+**준비할 것** 기술 목록(참조코드·상위참조코드·제목·일자·기술계층·생산자명·범위와내용·규모·종류).
+
+**기준(NAK 13)** 필수요소 6개(참조코드·제목·일자·기술계층·생산자명·범위와 내용) · 일자는 `2005/03/23`, 범위는 `1998-2005`, 추정은 `[대략]195?`, 집중 시기는 `[주로]1971-1979` · 연호는 서기로 바꾸고 주기에 적음 · 철 이상은 연도만, 건은 연/월/일까지 · 전자기록물 규모는 용량 단위.
+
+**이렇게 말하세요**
+```text
+기증 컬렉션 기술목록이 NAK 13 규칙에 맞는지 봐줘. 고쳐 쓸 값도 제안해줘.
+```
+
+**받는 결과** `점검 결과`(구분·내용·고쳐 쓸 값) · `기술요소(NAK 13)`
+
+**직접 실행** `python skills/archival-description/scripts/description_check.py 기술목록.xlsx -o 산출/기술점검.xlsx`
+
+**알아 둘 점** 표기와 누락만 봅니다. 범위와 내용 서술이 맞는지는 기술 담당자가 판단합니다.
+
+---
+
+## 40. official-doc-check — 공문서 표기 점검
+
+> ✍️ **비유:** 교정지에 빨간 펜. 날짜·시간·금액 쓰는 법과 항목 번호, '끝' 표시를 규정대로 맞췄는지 봅니다.
+
+**이럴 때** 기안문·보고서를 결재 올리기 전, 처리과 문서 품질 점검, 신규 직원 공문서 작성 교육 자료를 만들 때.
+
+**준비할 것** 기안문·보고서 파일(txt·docx·hwpx). HWP는 한글에서 HWPX로 저장.
+
+**기준** 날짜 `2026. 11. 20.` · 시간 `14:30` · 금액 `금113,560원(금일십일만삼천오백육십원)` · 항목 `1. 가. 1) 가) (1) (가) ① ㉮` · 붙임은 명칭·수량, 둘 이상이면 1. 2. · 마지막 글자에서 한 칸 띄우고 `끝.`
+
+**이렇게 말하세요**
+```text
+이 기안문 공문서 표기 맞는지 봐줘. 금액 한글로 고쳐 쓸 값도 알려줘.
+```
+
+**받는 결과** `점검 결과`(줄·구분·찾은 표기·제안) · `기준`
+
+**직접 실행** `python skills/official-doc-check/scripts/doc_check.py 기안문.hwpx 보고서.docx -o 산출/공문서점검.xlsx`
+
+**알아 둘 점** 원본은 고치지 않습니다. 규정은 특별한 사유가 있으면 다른 방법도 허용하므로 제안으로 봅니다. 근거: 「행정업무의 운영 및 혁신에 관한 규정」 제7조, 같은 규정 시행규칙 제2조·제4조.
+
+---
+
+## 41. system-requirements — 시스템 기능요건 점검
+
+> 🧾 **비유:** 집 지을 때 쓰는 건축 사양서 체크리스트. "꼭 있어야 하는 기능(M)"이 빠졌는지 한 줄씩 확인합니다.
+
+**이럴 때** 기록관리시스템(RMS) 구축·고도화 과업지시서를 쓸 때, 감리·검수 때, 기관평가에서 시스템 기능을 증빙할 때.
+
+**준비할 것** 없음(빈 점검표부터). 결과를 집계하려면 이행·근거를 채운 점검표.
+
+**대상** 기록관리시스템(NAK 6, 161개) · 영구기록관리시스템(NAK 7, 220개) · 정부산하(NAK 20, 149개) · 생산시스템(NAK 19-1, 83개) · 전자문서시스템(NAK 19-2, 76개) · 업무관리시스템(NAK 19-3, 73개)
+
+**이렇게 말하세요**
+```text
+우리 기록관리시스템 기능요건 점검표 만들어줘. 필수만.
+채운 점검표로 필수요건 충족률이랑 빠진 것 알려줘.
+```
+
+**받는 결과** `요약`(필수 충족률·장별) · `점검표`(원문 요건·M/CM/O·이행 선택 목록) · `필수 미충족`
+
+**직접 실행** `python skills/system-requirements/scripts/req_checklist.py --system 기록관리시스템 [--results 채운점검표.xlsx] -o 산출/기능요건.xlsx`
+
+**알아 둘 점** 요건 문장은 국가기록원 표준 PDF 원문을 옮긴 것입니다(줄바꿈으로 띄어쓰기가 붙은 곳 있음). NAK 19-1·19-2는 원문에 M/O 표시가 없어 '~하여야 한다'=필수, '~할 수 있다'=선택으로 나눴습니다.
 
 ---
 

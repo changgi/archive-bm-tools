@@ -7,6 +7,8 @@
   2. Magika(딥러닝 식별, AIC와 같은 엔진)가 있으면 그 결과
   3. 둘 다 없으면 파일 첫 바이트(시그니처)로 최소 판정
 위험 표시: 확장자 불일치, 실행 파일, 암호화·손상 의심(0바이트), 장기보존 검토가 필요한 포맷
+NAK 37:2025(v2.0) 「전자기록물 보존포맷 선정기준」 부속서 평가결과(국가기록원, 2026-11-20 내려받아 확인)로 '보존포맷·수용가능포맷·권고 외'를 붙인다.
+  (디지털화 결과물의 JPEG 등은 NAK 26 디지털화 기준을 따로 본다 — 여기 표시는 전자기록물 보존포맷 관점)
 """
 import argparse
 import csv
@@ -24,6 +26,36 @@ SIGS = [
 ZIP_FAMILY = {"hwpx", "docx", "xlsx", "pptx", "odt", "ods", "zip"}
 REVIEW = {"hwp": "독자 포맷 — 보존포맷 변환 검토", "doc": "구형 오피스", "xls": "구형 오피스", "ppt": "구형 오피스",
           "gif": "색 제한", "bmp": "비압축 독자", "exe": "실행 파일 — 반입 금지 검토"}
+
+
+NAK37 = {  # 확장자 → (유형, 등급)
+    **{e: ("텍스트", "보존포맷") for e in ("pdf", "docx", "odt", "epub")}, "hwpx": ("텍스트", "수용가능포맷"),
+    **{e: ("프리젠테이션", "보존포맷") for e in ("pptx", "odp")}, **{e: ("스프레드시트", "보존포맷") for e in ("xlsx", "ods")},
+    **{e: ("이미지", "보존포맷") for e in ("tif", "tiff", "png")},
+    **{e: ("오디오", "보존포맷") for e in ("wav", "bwf", "mp3", "aac", "m4a")}, **{e: ("오디오", "수용가능포맷") for e in ("flac", "wma")},
+    **{e: ("비디오(컨테이너)", "보존포맷") for e in ("mpg", "mpeg", "mp4", "mxf")}, **{e: ("비디오(컨테이너)", "수용가능포맷") for e in ("avi", "mkv", "mov", "wmv")},
+    **{e: ("데이터베이스·구조화", "보존포맷") for e in ("csv", "json", "xml")}, "siard": ("데이터베이스", "수용가능포맷"),
+}
+EVALUATED_NOT = {"hwp": "텍스트", "doc": "텍스트", "txt": "텍스트", "ppt": "프리젠테이션", "show": "프리젠테이션", "pps": "프리젠테이션", "pptm": "프리젠테이션",
+                 "xls": "스프레드시트", "cell": "스프레드시트", "xlk": "스프레드시트", "asc": "구조화"}
+
+
+def nak37(ext, path, sig):
+    if ext == "pdf" and sig == "pdf":
+        try:
+            with open(path, "rb") as f:
+                head = f.read(200000)
+            m = __import__("re").search(rb"pdfaid:part[=>\"']+\s*(\d)", head)
+            if m and m.group(1) in (b"1", b"2"):
+                return f"보존포맷(텍스트, PDF/A-{m.group(1).decode()})"
+        except OSError:
+            pass
+    if ext in NAK37:
+        t, g = NAK37[ext]
+        return f"{g}({t})"
+    if ext in EVALUATED_NOT:
+        return f"권고 외({EVALUATED_NOT[ext]} 평가 대상이었으나 권고 아님) — 보존포맷 변환 검토"
+    return ""
 
 
 def head_sig(path):
@@ -92,11 +124,11 @@ def main() -> int:
             if ext in REVIEW:
                 flags.append(REVIEW[ext])
             flagged += bool(flags)
-            rows.append([os.path.relpath(p, a.folder), ext, sig, label, puid, fmt, " · ".join(flags)])
+            rows.append([os.path.relpath(p, a.folder), ext, sig, label, puid, fmt, nak37(ext, p, sig), " · ".join(flags)])
     os.makedirs(os.path.dirname(a.out) or ".", exist_ok=True)
     with open(a.out, "w", encoding="utf-8-sig", newline="") as f:
         w = csv.writer(f)
-        w.writerow(["파일", "확장자", "시그니처", "Magika", "PRONOM ID", "Siegfried 포맷", "표시"])
+        w.writerow(["파일", "확장자", "시그니처", "Magika", "PRONOM ID", "Siegfried 포맷", "NAK 37 권고(2025)", "표시"])
         w.writerows(rows)
     engines = ", ".join(e for e, ok in (("Siegfried", bool(sf)), ("Magika", bool(mg))) if ok) or "시그니처만"
     print(f"{len(rows)}개 식별({engines}) · 표시 {flagged}건 → {a.out}")

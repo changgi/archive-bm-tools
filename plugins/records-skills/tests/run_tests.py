@@ -142,6 +142,15 @@ def main():
     code, out = run([S("format-identify", "scripts", "identify.py"), f"{t}/원본/files", "-o", f"{t}/산출/fmt.csv"])
     rows = {r[0]: r for r in list(csv.reader(open(f"{t}/산출/fmt.csv", encoding="utf-8-sig")))[1:]}
     check("포맷 식별: 확장자 불일치 표시", "PDF 아님" in rows.get("fake.pdf", [""])[-1], out.strip())
+    os.makedirs(f"{t}/fmt37")
+    for n_, data in (("a.hwp", b"\xd0\xcf\x11\xe0x"), ("b.hwpx", b"PK\x03\x04x"), ("c.xlsx", b"PK\x03\x04x"), ("d.pdf", b"%PDF-1.4 <pdfaid:part>1</pdfaid:part>"),
+                     ("e.mkv", b"\x1aE\xdf\xa3"), ("f.csv", b"a,b")):
+        open(f"{t}/fmt37/{n_}", "wb").write(data)
+    run([S("format-identify", "scripts", "identify.py"), f"{t}/fmt37", "-o", f"{t}/산출/fmt37.csv"])
+    r37 = {r[0]: r[6] for r in list(csv.reader(open(f"{t}/산출/fmt37.csv", encoding="utf-8-sig")))[1:]}
+    check("포맷 NAK 37: 보존포맷(xlsx·csv·PDF/A-1)·수용가능(hwpx·mkv)·권고 외(hwp)",
+          r37.get("c.xlsx", "").startswith("보존포맷") and r37.get("f.csv", "").startswith("보존포맷") and "PDF/A-1" in r37.get("d.pdf", "")
+          and r37.get("b.hwpx", "").startswith("수용가능") and r37.get("e.mkv", "").startswith("수용가능") and r37.get("a.hwp", "").startswith("권고 외"), str(r37))
 
     # 9. 비밀기록물 차단: 훅(읽기·검색)과 검수 게이트
     code, _ = run([g], json.dumps({"tool_name": "Read", "tool_input": {"file_path": f"{t}/비밀/보고서.hwp"}}))
@@ -491,7 +500,8 @@ def main():
         ["U1", "가상 민원처리", "민원과", "민원", *good],
         ["U2", "가상 토지대장", "지적과", "지적", "가상 토지 소유·지목 변동을 대장으로 관리하는 업무", "영구", "필요", "비치", "", "7년",
          "기록관", "원본 보존", "비공개", "개인정보", "", "목록만 열람"],
-        ["U3", "가상 회의", "", "회의", "회의", "7년", "", "미비치", "", "", "기록관", "스캔", "공개", "", "", "전부"]])
+        ["U3", "가상 회의", "", "회의", "회의", "7년", "", "미비치", "", "", "기록관", "스캔", "공개", "", "", "전부"],
+        ["U4", "가상 도로 민간투자사업", "도로과", "도로", *good]])
     xlsx(f"{t}/기준표_전년.xlsx", [sh, ["U1", "가상 민원처리", "민원과", "민원", good[0], "5년", *good[2:]]])
     code, out = run([S("records-schedule-check", "scripts", "schedule_check.py"), f"{t}/기준표.xlsx", "--previous", f"{t}/기준표_전년.xlsx",
                      "-o", f"{t}/산출/기준표점검.xlsx"])
@@ -499,9 +509,9 @@ def main():
     items = {(r[1], r[3]) for r in wb["점검 결과"].iter_rows(min_row=2, values_only=True)}
     notice = {(r[0], r[2]) for r in wb["고시 대상"].iter_rows(min_row=2, values_only=True) if r[0] and r[2]}
     want = {("U2", "책정 사유"), ("U2", "비치사유"), ("U2", "비치기간"), ("U2", "보존장소"), ("U2", "공개여부"),
-            ("U3", "보존기간"), ("U3", "책정 사유"), ("U3", "업무설명"), ("U3", "처리과"), ("U3", "보존방법"), ("U3", "접근권한")}
-    check("기준표 점검(NAK 4): 관리항목 7개·보존장소 30년 규칙·고시 대상(신설·변경)",
-          want <= items and not any(k == "U1" for k, _ in items) and notice == {("U1", "보존기간 변경"), ("U2", "신설"), ("U3", "신설")},
+            ("U3", "보존기간"), ("U3", "책정 사유"), ("U3", "업무설명"), ("U3", "처리과"), ("U3", "보존방법"), ("U3", "접근권한"), ("U4", "보존기간")}
+    check("기준표 점검(NAK 4): 관리항목 7개·보존장소 30년 규칙·대규모 투자사업 준영구·고시 대상(신설·변경)",
+          want <= items and not any(k == "U1" for k, _ in items) and notice == {("U1", "보존기간 변경"), ("U2", "신설"), ("U3", "신설"), ("U4", "신설")},
           f"{sorted(items - want)} {sorted(want - items)} {notice}")
 
     # 국가기록원 공식 생산현황 통보서식 채우기
@@ -690,7 +700,8 @@ def main():
         ["가-4", "가상과", "가상 지도", "도면카드류", "비전자", "4", "", "2", "3년", "2035-12-31", "파기", "원본", "2025-06-01", "", "", "", "", "", ""],
         ["가-5", "가상과", "가상 2022", "문서류", "비전자", "1", "20", "2", "영구", "2023-12-31", "일반문서로 재분류", "원본", "2022-02-01", "2025-04-01",
          "일반문서", "2", "영구", "", ""],
-        ["가-6", "가상과", "가상 영상", "시청각류", "디지털", "1", "", "3", "30년", "2024-06-30", "이관", "원본", "2022-07-01", "", "", "", "", "2025-03-02", ""]])
+        ["가-6", "가상과", "가상 영상", "시청각류", "디지털", "1", "", "3", "30년", "2024-06-30", "이관", "원본", "2022-07-01", "", "", "", "", "2025-03-02", ""],
+        ["가-7", "가상과", "가상 사본2", "문서류", "비전자", "1", "3", "2", "30년", "2027-12-31", "이관", "사본", "2025-05-01", "", "", "", "", "", ""]])
     c1, o1 = run([S("classified-records-check", "scripts", "classified_check.py"), f"{t}/비밀/목록.xlsx", "--year", "2025", "--today", "2026-11-20",
                   "-o", f"{t}/비밀/점검.xlsx"])
     cw = openpyxl.load_workbook(f"{t}/비밀/점검.xlsx")
@@ -700,8 +711,8 @@ def main():
     c2, o2 = run([S("production-status-report", "scripts", "fill_official_form.py"), f"{t}/생산등록.xlsx", "--form", form, "--year", "2025",
                   "--secret", f"{t}/비밀/점검.xlsx", "-o", f"{t}/비밀/통보서식.xlsx"])
     sw = openpyxl.load_workbook(f"{t}/비밀/통보서식.xlsx")
-    check("비밀기록물: 훅 차단·사본 제외·불확실 보호기간·보존<보호·원본 파기, 이관 시기(제68조② 기산일+5년), 서식 10 (가)(나)·11 목록",
-          code_h == 2 and "가-3" not in cj and "처리 후" in cj["가-2"] and "보존기간 ≥ 보호기간" in cj["가-4"] and "'파기'" in cj["가-4"] and cj["가-1"] == "통과"
+    check("비밀기록물: 훅 차단·사본 제외(사본 '이관' 표시)·불확실 보호기간·보존<보호·원본 파기, 이관 시기(제68조② 기산일+5년), 서식 10 (가)(나)·11 목록",
+          code_h == 2 and "가-3" not in cj and "사본 예고문" in cj.get("가-7", "") and "처리 후" in cj["가-2"] and "보존기간 ≥ 보호기간" in cj["가-4"] and "'파기'" in cj["가-4"] and cj["가-1"] == "통과"
           and ct[("가-5", "처리과→기록관")] == 2026 and ct[("가-6", "기록관→영구")] == 2028
           and c10[7][2] == 1 and c10[7][4] == 4 and c10[12][2] == 1 and c10[15][2] == 1
           and sw["서식 10"]["F7"].value == 1 and sw["서식 10"]["I7"].value == 4 and sw["서식 11"]["B6"].value == "가-5" and sw["서식 11"]["B14"].value == "가-6"
@@ -960,14 +971,16 @@ def main():
 
     # 서고 환경 NAK 11: 매수·서가 길이 환산, 규모, 검·교정 1년
     cn, on_ = run([S("stack-environment", "scripts", "env_check.py"), f"{t}/온습도.csv", "--pages", "250050", "--shelf-m", "30", "--area", "320",
-                   "--calibrated", "2025-10-01", "--today", "2026-11-20", "-o", f"{t}/산출/서고NAK11.xlsx"])
+                   "--calibrated", "2025-10-01", "--today", "2026-11-20", "--video", "20000", "--workers", "3", "--newbuild", "--completed", "2026-08-01",
+                   "-o", f"{t}/산출/서고NAK11.xlsx"])
     ok_n = False
     if cn == 0:
         wn = openpyxl.load_workbook(f"{t}/산출/서고NAK11.xlsx")
         ar_ = {r[0]: r for r in wn["서고 면적"].iter_rows(values_only=True)}
         ck_ = [r for r in wn["서고 점검표(NAK 11)"].iter_rows(values_only=True)]
         ok_n = (ar_["권 수(매수 환산)"][1] == "2,501권" and ar_["권 수(서가 길이 환산)"][1] == "1,500~2,000권" and ar_["서고 규모"][1] == "대형"
-                and any(r[0] == "검·교정" and r[2] == "부적합" for r in ck_) and any("8.5~15cm" in str(r[1]) for r in ck_))
+                and any(r[0] == "검·교정" and r[2] == "부적합" for r in ck_) and any("8.5~15cm" in str(r[1]) for r in ck_) and ar_["필요 면적(비디오)"][1] == "90.0㎡" and ar_["필요 면적(작업실)"][1] == "21.0㎡"
+                and any(r[0] == "입고 가능" and "2027-02-01" in str(r[1]) and r[2] == "아직 이름" for r in wn["신축 점검표(NAK 24)"].iter_rows(values_only=True)))
     check("서고 환경 NAK 11: 100매=1권·15~20mm 환산, 대형 서고, 검·교정 1년 지남, 점검표", ok_n, on_)
 
     # 필수기록물(NAK 2-2): 판정 규칙, 보호기간 ≤ 보존기간, 복본·분산·10km
@@ -1144,6 +1157,214 @@ def main():
         ok_rp = ([r[1] for r in rp_][:2] == ["C-3", "C-1"] and byp["C-1"][7] == "심화복원" and byp["C-1"][8] == "대상" and byp["C-2"][7] == "예방복원"
                  and byp["C-5"][7] == "예방복원" and byp["C-4"][7] == "보존 관리" and byp["C-4"][8] == "대상" and byp["C-3"][7] == "응급복원")
     check("복원처리 NAK 25: 응급→심화(3등급·상·상)→예방(3등급·대형), pH 6.5 이하·바스러짐 탈산", ok_rp, orp)
+
+    # 목록 작성·디지털화 검수(NAK 23)
+    xlsx(f"{t}/색인검수.xlsx", [["철관리번호", "철제목", "권호", "보존기간", "등록번호", "건제목", "생산일자", "시작쪽", "끝쪽", "작업자", "작업일"],
+                             ["L-1", "예산", "1", "영구", "E-1", "가", "2020-01-05", "1", "3", "김", "2026-11-01"],
+                             ["L-1", "예산", "1", "영구", "E-2", "나", "2020-02-05", "4", "6", "김", "2026-11-01"],
+                             ["L-1", "예산", "1", "영구", "E-3", "다", "2020-01-20", "8", "9", "김", "2026-11-01"],
+                             ["L-1", "예산", "2", "영구", "E-4", "라", "2020-03-01", "1", "2", "이", "2026-11-01"],
+                             ["L-2", "행사", "1", "3년", "E-5", "마", "2021-05-01", "1", "2", "이", "2026-11-02"],
+                             ["L-2", "행사", "1", "3년", "E-6", "", "2021-03-01", "3", "3", "이", "2026-11-02"]])
+    os.makedirs(f"{t}/색인이미지/E-1")
+    for i in range(3):
+        open(f"{t}/색인이미지/E-1/{i}.tif", "wb").write(b"II*\0")
+    for i in range(2):
+        open(f"{t}/색인이미지/E-2_{i + 1}.jpg", "wb").write(b"\xff\xd8")
+    clq, olq = run([S("listing-qa", "scripts", "listing_qa.py"), f"{t}/색인검수.xlsx", "--images", f"{t}/색인이미지", "--checked", "2000", "--errors", "3",
+                    "-o", f"{t}/산출/목록검수.xlsx"])
+    ok_lq = False
+    if os.path.exists(f"{t}/산출/목록검수.xlsx"):
+        wlq = openpyxl.load_workbook(f"{t}/산출/목록검수.xlsx")
+        iss = [(r[3], r[4], r[5]) for r in wlq["검수 결과"].iter_rows(min_row=2, values_only=True)]
+        txt = " | ".join(f"{a_}:{b_}:{c_}" for a_, b_, c_ in iss)
+        qq = {r[0]: r for r in wlq["품질 수준"].iter_rows(min_row=2, values_only=True)}
+        sp_ = [r for r in wlq["표본"].iter_rows(min_row=2, values_only=True) if isinstance(r[2], int)]
+        ok_lq = (clq == 1 and "E-3:면표시:7~7쪽 빠짐" in txt and "E-4:면표시:2권 첫 쪽 1 — 10쪽부터" in txt and "E-3:편철 순서" in txt
+                 and "E-6:필수 항목" in txt and "E-2:이미지 수:쪽수 3 · 이미지 2" in txt and "E-1:이미지 수" not in txt
+                 and "미달" in str(qq["정확도"][2]) and len(sp_) == 3 and "E-5:편철 순서" not in txt)
+    check("목록 검수 NAK 23: 면표시 빠짐·분권 이어짐, 보존기간별 편철 순서, 필수 항목, 쪽수↔이미지, 작업자별 표본, 99.9%", ok_lq, olq)
+
+    # 연간 업무 일정·수준 점검(NAK 18)
+    cyp, oyp = run([S("evaluation-readiness", "scripts", "yearly_plan.py"), "--year", "2027", "--staff", "5", "--experts", "1",
+                    "--ics", f"{t}/산출/일정2027.ics", "-o", f"{t}/산출/연간2027.xlsx"])
+    ok_yp = False
+    if cyp == 0:
+        icsx = open(f"{t}/산출/일정2027.ics", encoding="utf-8", newline="").read()
+        lvv = [r for r in openpyxl.load_workbook(f"{t}/산출/연간2027.xlsx")["수준 체크리스트"].iter_rows(values_only=True)]
+        ok_yp = (icsx.startswith("BEGIN:VCALENDAR") and "DTSTART;VALUE=DATE:20271031" in icsx and "DTSTART;VALUE=DATE:20270831" in icsx and icsx.count("BEGIN:VEVENT") >= 15
+                 and "\r\n" in icsx and any(r and r[0] == "인력 배치" and r[2] == "미달" and "2명" in r[1] for r in lvv) and lvv[-1][0] == "교육")
+    check("연간 일정 NAK 18: 월별 업무·10/31 기한 .ics, 수준 체크리스트, 전문요원 1/4", ok_yp, oyp)
+
+    # 기록물 기술 점검(NAK 13)
+    xlsx(f"{t}/기술목록.xlsx", [["참조코드", "상위참조코드", "제목", "일자", "기술계층", "생산자명", "범위와내용", "규모", "종류"],
+                             ["G1", "", "가상청 기록물군", "1960-2006", "기록물군", "가상청", "가상청 기록", "", ""],
+                             ["S1", "G1", "인사 계열", "1955-1975", "기록물계열", "가상청", "인사", "", ""],
+                             ["F1", "S1", "인사 발령철", "1960/03/01-1960/12/31", "기록물철", "가상청", "발령", "", ""],
+                             ["I1", "F1", "발령 통지", "단기4293년", "기록물건", "가상청", "", "", ""],
+                             ["I2", "F1", "전산 파일", "1960/05/02", "건", "가상청", "파일", "3개", "전자"]])
+    cdc, odc = run([S("archival-description", "scripts", "description_check.py"), f"{t}/기술목록.xlsx", "-o", f"{t}/산출/기술점검.xlsx"])
+    ok_dc = False
+    if os.path.exists(f"{t}/산출/기술점검.xlsx"):
+        dcx = [(r[1], r[3], r[5]) for r in openpyxl.load_workbook(f"{t}/산출/기술점검.xlsx")["점검 결과"].iter_rows(min_row=2, values_only=True)]
+        txt = " | ".join(f"{a_}:{b_}:{c_}" for a_, b_, c_ in dcx)
+        ok_dc = (cdc == 1 and "S1:상위 계층 일자" in txt and "F1:계층별 일자:1960-1960" in txt and "I1:필수요소" in txt and "I1:일자 표기:1960" in txt
+                 and "I2:기술계층" in txt and "I2:규모" in txt and not any(c == "G1" for c, _, _ in dcx))
+    check("기술 NAK 13: 필수요소, 연호→서기, 철은 연도만, 상위 범위, 계층 값, 전자 용량 단위", ok_dc, odc)
+
+    # 정보공개 서식·통계·수수료(시행규칙 별표·별지 4·11·12)
+    xlsx(f"{t}/청구서식.xlsx", [["접수번호", "청구일", "정보내용", "공개방법", "청구방법", "담당부서", "결정", "비공개사유", "결정일", "공개일", "수령방법",
+                              "사본규격", "사본장수", "열람시간", "변환", "지움", "이의신청일", "사건명"],
+                             ["F-1", "2026-03-02", "예산서", "사본·출력물", "정보통신망", "기획과", "공개", "", "2026-03-05", "2026-03-06", "우편", "A3 이상", "12", "", "", "", "", ""],
+                             ["F-2", "2026-03-02", "감사 결과", "전자파일", "정보통신망", "감사과", "부분공개", "제6호 개인 성명·주소", "2026-03-20", "", "정보통신망",
+                              "B4 이하", "30", "", "", "예", "2026-03-25", "감사 결과 부분공개 이의"],
+                             ["F-3", "2026-04-01", "계획안", "열람", "직접 출석", "기획과", "비공개", "제5호", "2026-04-30", "", "", "", "", "130", "", "", "", ""]])
+    cff, off = run([S("access-request", "scripts", "foi_forms.py"), f"{t}/청구서식.xlsx", "--year", "2026", "-o", f"{t}/산출/정보공개서식.xlsx"])
+    ok_ff = False
+    if cff == 0:
+        wff = openpyxl.load_workbook(f"{t}/산출/정보공개서식.xlsx")
+        p4 = {r[0]: r for r in wff["별지 제4호 처리대장"].iter_rows(min_row=3, values_only=True)}
+        p12 = [r for r in wff["별지 제12호 운영실태"].iter_rows(values_only=True)]
+        tot = [r for r in p12 if r and r[0] == "계"]
+        p11 = [r for r in wff["별지 제11호 이의신청 처리대장"].iter_rows(min_row=3, values_only=True)]
+        ok_ff = (p4["F-1"][13] == 1400 and p4["F-2"][13] == 1700 and p4["F-3"][13] == 3000 and p4["F-1"][2] == "(정보공개시스템)"
+                 and "단계" in str(p4["F-3"][15]) and "짧음" in str(p4["F-3"][15]) and tot[0][1:5] == (3, 1, 1, 1) and tot[4][1:6] == (3, 0, 1, 1, 1)
+                 and tot[5][6] == 1 and tot[5][7] == 1 and len(p11) == 1)
+    check("정보공개 서식: 별표 수수료(A3 첫장+추가·지움=사본 동일·열람 1시간 초과), 처리대장·이의신청대장, 운영실태 총괄·결정기간·사유별", ok_ff, off)
+
+    # 공문서 표기(행정업무규정 제7조, 시행규칙 제2조·제4조)
+    with open(f"{t}/공문.txt", "w", encoding="utf-8") as fh:
+        fh.write("행사 계획\n1. 일시: 2026년 11월 20일 오후 2시 30분\n2. 장소: 대회의실\n4. 예산: 113,560원\n  가. 인쇄비: 금50,000원(금오만원)\n"
+                 "  나. 다과비: 금63,560원(금육만삼천원)\n  라. 기타\n    1) 회의 2026-12-01\n    (1) 세부\n\n붙임  계획서 1부.\n      2. 명단\n본문 끝  끝\n")
+    with open(f"{t}/공문2.txt", "w", encoding="utf-8") as fh:
+        fh.write("회의 개최 알림\n1. 일시: 2026. 11. 20. 14:30\n2. 예산: 금113,560원(금일십일만삼천오백육십원)\n  가. 장소\n  나. 참석\n\n붙임  1. 계획서 1부.\n      2. 명단 1부. 끝.\n")
+    cdk, odk = run([S("official-doc-check", "scripts", "doc_check.py"), f"{t}/공문.txt", f"{t}/공문2.txt", "-o", f"{t}/산출/공문점검.xlsx"])
+    ok_dk = False
+    if os.path.exists(f"{t}/산출/공문점검.xlsx"):
+        dk = [(r[0], r[2], r[4]) for r in openpyxl.load_workbook(f"{t}/산출/공문점검.xlsx")["점검 결과"].iter_rows(min_row=2, values_only=True)]
+        txt = " | ".join(f"{a_}:{b_}:{c_}" for a_, b_, c_ in dk)
+        ok_dk = (cdk == 1 and "공문.txt:날짜:2026. 11. 20." in txt and "공문.txt:시간:14:30" in txt and "금일십일만삼천오백육십원" in txt
+                 and "금육만삼천오백육십원" in txt and "공문.txt:항목 순서:1. 단계 2 다음은 3번째" in txt and "가. 단계 2 다음은 3번째" in txt
+                 and "1) 다음 하위 항목은 가)" in txt and "공문.txt:붙임" in txt and "끝." in txt and not any(f_ == "공문2.txt" for f_, _, _ in dk))
+    check("공문서 표기: 날짜·시간·금액(한글 대조), 항목 순서·단계, 붙임 구분·수량, 끝 표시 — 바른 문서는 제안 0", ok_dk, odk + txt[:300] if os.path.exists(f"{t}/산출/공문점검.xlsx") else odk)
+
+    # 시스템 기능요건(NAK 6·7·20·19) 점검표와 결과 집계
+    crq, orq = run([S("system-requirements", "scripts", "req_checklist.py"), "--system", "기록관리시스템", "-o", f"{t}/산출/요건.xlsx"])
+    ok_rq = False
+    if crq == 0:
+        wq = openpyxl.load_workbook(f"{t}/산출/요건.xlsx")
+        rq = [list(r) for r in wq["점검표"].iter_rows(min_row=2, values_only=True)]
+        for i, r in enumerate(rq):
+            r[6] = "충족" if i % 10 else "미충족"
+        xlsx(f"{t}/요건결과.xlsx", [["표준", "번호", "장", "절", "요건", "구분", "이행", "근거"]] + rq)
+        crq2, orq2 = run([S("system-requirements", "scripts", "req_checklist.py"), "--system", "기록관리시스템", "--results", f"{t}/요건결과.xlsx",
+                          "-o", f"{t}/산출/요건결과.xlsx"])
+        wq2 = openpyxl.load_workbook(f"{t}/산출/요건결과.xlsx")
+        nm = sum(1 for i, r in enumerate(rq) if i % 10 == 0 and r[5] in ("M", "CM"))
+        miss_ = [r for r in wq2["필수 미충족"].iter_rows(min_row=2, values_only=True)]
+        ok_rq = (len(rq) == 161 and rq[0][1] == "5.1.1" and crq2 == 0 and len(miss_) == nm and nm > 0 and "필수요건 충족" in str([r[0] for r in wq2["요약"].iter_rows(values_only=True)]))
+        orq += orq2
+    check("시스템 기능요건 NAK 6: 점검표 161개(M·O), 채운 결과로 필수 미충족 목록·충족률", ok_rq, orq)
+    # PDF/A-1b 사전 점검(NAK 30)
+    import pikepdf as _pk
+    os.makedirs(f"{t}/pdfa30", exist_ok=True)
+    _p = _pk.new(); _p.add_blank_page()
+    _p.Root.Names = _p.make_indirect(_pk.Dictionary(EmbeddedFiles=_pk.Dictionary(Names=_pk.Array())))
+    _p.Root.OpenAction = _pk.Dictionary(S=_pk.Name.JavaScript, JS=_pk.String("x"))
+    _p.save(f"{t}/pdfa30/bad.pdf")
+    _p.save(f"{t}/pdfa30/enc.pdf", encryption=_pk.Encryption(owner="o", user="u"))
+    cpa, opa = run([S("preservation-convert", "scripts", "pdfa_precheck.py"), f"{t}/pdfa30", "-o", f"{t}/산출/pdfa30.csv"])
+    pa = {r[0]: r for r in list(csv.reader(open(f"{t}/산출/pdfa30.csv", encoding="utf-8-sig")))[1:]} if os.path.exists(f"{t}/산출/pdfa30.csv") else {}
+    check("PDF/A 사전 점검 NAK 30: 선언·OutputIntent·내장 파일·JavaScript·암호화",
+          cpa == 1 and all(k in pa.get("bad.pdf", [""] * 4)[3] for k in ("6.7", "6.2.2", "6.1.11", "6.6")) and "Encrypt" in pa.get("enc.pdf", [""] * 4)[3], opa)
+
+    # NEO2 장기보존패키지 구조(NAK 31-1)
+    import base64 as _b64
+    os.makedirs(f"{t}/neo")
+    body = _b64.b64encode(b"hello").decode()
+    good = ('<neo:NAKEncapsulatedObject xmlns:neo="urn:nak:neo"><neo:NEOFormatDescription>NEO</neo:NEOFormatDescription><neo:Version>2.0</neo:Version>'
+            '<neo:SignedObject><neo:ObjectCreationDate>2026-11-20</neo:ObjectCreationDate><neo:ObjectContent><neo:Record><neo:RecordMetadata>'
+            '<neo:TitleCon><neo:MainTitle>가상</neo:MainTitle></neo:TitleCon><neo:DateTimeCon><neo:DateTimeCreated>2026</neo:DateTimeCreated>'
+            '<neo:DateTimeClosed>2026</neo:DateTimeClosed></neo:DateTimeCon></neo:RecordMetadata><neo:Component><neo:ComponentMetadata>'
+            '<neo:ComponentTitle>본문</neo:ComponentTitle><neo:ComponentType>본문</neo:ComponentType></neo:ComponentMetadata><neo:Encoding>'
+            '<neo:EncodingMetadata><neo:SourceFileIdentifier>a.txt</neo:SourceFileIdentifier><neo:SouceFileFormatName>TXT</neo:SouceFileFormatName>'
+            '<neo:SourceFileExtent>5</neo:SourceFileExtent></neo:EncodingMetadata><neo:ComponentData>' + body + '</neo:ComponentData></neo:Encoding>'
+            '</neo:Component></neo:Record></neo:ObjectContent></neo:SignedObject><neo:SignatureBlock><neo:SignatureFormatDescription>x</neo:SignatureFormatDescription>'
+            '<neo:SignatureDate>2026</neo:SignatureDate><neo:Signer>x</neo:Signer><neo:Signature>x</neo:Signature></neo:SignatureBlock></neo:NAKEncapsulatedObject>')
+    open(f"{t}/neo/good.xml", "w", encoding="utf-8").write(good)
+    open(f"{t}/neo/bad.xml", "w", encoding="utf-8").write(good.replace("<neo:MainTitle>가상</neo:MainTitle>", "").replace(body, "@@@").replace(
+        "<neo:SignatureBlock>", "<neo:X>").replace("</neo:SignatureBlock>", "</neo:X>"))
+    cnc, onc = run([S("transfer-reconcile", "scripts", "neo_check.py"), f"{t}/neo", "-o", f"{t}/산출/neo.csv"])
+    nc = {r[0]: r for r in list(csv.reader(open(f"{t}/산출/neo.csv", encoding="utf-8-sig")))[1:]} if os.path.exists(f"{t}/산출/neo.csv") else {}
+    check("NEO2 NAK 31-1: 필수 요소·부모별 필수, Base64·크기, 서명 블록", cnc == 1 and nc.get("good.xml", [""])[-1] == "통과"
+          and all(k in nc.get("bad.xml", [""] * 6)[4] for k in ("TitleCon→MainTitle", "Base64", "SignatureBlock")), onc + str(nc.get("bad.xml")))
+    import hashlib as _hl
+    import zipfile as _zf
+    rec = b"record-body"
+    pi = ('<PackagingInformation xmlns="http://www.archives.go.kr/2020/RMS/3.0"><Version>3.0</Version><PackageManifest>'
+          '<ManifestItem HashAlgorithm="SHA2-256"><HashValue>' + _hl.sha256(rec).hexdigest() + '</HashValue><Path>Record/a.pdf</Path></ManifestItem>'
+          '</PackageManifest></PackagingInformation>')
+    def _mk(name, first="mimetype", mt="application/neo3+zip", body=rec):
+        with _zf.ZipFile(f"{t}/{name}", "w", _zf.ZIP_DEFLATED) as z:
+            if first == "mimetype":
+                z.writestr(_zf.ZipInfo("mimetype"), mt, compress_type=_zf.ZIP_STORED)
+            for n_ in ("Metadata.xml", "Metadata.xsd", "PackagingInformation.xsd"):
+                z.writestr(n_, "<x/>")
+            z.writestr("PackagingInformation.xml", pi)
+            z.writestr("Record/a.pdf", body)
+            if first != "mimetype":
+                z.writestr("mimetype", mt)
+    _mk("neo3ok.zip")
+    _mk("neo3bad.zip", first="late", body=b"tampered")
+    c3, o3 = run([S("transfer-reconcile", "scripts", "neo_check.py"), f"{t}/neo3ok.zip", "-o", f"{t}/산출/neo3ok.csv"])
+    c3b, o3b = run([S("transfer-reconcile", "scripts", "neo_check.py"), f"{t}/neo3bad.zip", "-o", f"{t}/산출/neo3bad.csv"])
+    bad3 = " ".join(r[1] for r in list(csv.reader(open(f"{t}/산출/neo3bad.csv", encoding="utf-8-sig")))[1:]) if os.path.exists(f"{t}/산출/neo3bad.csv") else ""
+    check("NEO3 NAK 31-2: mimetype 첫 항목·비압축, 최상위 4파일, Manifest 해시 대조", c3 == 0 and c3b == 1
+          and "첫 항목" in bad3 and "압축돼" in bad3 and "해시 불일치" in bad3, o3 + o3b + bad3)
+
+    # NAK 8 메타데이터 필수 요소
+    hdr = ["1.1 생산자유형", "1.2 기관명", "1.6 개인명", "2 기록계층", "3.1 기본식별자", "4.1 제목", "7 전자기록물여부", "8.1 기록유형", "9.1 포맷명",
+           "11.1 용량", "11.2 단위", "12.1 분류체계유형", "12.2.2 분류명", "13.1 생산일시", "13.2 종료일시", "15.1 보존기간", "16 보존장소",
+           "17.3.1 공개구분", "17.3.2 비공개사유", "5.2 기술내용"]
+    good_r = ["기안자", "가상기관", "홍길동", "건", "A-1", "가상 보고", "Y", "일반문서", "PDF", "10", "KB", "기록관리기준표", "가상과제",
+              "2026-01-02", "2026-01-02", "10년", "기록관", "공개", "", ""]
+    bad_r = list(good_r)
+    bad_r[0], bad_r[2], bad_r[3], bad_r[4], bad_r[8], bad_r[14], bad_r[17], bad_r[19] = "결재자", "", "", "A-2", "", "2025-12-31", "비공개", "요약"
+    with open(f"{t}/nak8.csv", "w", encoding="utf-8-sig", newline="") as f:
+        csv.writer(f).writerows([hdr, good_r, bad_r])
+    old_r = list(good_r); old_r[5] = "옛 제목"
+    with open(f"{t}/nak8_old.csv", "w", encoding="utf-8-sig", newline="") as f:
+        csv.writer(f).writerows([hdr, old_r])
+    c8, o8 = run([S("metadata-autofill", "scripts", "nak8_check.py"), f"{t}/nak8.csv", "--before", f"{t}/nak8_old.csv", "-o", f"{t}/산출/nak8.csv"])
+    r8 = {r[1]: r for r in list(csv.reader(open(f"{t}/산출/nak8.csv", encoding="utf-8-sig")))[1:]} if os.path.exists(f"{t}/산출/nak8.csv") else {}
+    b8, g8 = r8.get("A-2", [""] * 5)[3], r8.get("A-1", [""] * 5)[3]
+    check("메타데이터 NAK 8: 필수·세트·비공개사유·부속서 D 개인명·종료<생산·포맷·변경 불가", c8 == 1
+          and all(k in b8 for k in ("기록계층", "기술유형", "비공개사유", "개인명", "종료일시", "포맷명")) and "변경 불가" in g8, o8 + b8 + g8)
+
+    # SIARD 2.1(NAK 35 부속서 B)
+    meta = ('<siardArchive xmlns="http://www.bar.admin.ch/xmlns/siard/2/metadata.xsd"><schemas><schema><name>S</name><folder>schema0</folder>'
+            '<tables><table><name>T</name><folder>table0</folder><columns><column><name>A</name></column><column><name>B</name></column></columns>'
+            '</table></tables></schema></schemas></siardArchive>')
+    xsd = ('<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"><xs:element name="table"><xs:complexType><xs:sequence>'
+           '<xs:element name="row"><xs:complexType><xs:sequence><xs:element name="c1"/><xs:element name="c2"/></xs:sequence></xs:complexType></xs:element>'
+           '</xs:sequence></xs:complexType></xs:element></xs:schema>')
+    def _sd(name, ok=True):
+        with _zf.ZipFile(f"{t}/{name}", "w", _zf.ZIP_DEFLATED) as z:
+            if ok:
+                z.writestr("header/siardversion/2.1/", "")
+            z.writestr("header/metadata.xml", meta)
+            z.writestr("header/metadata.xsd", "<x/>")
+            z.writestr("content/schema0/table0/table0.xml", "<table/>")
+            z.writestr("content/schema0/table0/table0.xsd", xsd if ok else xsd.replace('<xs:element name="c2"/>', ""))
+            if not ok:
+                z.writestr("extra.txt", "x")
+                z.writestr("content/schema0/1표/1표.xml", "x")
+    _sd("ok.siard"); _sd("bad.siard", ok=False)
+    cs, os_ = run([S("dataset-schedule", "scripts", "siard_check.py"), f"{t}/ok.siard", "-o", f"{t}/산출/siard_ok.csv"])
+    cb, ob = run([S("dataset-schedule", "scripts", "siard_check.py"), f"{t}/bad.siard", "-o", f"{t}/산출/siard_bad.csv"])
+    sb = " ".join(r[0] for r in list(csv.reader(open(f"{t}/산출/siard_bad.csv", encoding="utf-8-sig")))[1:]) if os.path.exists(f"{t}/산출/siard_bad.csv") else ""
+    check("SIARD NAK 35 부속서 B: 최상위 폴더·버전 폴더·이름 규칙·metadata 대응·열 수", cs == 0 and cb == 1
+          and all(k in sb for k in ("P_4.2-1", "P_4.2-4", "P_4.2-6", "P_4.3-1", "P_4.3-2")), os_ + ob + sb)
 
     # 플러그인 훅 명령: Windows(Git Bash)처럼 python3가 없거나 가짜일 때도 보호가 꺼지지 않는지
     hj = os.path.join(ROOT, "hooks", "hooks.json")
