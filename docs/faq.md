@@ -45,10 +45,10 @@
 PowerShell에서는 `irm https://claude.ai/install.ps1 | iex`를 쓰세요. `&&`가 들어간 명령은 CMD용입니다.
 
 ### `/plugin marketplace add`에서 저장소를 못 찾는다고 나와요
-비공개 저장소라서 생기는 일이 대부분입니다.
-1. 관리자에게 협업자 초대를 받았는지, **초대 메일의 수락**까지 했는지 확인합니다.
-2. 터미널에서 `gh auth login`으로 GitHub에 로그인합니다.
-3. `gh repo view changgi/archive-bm-tools`가 열리면 권한은 정상입니다. Claude Code를 다시 시작해 재시도합니다.
+저장소는 공개라 권한 문제는 아닙니다. 대부분 네트워크나 철자 문제입니다.
+1. 이름을 `changgi/archive-bm-tools` 그대로 입력했는지 봅니다.
+2. 브라우저로 https://github.com/changgi/archive-bm-tools 가 열리는지 봅니다. 기관 방화벽이 GitHub를 막으면 전산 담당자에게 허용을 요청합니다.
+3. 프록시 환경이면 터미널에서 `gh auth login`으로 로그인한 뒤 Claude Code를 다시 시작해 재시도합니다.
 
 ### `/`를 눌러도 `records-skills:`가 안 보여요
 `/plugin` → **Installed** 탭에서 `records-skills`가 켜져(enabled) 있는지 봅니다. **Errors** 탭에 이유가 나옵니다. 설치 직후라면 `/reload-plugins`를 실행합니다.

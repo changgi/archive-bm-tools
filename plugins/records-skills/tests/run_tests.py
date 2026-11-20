@@ -449,14 +449,14 @@ def main():
           cat == 0 and [r[1] for r in atr] == ["P2", "P3", "P1"] and "48시간 지남" in str(atr[0][12]) and atr[2][9] == "후순위" and "물·수분 절대" in str(atr[2][11])
           and [r[8] for r in apr] == ["1", "4"], oat + oap + str(atr))
     xlsx(f"{t}/예방목록.xlsx", [["관리번호", "철제목", "매수", "재질", "규격", "편철", "상태", "해당 면"], ["F1", "가상 팩스철", "80", "감열지", "A4", "클립", "", "3-5,8"],
-        ["F2", "가상 대장", "650", "일반", "A4", "", "", ""], ["F3", "가상 철", "60", "일반", "A4", "", "바스라짐", ""], ["F4", "가상 정상", "50", "일반", "A4", "", "", ""]])
+        ["F2", "가상 대장", "650", "청사진", "A4", "", "", ""], ["F3", "가상 철", "60", "일반", "A4", "", "바스라짐", ""], ["F4", "가상 정상", "50", "일반", "A4", "", "", ""]])
     cpc, opc = run([S("preservation-inspection", "scripts", "preventive_care.py"), f"{t}/예방목록.xlsx", "-o", f"{t}/산출/예방조치.xlsx"])
     wpc = openpyxl.load_workbook(f"{t}/산출/예방조치.xlsx") if os.path.exists(f"{t}/산출/예방조치.xlsx") else None
     pcr = [r for r in wpc["예방조치 계획"].iter_rows(min_row=2, values_only=True)] if wpc else []
     pcs = {r[0]: r[1] for r in wpc["용품 준비"].iter_rows(min_row=2, values_only=True)} if wpc else {}
-    check("예방조치: 감열지 간지(면 4)·금속철 제거·거대 편철 500매 초과·훼손 심화 봉투+복원 연계·정상 철 제외",
-          cpc == 0 and {(r[0], r[4]) for r in pcr} == {("F1", "감열지"), ("F1", "금속철"), ("F2", "거대 편철"), ("F3", "훼손 심화")}
-          and pcs.get("간지") == 4 and any(r[10] for r in pcr if r[0] == "F3"), opc + str(pcr))
+    check("예방조치: 감열지 간지(면 4)·청사진은 사진 아님·금속철 제거·거대 편철 500매 초과·훼손 심화 봉투+복원 연계·정상 철 제외",
+          cpc == 0 and {(r[0], r[4]) for r in pcr} == {("F1", "감열지"), ("F1", "금속철"), ("F2", "감광지"), ("F2", "거대 편철"), ("F3", "훼손 심화")}
+          and pcs.get("간지") == 5 and any(r[10] for r in pcr if r[0] == "F3"), opc + str(pcr))
 
     # 대학·의료기관 보존기간 가이드 대조
     open(f"{t}/대학기준표.csv", "w", encoding="utf-8-sig").write("단위과제명,보존기간\n학생증발급,3년\n학사일정관리,10년\n자격증관리대장,10년\n")

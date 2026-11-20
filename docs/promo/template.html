@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>records-skills 소개</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;600;700&display=swap">
+<style>
+/* VOICE: 일하는 사람의 도구 소개 — 차분하고 정확하게, 과장 없이
+   IDEA: 보존서고의 문서 보존상자와 철 표지 — 페이지가 상자 라벨·색인카드처럼 움직인다
+   PICTURE: 서가에 꽂힌 보존상자 7개(생애주기 영역), 라벨에 스킬 수, 한 상자가 살짝 당겨져 나옴
+   COLOUR and TYPE: 판지 갈색 바탕 + 먹색 + 결재 도장 빨강, IBM Plex Sans KR 4단계
+   LAYOUT: 첫 화면 위에 제목·설치 명령, 아래 넓은 서가 그림 / 표·카드·시나리오는 철 표지 형식 */
+:root{color-scheme:light dark;
+--bg:light-dark(#efe7da,#16130f);--board:light-dark(#c9a46a,#6f5532);--board2:light-dark(#b68f55,#5a4428);
+--panel:light-dark(#fffdf8,#221d17);--ink:light-dark(#1d1a16,#efe7da);--mute:light-dark(#5b5248,#b3a795);
+--line:light-dark(#d8cdbb,#3a3128);--red:light-dark(#b8321c,#e0583f);--shelf:light-dark(#3b2f22,#0b0907)}
+:root[data-theme=light]{color-scheme:light}:root[data-theme=dark]{color-scheme:dark}
+*{box-sizing:border-box;min-width:0}
+body{margin:0;word-break:keep-all;overflow-wrap:break-word;background:var(--bg);color:var(--ink);font:16px/1.6 "IBM Plex Sans KR","Apple SD Gothic Neo","Malgun Gothic",system-ui,sans-serif;overflow-x:clip}
+a{color:inherit}
+.band{padding:clamp(28px,4vw,64px) max(5vw,16px)}
+.wrap{max-width:1240px;margin:0 auto}
+h1{font-size:clamp(34px,5vw,52px);line-height:1.08;margin:0 0 14px;text-wrap:balance;font-weight:700}
+h2{font-size:clamp(26px,3.2vw,34px);line-height:1.15;margin:0 0 10px;text-wrap:balance}
+h3{font-size:17px;margin:0 0 6px}
+p{margin:0 0 12px;max-width:68ch}
+.lead{font-size:17px;color:var(--mute)}
+.small{font-size:13px;color:var(--mute)}
+code{font-family:ui-monospace,SFMono-Regular,Consolas,monospace;font-size:.92em;overflow-wrap:anywhere}
+pre,.scroll{overflow-x:auto}
+.hero{padding-bottom:28px}
+.cmd{display:flex;flex-wrap:wrap;gap:8px;align-items:stretch;margin:18px 0 6px}
+.cmd pre{flex:1 1 300px;max-width:100%;margin:0;background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:12px 14px;font:14px/1.5 ui-monospace,Consolas,monospace}
+button{font:inherit;font-weight:600;min-height:44px;padding:0 18px;border-radius:6px;border:2px solid var(--ink);background:var(--ink);color:var(--bg);cursor:pointer}
+button.ghost{background:transparent;color:var(--ink)}
+button:focus-visible,a:focus-visible,input:focus-visible{outline:3px solid var(--red);outline-offset:2px}
+.stamp{display:inline-block;border:2px solid var(--red);color:var(--red);font-weight:700;padding:2px 10px;border-radius:4px;transform:rotate(-2deg);font-size:14px}
+.fig{position:relative;min-height:320px}
+.fig>svg{position:absolute;inset:0;width:100%;height:100%}
+.shelfband{background:var(--shelf);padding:0 max(5vw,16px)}
+.legend{display:none;color:#efe7da;font-size:13px;margin:0;padding:4px 0 12px}
+@media(max-width:519px){.legend{display:block}}
+nav.scroll{display:flex;gap:6px;padding:10px max(5vw,16px);background:var(--panel);border-bottom:1px solid var(--line)}
+nav.scroll a{flex:none;text-decoration:none;padding:10px 12px;border-radius:6px;font-weight:600;font-size:15px}
+nav.scroll a:hover{background:var(--bg)}
+@media(min-width:900px){nav.scroll{position:sticky;top:0;z-index:5}}
+html{scroll-padding-top:72px}
+table{border-collapse:collapse;width:100%;background:var(--panel)}
+th,td{text-align:left;padding:12px 14px;border-bottom:1px solid var(--line);vertical-align:top}
+th{font-size:14px;color:var(--mute);font-weight:600}
+.label{background:var(--panel);border:1px solid var(--line);border-radius:4px;padding:18px;position:relative}
+.label::before{content:"";position:absolute;left:0;right:0;top:0;height:6px;background:var(--board);border-radius:4px 4px 0 0}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,270px),1fr));gap:12px}
+.chips{display:flex;flex-wrap:wrap;gap:6px;margin:16px 0}
+.chip{min-height:40px;padding:0 14px;border-radius:20px;border:1px solid var(--line);background:var(--panel);color:var(--ink);font-weight:600}
+.chip[aria-pressed=true]{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+input[type=search]{font:inherit;font-size:16px;min-height:44px;padding:0 14px;border:1px solid var(--line);border-radius:6px;background:var(--panel);color:var(--ink);width:min(100%,360px)}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:4px;padding:14px 16px}
+.card .id{font-weight:700;font-family:ui-monospace,Consolas,monospace;font-size:14px}
+.card .cat{font-size:13px;color:var(--mute)}
+.card p{font-size:15px;margin:6px 0 0}
+.new{color:var(--red);font-weight:700;font-size:13px;margin-left:6px}
+.scen{display:grid;grid-template-columns:minmax(0,1fr);gap:14px}
+.scen .label{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:16px}
+.say{background:var(--bg);border-radius:6px;padding:10px 12px;font-size:15px}
+.steps{counter-reset:s;display:grid;gap:10px;padding:0;margin:0;list-style:none}
+.steps li{counter-increment:s;display:grid;grid-template-columns:44px minmax(0,1fr);gap:12px;align-items:start}
+.steps li::before{content:counter(s);display:grid;place-items:center;width:44px;height:44px;border-radius:50%;border:2px solid var(--ink);font-weight:700}
+.safe{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,230px),1fr));gap:12px}
+footer{border-top:1px solid var(--line)}
+@media(max-width:700px){.scen .label{grid-template-columns:minmax(0,1fr)}}
+@media(max-width:600px){table{font-size:13px}.stack thead{display:none}.stack tr{display:grid;padding-block:10px}.stack td{display:flow-root;border:0;padding:3px 0;padding-inline-start:8em;text-align:start}.stack td::before{content:attr(data-l);float:inline-start;width:7.5em;margin-inline-start:-8em;white-space:normal;color:var(--mute)}.stack td:empty{display:none}}
+@media(prefers-reduced-motion:no-preference){#pull{transition:transform .6s ease}}
+</style>
+<script>new MutationObserver(()=>{for(const c of document.querySelectorAll('.stack td:not([data-l])')){let i=0,p=c;while(p=p.previousElementSibling)i+=p.colSpan;c.dataset.l=c.closest('table').rows[0].cells[i]?.textContent||''}}).observe(document,{childList:true,subtree:true})</script>
+</head>
+<body>
+<section class="band hero"><div class="wrap">
+  <span class="stamp">v2.21.0 · 스킬 42종</span>
+  <h1>점검과 서식은 스크립트가,<br>판단과 제출은 담당자가.</h1>
+  <p class="lead">공공기관 기록관리 담당자를 위한 Claude 플러그인 <b>records-skills</b>. 생산현황 통보부터 이관·보존·공개·평가·폐기까지, 한 해 내내 반복되는 대조와 서식 채우기를 Claude Code에게 말로 맡기고 결과를 확인합니다.</p>
+  <div class="cmd">
+    <pre id="install">/plugin marketplace add changgi/archive-bm-tools
+/plugin install records-skills@changgi-archive-bm-tools</pre>
+    <button id="copy" type="button">설치 명령 복사</button>
+  </div>
+  <p class="small" id="copied" aria-live="polite">Claude Code 안에서 입력합니다. 공개 저장소라 따로 권한을 받지 않아도 됩니다.</p>
+</div></section>
+
+<div class="shelfband"><div class="wrap fig" id="shelf" role="img" aria-label="서가에 꽂힌 보존상자 7개: 생산·등록 14, 이관·인수 6, 보존 10, 공개·활용 3, 평가·폐기 3, 새 유형 기록 3, 기관평가·보고 3"><svg id="shelfsvg"></svg></div><p class="legend wrap">왼쪽부터 생산·등록 14 · 이관·인수 6 · 보존 10 · 공개·활용 3 · 평가·폐기 3 · 새 유형 기록 3 · 기관평가·보고 3</p></div>
+
+<nav class="scroll" aria-label="쪽 안 이동">
+  <a href="#why">무엇이 바뀌나</a><a href="#skills">스킬 42종</a><a href="#examples">예제</a><a href="#safety">안전장치</a><a href="#start">시작하기</a><a href="#sources">근거</a>
+</nav>
+
+<section class="band" id="why"><div class="wrap">
+  <h2>엑셀 피벗과 눈 대조를, 시트 한 장으로</h2>
+  <p class="lead">병원 검사실이 검사 결과를 내고 의사가 진단하듯, 스크립트는 점검 결과·후보·초안을 만들고 결정은 담당자가 합니다.</p>
+  <table class="stack"><thead><tr><th>업무</th><th>지금까지</th><th>플러그인으로</th></tr></thead><tbody id="beforeafter"></tbody></table>
+</div></section>
+
+<section class="band" id="skills" style="background:var(--panel)"><div class="wrap">
+  <h2>기록물 생애주기 7개 영역, 스킬 42종</h2>
+  <p class="lead">영역을 고르거나 하고 싶은 일을 검색하세요. <span class="new">새로</span> 표시는 v2.14~2.21에서 더하거나 넓힌 것입니다.</p>
+  <div class="chips" id="chips" role="group" aria-label="영역 고르기"></div>
+  <label class="small" for="q">검색</label><br>
+  <input type="search" id="q" placeholder="예: 이관, 보존기간, 행정박물, 공개">
+  <p class="small" id="count" aria-live="polite"></p>
+  <div class="grid" id="cards"></div>
+</div></section>
+
+<section class="band" id="examples"><div class="wrap">
+  <h2>여섯 가지 업무 장면, 실제 결과 파일 그대로</h2>
+  <p class="lead">저장소 <a href="https://github.com/changgi/archive-bm-tools/tree/main/examples/%EC%8B%9C%EB%82%98%EB%A6%AC%EC%98%A4"><code>examples/시나리오/</code></a>에 입력 자료와 결과 엑셀이 있습니다. 결과는 <code>python examples/시나리오/만들기.py</code>로 다시 만들 수 있습니다.</p>
+  <p class="small">아래 기관·자료는 모두 지어낸 것이고, 스킬이 무엇을 잡는지 보이려고 일부러 틀린 곳을 넣었습니다.</p>
+  <div class="scen" id="scen"></div>
+</div></section>
+
+<section class="band" id="safety" style="background:var(--panel)"><div class="wrap">
+  <h2>잠금은 세 겹, 결정은 사람에게</h2>
+  <div class="safe">
+    <div class="label"><h3>비밀기록물은 열지 않음</h3><p>비밀 폴더의 읽기와 명령 실행을 훅이 막습니다. 비밀 관련 서식은 담당자가 비밀 전용 장비에서 직접 돌립니다.</p></div>
+    <div class="label"><h3>원본은 읽기만</h3><p>원본·보존 폴더에 쓰기를 막고, 결과는 언제나 새 파일로 씁니다. 차 있는 산출 폴더는 덮어쓰지 않습니다.</p></div>
+    <div class="label"><h3>폐기·공개·제출은 사람이</h3><p>스크립트는 후보와 초안까지 만듭니다. 폐기 집행, 공개 범위 변경, 메일 발송은 하지 않습니다.</p></div>
+    <div class="label"><h3>처리 이력이 남음</h3><p>어떤 도구가 언제 무엇을 했는지 로그로 남고, 산출물은 품질 관문(records-qa-gate)을 거칩니다.</p></div>
+  </div>
+</div></section>
+
+<section class="band" id="start"><div class="wrap">
+  <h2>30분이면 첫 결과까지</h2>
+  <ol class="steps">
+    <li><div><h3>Python 3.10 이상 설치</h3><p><code>python -m pip install openpyxl pypdf pikepdf pillow numpy python-docx python-hwpx holidays</code> (Windows는 Git for Windows도)</p></div></li>
+    <li><div><h3>Claude Code 설치·로그인</h3><p>Windows <code>irm https://claude.ai/install.ps1 | iex</code>, macOS <code>curl -fsSL https://claude.ai/install.sh | bash</code></p></div></li>
+    <li><div><h3>저장소는 공개</h3><p>초대나 로그인 없이 받을 수 있습니다. 기관 방화벽이 막으면 <code>gh auth login</code> 뒤 다시 시도합니다.</p></div></li>
+    <li><div><h3>플러그인 설치</h3><p>위 설치 명령 두 줄을 Claude Code에 입력하고 설치 범위는 <b>Install for you (user scope)</b>.</p></div></li>
+    <li><div><h3>작업 폴더 준비</h3><p><code>templates/</code>의 <code>CLAUDE.md</code>와 <code>.claude/settings.json</code>을 작업 폴더에 복사합니다.</p></div></li>
+    <li><div><h3>보호 장치 확인</h3><p><code>비밀/시험.txt 읽어줘</code>라고 해 보고, <b>차단되면 정상</b>입니다.</p></div></li>
+  </ol>
+  <p class="small">자세한 그림 안내: <a href="https://github.com/changgi/archive-bm-tools/blob/main/docs/getting-started.md">처음 시작하기</a> · 저장소 <a href="https://github.com/changgi/archive-bm-tools">github.com/changgi/archive-bm-tools</a></p>
+</div></section>
+
+<section class="band" id="sources" style="background:var(--panel)"><div class="wrap">
+  <h2>근거는 법령 원문과 국가기록원 공개 자료</h2>
+  <table class="stack"><thead><tr><th>자료</th><th>쓰는 곳</th></tr></thead><tbody id="src"></tbody></table>
+  <p class="small">시험 117개가 주요 계산과 보호 훅을 확인합니다. 법령·지침이 바뀌면 판을 올려 다시 맞춥니다.</p>
+</div></section>
+
+<footer class="band"><div class="wrap">
+  <p><b>만든 사람</b> Song Chang-gi · chgsong@naver.com · <a href="https://github.com/changgi">github.com/changgi</a></p>
+  <p class="small">개인이 만든 업무 보조 도구이며 국가기록원의 공식 서비스가 아닙니다. 코드 MIT, 문서 CC BY 4.0. 국가기록원 서식·준칙 표는 공공저작물로 출처를 밝혀 씁니다.</p>
+</div></footer>
+
+<script>
+{
+const SKILLS=__SKILLS__;
+const CATS=[["생산·등록","생산·등록"],["이관·인수","이관·인수"],["보존","보존"],["공개·활용","공개·활용"],["평가·폐기","평가·폐기"],["새 유형 기록","새 유형"],["기관평가·보고","기관평가"]];
+const BA=[["생산현황 통보","부서×보존기간 피벗을 만들고 서식 1~11에 손으로 옮김","입력 폴더 하나로 서식 1~11을 채우고 통보 전 확인 목록까지"],
+["이관","이관 목록과 상자·파일을 눈으로 대조","빠진 것·남는 것·이름 다른 것을 시트로, 2027년 바뀌는 기한도 계산"],
+["보존기간","준칙 PDF를 펴 놓고 과제마다 찾아봄","공통·고유 준칙, 1964~1997 분류표, 대학·의료 가이드와 자동 대조"],
+["DB구축 검수","업체가 넘긴 목록과 이미지 폴더를 표본으로 훑어봄","일괄등록 규격의 오류 문구 그대로 전수 점검, 빠진 이미지 번호까지"],
+["재난","침수 현장에서 무엇부터 할지 매뉴얼을 뒤짐","48시간 기한·재질별 순서·포장 라벨·체크리스트를 한 번에"],
+["PDF/A","변환하고 나서 ‘됐겠지’","veraPDF로 적합·부적합 조항까지 확인"]];
+const SC=[["1","대학 기준표 ↔ 2021 대학 가이드","retention-review","우리 대학 기록관리기준표를 대학 가이드랑 비교해서 짧게 잡힌 과제 찾아줘","6과제 중 5과제를 가이드 201과제와 맞추고, 학생증발급 3년(가이드 5년)·자격증관리대장 10년(준영구)·전산시스템구축 10년(준영구) 3건을 ‘짧음’으로 표시"],
+["2","행정정보DB구축 일괄등록 점검","listing-qa","DB구축 업체가 넘긴 목록이랑 이미지 폴더, 일괄등록 규격대로 점검해줘","13월 등록일자, 건 일련번호 중복, 철 쪽수 9 ≠ 건 합계 10, 건 없는 철, 00000002.TIF 빠짐, 0바이트 이미지 등 9건을 규격 문구로"],
+["3","수해 피해 행정박물 응급조치","disaster-recovery","어제 아침 9시에 침수된 행정박물 목록이야. 응급조치 순서 정해줘","자개 장식 목재 현판 → 염색 직물 제복(48시간까지 18시간) → 곰팡이 액자(전문가 상의) → 도자기 → 금속 순서, 상태조사표·체크리스트·키트"],
+["4","취약 종이기록물 예방조치","preservation-inspection","서고 목록 보고 간지·보호 폴더 필요한 철이랑 용품 수량 뽑아줘","감열지·청사진은 간지 20장, 트레이싱지는 보호 폴더, 720매 대장은 편철 개선, 바스라진 회의록은 밀봉 후 복원 연계"],
+["5","청사 이전 이송 계획","office-relocation","내년 청사 이전이야. 보유현황으로 폐기 후보랑 이송 박스 편성해줘","보존기간 빈 철 1개, 평가·폐기 후보 2개, 관리번호·레이블, 이송 박스 5개·배가표, 비밀철은 건수만"],
+["6","기관 통폐합 기록관리표","agency-closure","가청이랑 나청 단위과제 목록 맞대서 통합 기록관리표 초안 만들어줘","같은 업무 2쌍의 명칭 차이·보존기간 비대칭(준영구/영구)을 찾고, 카드 없는 과제는 사전 정비 대상으로, 통합 초안과 부서 점검표"]];
+const SRC=[["공공기록물법·시행령(2026. 8. 25.)·시행규칙(2026. 9. 11.), 별표·별지 서식","전 스킬, 2027. 1. 1. 시행 이관 기한"],["2026년 기록물관리 지침(일반·공공기관·대학)","기관평가 준비, 수행업무 점검표"],["NAK 표준 30여 종(기록관리표·평가폐기·보존복원·디지털화·재난 등)","스킬별 점검 기준"],["표준·지침·매뉴얼 메뉴(지침 18·매뉴얼 12·규격서식 5)","예방조치·행정박물 응급조치·일괄등록·청사 이전 등"],["기록물분류기준 메뉴(보존기간 책정기준·분류기준표·공문서분류표)","보존기간 대조, 옛 분류번호 풀이"]];
+const esc=s=>s.replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const code=s=>esc(s).replace(/`([^`]+)`/g,"<code>$1</code>");
+document.getElementById('beforeafter').innerHTML=BA.map(r=>`<tr><td><b>${r[0]}</b></td><td>${r[1]}</td><td>${r[2]}</td></tr>`).join('');
+document.getElementById('src').innerHTML=SRC.map(r=>`<tr><td>${r[0]}</td><td>${r[1]}</td></tr>`).join('');
+document.getElementById('scen').innerHTML=SC.map(s=>`<article class="label"><div><p class="small">시나리오 ${s[0]} · <code>${s[2]}</code></p><h3>${s[1]}</h3><p class="say">“${s[3]}”</p></div><div><p class="small">받는 결과</p><p>${s[4]}</p></div></article>`).join('');
+let cat="", q="";
+const chips=document.getElementById('chips');
+chips.innerHTML=[["","전체"]].concat(CATS).map(([k,l])=>`<button type="button" class="chip" data-k="${k}" aria-pressed="${k===cat}">${l} ${k?SKILLS.filter(s=>s.cat===k).length:SKILLS.length}</button>`).join('');
+function render(){
+  const t=q.trim().toLowerCase();
+  const list=SKILLS.filter(s=>(!cat||s.cat===cat)&&(!t||(s.id+s.desc+s.cat).toLowerCase().includes(t)));
+  document.getElementById('cards').innerHTML=list.map(s=>`<div class="card"><span class="id">${s.id}</span>${s.new?'<span class="new">새로</span>':''}<div class="cat">${s.cat}</div><p>${code(s.desc)}</p></div>`).join('')||'<p>맞는 스킬이 없습니다. 다른 낱말로 찾아보세요.</p>';
+  document.getElementById('count').textContent=`${list.length}종`;
+  for(const b of chips.querySelectorAll('.chip'))b.setAttribute('aria-pressed',String(b.dataset.k===cat));
+}
+chips.addEventListener('click',e=>{const b=e.target.closest('.chip');if(!b)return;cat=b.dataset.k;try{localStorage.setItem('rs-cat',cat)}catch(_){}render()});
+document.getElementById('q').addEventListener('input',e=>{q=e.target.value;render()});
+try{const c=localStorage.getItem('rs-cat');if(c!==null&&(c===""||CATS.some(x=>x[0]===c)))cat=c}catch(_){}
+render();
+document.getElementById('copy').addEventListener('click',async()=>{const m=document.getElementById('copied');try{await navigator.clipboard.writeText(document.getElementById('install').textContent);m.textContent='복사했습니다. Claude Code에 붙여 넣으세요.'}catch(_){m.textContent='복사가 막혀 있습니다. 위 두 줄을 직접 선택해 복사하세요.'}});
+const svg=document.getElementById('shelfsvg'), fig=document.getElementById('shelf');
+const counts=CATS.map(([k,l])=>[l,SKILLS.filter(s=>s.cat===k).length]);
+function draw(){
+  const W=fig.clientWidth,H=fig.clientHeight,n=counts.length,pad=Math.max(8,W*.02),gap=Math.max(6,W*.012);
+  const bw=(W-pad*2-gap*(n-1))/n, base=H-34, small=W<520;
+  let g=`<defs><linearGradient id="bx" x1="0" x2="1"><stop offset="0" stop-color="var(--board2)"/><stop offset=".12" stop-color="var(--board)"/><stop offset=".9" stop-color="var(--board)"/><stop offset="1" stop-color="var(--board2)"/></linearGradient></defs>`;
+  g+=`<rect x="0" y="${base}" width="${W}" height="14" fill="#5e4a33"/><rect x="0" y="${base}" width="${W}" height="3" fill="#8a6d4b"/><rect x="0" y="${base+14}" width="${W}" height="20" fill="rgba(0,0,0,.35)"/>`;
+  counts.forEach(([l,c],i)=>{
+    const h=(H-70)*(.62+.38*Math.min(c,14)/14), x=pad+i*(bw+gap), y=base-h, pull=i===2;
+    g+=`<g ${pull?'id="pull"':''}>`;
+    g+=`<rect x="${x+3}" y="${y+6}" width="${bw}" height="${h}" fill="rgba(0,0,0,.28)"/>`;
+    g+=`<rect x="${x}" y="${y}" width="${bw}" height="${h}" rx="2" fill="url(#bx)"/>`;
+    g+=`<rect x="${x+bw*.2}" y="${y+14}" width="${bw*.6}" height="${Math.max(8,bw*.12)}" rx="${Math.max(4,bw*.06)}" fill="rgba(0,0,0,.35)"/>`;
+    const ly=y+h*.34, lh=Math.min(h*.42,small?70:120);
+    g+=`<rect x="${x+bw*.1}" y="${ly}" width="${bw*.8}" height="${lh}" fill="#fffdf8" stroke="#d8cdbb"/>`;
+    g+=`<text x="${x+bw/2}" y="${ly+lh*.52}" text-anchor="middle" font-size="${Math.min(bw*.42,small?20:40)}" font-weight="700" fill="#1d1a16" font-family="inherit">${c}</text>`;
+    if(!small)g+=`<text x="${x+bw/2}" y="${ly+lh*.82}" text-anchor="middle" font-size="${Math.min(14,bw*.13)}" fill="#5b5248" font-family="inherit">${l}</text>`;
+    g+=`<rect x="${x+bw*.1}" y="${ly}" width="${bw*.8}" height="4" fill="#b8321c"/></g>`;
+  });
+  svg.setAttribute('viewBox',`0 0 ${W} ${H}`);svg.innerHTML=g;
+  const p=document.getElementById('pull');if(p)requestAnimationFrame(()=>p.style.transform='translateY(-10px)');
+}
+const ro=new ResizeObserver(draw);ro.observe(fig);
+}
+</script>
+</body>
+</html>
