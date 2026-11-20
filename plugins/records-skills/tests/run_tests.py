@@ -705,6 +705,14 @@ def main():
                   "-o", f"{t}/산출/행정박물.xlsx"])
     aw = openpyxl.load_workbook(f"{t}/산출/행정박물.xlsx")
     aj = {r[1]: r[4] for r in aw["점검"].iter_rows(min_row=2, values_only=True)}
+    xlsx(f"{t}/행정박물2.xlsx", [["등록번호", "생산부서", "행정박물명", "생산일자", "종료일자", "유형", "재질", "크기", "수량", "내용요약", "관련번호"],
+        ["1234567-2025-000011", "가상과", "개청 기념 청동 메달", "20250301", "20250301", "", "", "5×5", "1", "기념 메달", "없음"],
+        ["1234567-2025-000012", "가상과", "구 청사 목재 현판", "20250301", "20250301", "", "", "100×30", "1", "현판", "없음"]])
+    run([S("admin-artifacts-check", "scripts", "artifacts_check.py"), f"{t}/행정박물2.xlsx", "--asof", "2025-12-31", "-o", f"{t}/산출/행정박물2.xlsx"])
+    aj2 = {r[1]: str(r[4]) for r in openpyxl.load_workbook(f"{t}/산출/행정박물2.xlsx")["점검"].iter_rows(min_row=2, values_only=True)}
+    check("행정박물 유형·재질 후보(국가기록원 행정박물 상태검사·점검 매뉴얼 형태·재질 분류)",
+          "유형 후보: 상장·상패류" in aj2.get("1234567-2025-000011", "") and "재질 후보: 금속" in aj2.get("1234567-2025-000011", "")
+          and "유형 후보: 상징류" in aj2.get("1234567-2025-000012", "") and "재질 후보: 목재" in aj2.get("1234567-2025-000012", ""), str(aj2))
     s5 = {r[0]: r[1] for r in aw["서식 5 수치"].iter_rows(min_row=2, values_only=True)}
     due = {r[0]: r[5] for r in aw["이관 기한"].iter_rows(min_row=2, values_only=True)}
     c3, o3 = run([S("production-status-report", "scripts", "fill_official_form.py"), f"{t}/생산등록.xlsx", "--form", form, "--year", "2025",
