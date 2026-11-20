@@ -7,15 +7,15 @@
 생산현황 통보부터 이관·보존·공개·평가·폐기까지 —<br>
 반복되는 점검과 서식 작성은 스크립트가, 판단과 제출은 사람이.
 
-![version](https://img.shields.io/badge/records--skills-v2.13.0-1f6feb)
+![version](https://img.shields.io/badge/records--skills-v2.21.0-1f6feb)
 ![skills](https://img.shields.io/badge/스킬-42종-2da44e)
-![tests](https://img.shields.io/badge/시험-76%2F76%20통과-2da44e)
+![tests](https://img.shields.io/badge/시험-117%2F117%20통과-2da44e)
 ![python](https://img.shields.io/badge/Python-3.10%2B-3776ab?logo=python&logoColor=white)
 ![law](https://img.shields.io/badge/근거-시행령%202026.8.25.-8250df)
 ![license](https://img.shields.io/badge/코드-MIT-lightgrey)
 ![docs](https://img.shields.io/badge/문서-CC%20BY%204.0-lightgrey)
 
-**[📖 사용 안내](docs/README.md)** · [🚀 처음 시작하기](docs/getting-started.md) · [🧰 스킬 사용법](docs/skills.md) · [📅 업무 달력](docs/calendar.md) · [❓ FAQ](docs/faq.md)
+**[📖 사용 안내](docs/README.md)** · [🚀 처음 시작하기](docs/getting-started.md) · [🧰 스킬 사용법](docs/skills.md) · [🧪 예제](examples/시나리오) · [📅 업무 달력](docs/calendar.md) · [❓ FAQ](docs/faq.md) · [📣 소개 페이지](docs/promo/index.html)
 
 </div>
 
@@ -33,6 +33,31 @@
 | 이관 목록과 실물 상자를 눈으로 대조 | 빠진 것·남는 것·이름 다른 것을 시트로 |
 | 비공개 기록물 중 재분류 대상 찾기 | 올해 심의 대상과 사유 결함 후보를 자동 추출 |
 | PDF/A 변환 후 "됐겠지" | veraPDF로 적합·부적합(조항)까지 확인 |
+
+---
+
+## 🆕 v2.21.0에서 달라진 것
+
+국가기록포털 **표준·지침·매뉴얼** 6개 탭(표준 33·지침 18·매뉴얼 12·규격서식 5·KS 11·해외 120)과 **기록물분류기준** 3개 메뉴를 전부 열어, 첨부 파일까지 읽고 스크립트로 옮겼습니다. 게시물마다 어느 스킬이 맡는지는 [전수 대응표](plugins/records-skills/skills/records-qa-gate/references/standards-menu-2026-11-21.md)에 있습니다.
+
+| 영역 | 새로 할 수 있는 일 | 근거 자료 |
+|---|---|---|
+| 📦 청사 이전 | 새 스킬 **office-relocation** — 보유현황 통계, 평가·폐기 후보, 관리번호·레이블, 이송 박스·배가표, 점검표 | 공공기관 청사 이전 대비 기록관리 업무 매뉴얼 |
+| 🏛️ 기관 통폐합 | 두 기관 이상 단위과제 맞대기 → 문제유형·통합 기록관리표 초안 | 기관 통폐합 분류체계 정비 방안 연구(2026) |
+| 🗂️ 일괄등록 | RAMP 일괄등록 파일 만들기, 행정정보DB구축 결과(목록+이미지 폴더) 점검 | RAMP 일괄등록 규격(2024), 행정정보DB구축 기록물 규격(2023) |
+| ⚖️ 보존기간 | 1964~1997 공문서분류표, 2012·2021 고유업무 준칙, 분류기준표 2,416건, 대학·의료기관 가이드 | 기록물분류기준 메뉴, 매뉴얼 탭 |
+| 🛡️ 보존·재난 | 행정박물 응급조치, 취약 종이기록물 예방조치, 첫 상태검사 우선순위, 해충 트랩 | 지침 탭(2024·2025), 소독대상 선별 매뉴얼(2022) |
+| 📷 시청각 | 사진 등록대상 선정(연사 대표·노출·흑백·저해상도) | 시청각기록물 관리지침(2024) |
+| 📊 기관평가 | 2026 평가 지표별 전국 평균, 공공기관·대학 수행업무 점검표 | 2026 기관평가 결과, 2026 지침 3종 |
+
+**바로 따라 해 보기** — [업무 시나리오 예제 6가지](examples/시나리오)에 가상 입력과 실제 결과 파일이 있습니다.
+
+```text
+우리 대학 기록관리기준표를 대학 가이드랑 비교해서 짧게 잡힌 과제 찾아줘.
+DB구축 업체가 넘긴 목록이랑 이미지 폴더, 일괄등록 규격대로 점검해줘.
+어제 아침 9시에 침수된 행정박물 목록이야. 응급조치 순서 정해줘.
+가청이랑 나청 단위과제 목록 맞대서 통합 기록관리표 초안 만들어줘.
+```
 
 ---
 
@@ -57,7 +82,7 @@
 
 ```mermaid
 flowchart LR
-    A["📝 생산·등록<br/>14종"] --> B["📦 이관·인수<br/>5종"]
+    A["📝 생산·등록<br/>14종"] --> B["📦 이관·인수<br/>6종"]
     B --> C["🛡️ 보존<br/>10종"]
     C --> D["🔓 공개·활용<br/>3종"]
     D --> E["⚖️ 평가·폐기<br/>3종"]
@@ -120,10 +145,10 @@ flowchart LR
 | [docno-extract](plugins/records-skills/skills/docno-extract) | 문서번호 추출, 물결표(~) 범위를 낱개로 펼치기 |
 | [task-suggest](plugins/records-skills/skills/task-suggest) | 제목으로 공통업무 단위과제·보존기간 후보 |
 | [records-schedule-check](plugins/records-skills/skills/records-schedule-check) | 기록관리기준표 관리항목 점검(NAK 4:2025) |
-| 🆕 [listing-qa](plugins/records-skills/skills/listing-qa) | 목록 작성·디지털화 사업 검수 — 면표시·편철 순서·쪽수↔이미지·작업자별 표본 3%·99.9% — NAK 23 |
+| [listing-qa](plugins/records-skills/skills/listing-qa) | 목록 작성·디지털화 사업 검수 — 면표시·편철 순서·쪽수↔이미지·작업자별 표본 3%·99.9% — NAK 23, 🆕 RAMP 일괄등록 파일(2024 규격)·행정정보DB구축 일괄등록 점검(2023 규격, 이미지 폴더 포함) |
 | 🆕 [official-doc-check](plugins/records-skills/skills/official-doc-check) | 공문서 표기 점검 — 날짜·시간·금액(한글 대조)·항목 기호·붙임·끝 표시 — 행정업무규정 제7조·시행규칙 제2·4조 |
 | 🆕 [archival-description](plugins/records-skills/skills/archival-description) | 기록물 기술 점검 — 필수요소 6개, 일자 표기·연호 환산, 계층별 일자 — NAK 13 |
-| [typed-records-check](plugins/records-skills/skills/typed-records-check) | 회의록 구성 요소 8가지, 시청각 생산정보 |
+| [typed-records-check](plugins/records-skills/skills/typed-records-check) | 회의록 구성 요소 8가지, 시청각 생산정보, 🆕 사진 등록대상 선정(연사 대표·노출·흑백 변환·저해상도) — 시청각기록물 관리지침 2024 |
 | [publications-check](plugins/records-skills/skills/publications-check) | 발간등록번호·발간주기·송부 책자 3부 |
 | [admin-artifacts-check](plugins/records-skills/skills/admin-artifacts-check) | 행정박물 기본정보 11항목·유형 7·재질 13종·이관 기한(별표 4·5) |
 | 🆕 [records-forms](plugins/records-skills/skills/records-forms) | 시행규칙 별지 서식 작성 — 색인목록(쪽표시 자동), 반출·반입서, 보존·복원처리서, 전자매체 수록계획서, 발간등록 신청, 폐기 금지 요청·해제·연장, 부기·정정 요청 |
@@ -131,7 +156,7 @@ flowchart LR
 </details>
 
 <details>
-<summary><b>📦 이관·인수 (5)</b></summary>
+<summary><b>📦 이관·인수 (6)</b></summary>
 
 | 스킬 | 하는 일 |
 |---|---|
@@ -139,7 +164,7 @@ flowchart LR
 | [transfer-reconcile](plugins/records-skills/skills/transfer-reconcile) | 이관 목록과 파일·상자 대조, 통합(전자+비전자) 이관 붙임 후보 |
 | [transfer-triage](plugins/records-skills/skills/transfer-triage) | 인수·기증 폴더 첫 진단 — 포맷 분포·중복·위험 파일 |
 | [format-identify](plugins/records-skills/skills/format-identify) | 내용으로 실제 포맷 식별, 확장자 불일치 |
-| 🆕 [agency-closure](plugins/records-skills/skills/agency-closure) | 한시·폐지·통합·전환 기관 인계인수 — 관리 주체, 유형별 이관목록, 인계인수서, 체크리스트, 3개월 통보 기한 — NAK 15 |
+| [agency-closure](plugins/records-skills/skills/agency-closure) | 한시·폐지·통합·전환 기관 인계인수 — 관리 주체, 유형별 이관목록, 인계인수서, 체크리스트, 3개월 통보 기한 — NAK 15, 🆕 통폐합 기관 기록관리표 통합 초안(단위과제비교표·문제유형) |
 | 🆕 [office-relocation](plugins/records-skills/skills/office-relocation) | 청사 이전·문서고 이전 — 보유현황 통계, 보존기간 확인, 평가·폐기 후보, 관리번호·레이블, 이송 박스·배가표, 추진상황 점검표 — 국가기록원 청사 이전 매뉴얼 |
 
 </details>
@@ -150,14 +175,14 @@ flowchart LR
 | 스킬 | 하는 일 |
 |---|---|
 | [preservation-convert](plugins/records-skills/skills/preservation-convert) | PDF/A-1b 변환, veraPDF 검증, 날짜 맞춤 |
-| [preservation-inspection](plugins/records-skills/skills/preservation-inspection) | 정수점검·상태검사 주기, 별지 제7호서식 작업지, 🆕 복원처리 계획(심화·예방·응급, 탈산 대상) — NAK 25 |
+| [preservation-inspection](plugins/records-skills/skills/preservation-inspection) | 정수점검·상태검사 주기, 별지 제7호서식 작업지, 복원처리 계획(심화·예방·응급, 탈산 대상) — NAK 25, 🆕 첫 상태검사 우선순위·해충 트랩 판정·취약 종이기록물 예방조치(간지·보호 폴더·편철 개선) |
 | [fixity-check](plugins/records-skills/skills/fixity-check) | SHA-256 기준선과 정기 대조 |
 | [scan-qc](plugins/records-skills/skills/scan-qc) | 스캔 이미지 DPI·기울기·빈 면·밝기, 🆕 NAK 26 매체별 해상도·비트심도·포맷·JPEG 품질, 시청각 디지털화 점검 |
 | 🆕 [media-check](plugins/records-skills/skills/media-check) | 기록매체 대장 점검(-R/+R, 4/5, 반도체 1년, 테이프 3년, 마이그레이션)과 간이 검사(복사 전·후·해시) — NAK 12 |
 | [stack-environment](plugins/records-skills/skills/stack-environment) | 서고 온습도 기록을 시행령 별표 6 기준(매체별)에 견줌, 이탈 시간, 서고 면적, 장비 점검표, 🆕 NAK 11 서고 점검표·권 수 환산·검·교정 주기 |
 | [box-labels](plugins/records-skills/skills/box-labels) | 보존상자 편성(생산연도·보존기간·단위과제별), 별표 6 상자 표지 PDF·HTML, 철당 100매 분권 후보 |
 | 🆕 [vital-records](plugins/records-skills/skills/vital-records) | 필수기록물 필수성 평가표(기능성·고유성·증거성), 보호기간 점검, 관리목록표, 복본·분산(10km) 점검, 10월 31일 검토 기한, 재난 뒤 피해 평가·업무복구 순서 — NAK 2-2 |
-| 🆕 [disaster-recovery](plugins/records-skills/skills/disaster-recovery) | 수해·화재 피해 종이기록물 응급복구 순서, 48시간 기한·즉시 냉동동결·곰팡이 분리, 포장 라벨, 재질별 건조 방법, 부속서 A·C·D·E, 대피 우선순위 — NAK 38, 필름·사진·테이프 등 종이 외 매체 — NAK 2-1 |
+| 🆕 [disaster-recovery](plugins/records-skills/skills/disaster-recovery) | 수해·화재 피해 종이기록물 응급복구 순서, 48시간 기한·즉시 냉동동결·곰팡이 분리, 포장 라벨, 재질별 건조 방법, 부속서 A·C·D·E, 대피 우선순위 — NAK 38, 필름·사진·테이프 등 종이 외 매체 — NAK 2-1, 🆕 행정박물 응급조치(재질 군·직물 48시간·구조 우선순위 1~6등급) |
 | 🆕 [security-disaster-plan](plugins/records-skills/skills/security-disaster-plan) | 보안·재난관리 체크리스트, 위험평가표(발생가능성×위험도), 업무별 안전규칙, 임무카드·비상용품 점검, 재난 보고서, 영구기관 RTO·RPO — NAK 2-1 |
 
 </details>
@@ -178,7 +203,7 @@ flowchart LR
 
 | 스킬 | 하는 일 |
 |---|---|
-| [retention-review](plugins/records-skills/skills/retention-review) | 보존기간 대조 — 기관 기준표·공통업무 준칙·NAK 39 제정(안) |
+| [retention-review](plugins/records-skills/skills/retention-review) | 보존기간 대조 — 기관 기준표·공통업무 준칙·NAK 39 제정(안), 🆕 중앙행정기관 고유업무 준칙(2021·2012), 옛 공문서분류표(1964~1997), 기관별 분류기준표 색인(2,416건), 대학(201과제)·의료기관(135과제) 가이드 |
 | [disposal-dossier](plugins/records-skills/skills/disposal-dossier) | 기록물평가심의서·의견조회표(별지 제10호), 🆕 처분결과 등록·폐기 집행 대조·위탁 폐기 점검 — NAK 5-1 |
 | [email-appraisal](plugins/records-skills/skills/email-appraisal) | MBOX·EML 이메일 기록 평가 |
 
@@ -201,7 +226,7 @@ flowchart LR
 | 스킬 | 하는 일 |
 |---|---|
 | 🆕 [system-requirements](plugins/records-skills/skills/system-requirements) | 기록관리·영구·정부산하·생산시스템 기능요건 점검표(원문 762개), 필수 충족률·미충족 — NAK 6·7·20·19 |
-| [evaluation-readiness](plugins/records-skills/skills/evaluation-readiness) | 기록관리 기관평가 지표별 증빙 점검, 🆕 연간 업무 일정·캘린더(.ics)·기관장 보고 점검표 — NAK 18 |
+| [evaluation-readiness](plugins/records-skills/skills/evaluation-readiness) | 기록관리 기관평가 지표별 증빙 점검, 연간 업무 일정·캘린더(.ics)·기관장 보고 점검표 — NAK 18, 🆕 2026 평가 지표별 전국 평균, 일반·공공기관·대학 지침 수행업무 점검표 |
 | [hwpx-report](plugins/records-skills/skills/hwpx-report) | 마크다운 → 한글(HWPX) 보고서, 기관 서식 채움 |
 
 </details>
@@ -239,6 +264,7 @@ flowchart LR
 | 「2026년 기록물관리 지침」 | 국가기록원(archives.go.kr) |
 | 생산현황 통보서식, 공통업무 보존기간 준칙 | 국가기록원 공개 자료 |
 | NAK 6·7·19-1~3·20 시스템 기능요건 · NAK 30 PDF/A-1b · NAK 31-1 NEO2 · NAK 24 보존시설 신축 · NAK 32-1·16-2·5-2·9(참고) · NAK 23:2017(v1.2) 목록 작성·디지털화 작업 · NAK 13:2022(v2.1) 영구기록물 기술규칙 · NAK 18:2022(v1.1) 기관장 책임과 역할 · NAK 21:2018(v1.1) 서비스 표준 · NAK 26:2023(v2.1) 디지털화 기준 · NAK 25:2026(v2.1) 종이기록물 보존·복원 · NAK 16-1:2020(v1.2) 공개관리(생산부서·기록관) · NAK 5-1:2014(v2.2) 평가·폐기(기록관용) · NAK 12:2022(v3.1) 기록매체 요건 · NAK 15:2021(v2.0) 한시·폐지기관 · NAK 2-1:2024(v1.2) 보안 및 재난관리 기준 · NAK 2-2:2025(v1.2) 필수기록물 선별·보호 · NAK 38:2024(v1.0) 재난 피해 종이기록물 응급복구 · NAK 11:2025(v2.0) 보존시설·장비·환경 기준 | 국가기록원 표준 원문 PDF (2026-11-20 내려받아 확인) |
+| 국가기록포털 표준·지침·매뉴얼(지침 18·매뉴얼 12·규격서식 5) · 기록물분류기준(보존기간 책정기준·기록물분류기준표·공문서분류 및 보존기간표) | 2026-11-20~21 첨부 파일까지 내려받아 확인 — [전수 대응표](plugins/records-skills/skills/records-qa-gate/references/standards-menu-2026-11-21.md) |
 | NAK 10:2026(v1.5) 확정 · NAK 17:2026(v1.4)안 · NAK 39:2026(v1.0) 제정(안) | 국가기록원 고시·예고 |
 | 시행령 별표 1~6(보존기간·보존방법·상태검사·행정박물·시설환경) · 시행규칙 별표 1~16·별지 제1~25호 | 국가법령정보센터 별표·서식 원문(2026-11-20 확인 — [기록](plugins/records-skills/skills/records-qa-gate/references/law-forms-2026-11-20.md)) |
 | 국가기록원 행정규칙(고시 제2025-10호로 재고시된 NAK 표준, 부기·정정 처리 기준 훈령 제224호 등) · 간행물 발간등록 안내 | 국가법령정보센터 행정규칙, 국가기록포털 |
@@ -253,7 +279,7 @@ flowchart LR
 python plugins/records-skills/tests/run_tests.py
 ```
 
-76개(veraPDF가 PATH에 있으면 77개, ffmpeg가 없으면 1개 적음) — 스킬 42종의 주요 계산과, 보호 훅이 Windows처럼 `python3`가 없거나 가짜일 때도 꺼지지 않는지까지 확인합니다. 필요 패키지: `openpyxl` `pypdf` `pikepdf` `pillow` `numpy` (선택: `python-docx` `python-hwpx` `holidays`, LibreOffice). Python 3.11·3.12·3.13에서 확인했고, [GitHub Actions](.github/workflows/test.yml)로 3.10~3.13을 돌립니다.
+117개(veraPDF·ffmpeg 유무에 따라 1~2개 달라짐) — 스킬 42종의 주요 계산과, 보호 훅이 Windows처럼 `python3`가 없거나 가짜일 때도 꺼지지 않는지까지 확인합니다. 필요 패키지: `openpyxl` `pypdf` `pikepdf` `pillow` `numpy` (선택: `python-docx` `python-hwpx` `holidays`, LibreOffice). Python 3.11·3.12·3.13에서 확인했고, [GitHub Actions](.github/workflows/test.yml)로 3.10~3.13을 돌립니다.
 
 ---
 
