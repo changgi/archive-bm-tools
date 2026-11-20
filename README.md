@@ -1,15 +1,15 @@
 <div align="center">
 
-<img src=".github/assets/banner.svg" alt="archive-bm-tools — 기록관리 담당자를 위한 Claude 스킬 42종" width="100%">
+<img src=".github/assets/banner.svg" alt="archive-bm-tools — 기록관리 담당자를 위한 Claude 스킬 43종" width="100%">
 
 **공공기관 기록관리 담당자를 위한 Claude 플러그인 마켓플레이스**
 
 생산현황 통보부터 이관·보존·공개·평가·폐기까지 —<br>
 반복되는 점검과 서식 작성은 스크립트가, 판단과 제출은 사람이.
 
-![version](https://img.shields.io/badge/records--skills-v2.21.0-1f6feb)
-![skills](https://img.shields.io/badge/스킬-42종-2da44e)
-![tests](https://img.shields.io/badge/시험-117%2F117%20통과-2da44e)
+![version](https://img.shields.io/badge/records--skills-v2.22.0-1f6feb)
+![skills](https://img.shields.io/badge/스킬-43종-2da44e)
+![tests](https://img.shields.io/badge/시험-118%2F118%20통과-2da44e)
 ![python](https://img.shields.io/badge/Python-3.10%2B-3776ab?logo=python&logoColor=white)
 ![law](https://img.shields.io/badge/근거-시행령%202026.8.25.-8250df)
 ![license](https://img.shields.io/badge/코드-MIT-lightgrey)
@@ -36,7 +36,12 @@
 
 ---
 
-## 🆕 v2.21.0에서 달라진 것
+## 🆕 v2.22.0에서 달라진 것
+
+- 🆕 **record-by-design**(43번째 스킬): 현용 단계에서 만든 파일이 "누가·무슨 업무로·왜·무엇과 이어져" 만들었는지와 원본 그대로임을 스스로 증명하는 기록 패키지로 만들고, 같은 메타데이터에서 여러 매개로 다시 만듭니다. [사용법](docs/skills.md#43-record-by-design--생산-시점-기록화)
+- python-hwpx 7.0 호환, GitHub Actions에서 LibreOffice까지 설치해 시험
+
+### v2.21.0
 
 국가기록포털 **표준·지침·매뉴얼** 6개 탭(표준 33·지침 18·매뉴얼 12·규격서식 5·KS 11·해외 120)과 **기록물분류기준** 3개 메뉴를 전부 열어, 첨부 파일까지 읽고 스크립트로 옮겼습니다. 게시물마다 어느 스킬이 맡는지는 [전수 대응표](plugins/records-skills/skills/records-qa-gate/references/standards-menu-2026-11-21.md)에 있습니다.
 
@@ -82,7 +87,7 @@ DB구축 업체가 넘긴 목록이랑 이미지 폴더, 일괄등록 규격대�
 
 ```mermaid
 flowchart LR
-    A["📝 생산·등록<br/>14종"] --> B["📦 이관·인수<br/>6종"]
+    A["📝 생산·등록<br/>15종"] --> B["📦 이관·인수<br/>6종"]
     B --> C["🛡️ 보존<br/>10종"]
     C --> D["🔓 공개·활용<br/>3종"]
     D --> E["⚖️ 평가·폐기<br/>3종"]
@@ -129,12 +134,12 @@ flowchart LR
 
 ---
 
-## 🧰 스킬 42종
+## 🧰 스킬 43종
 
-> 스킬마다 준비할 파일·말하는 법·받는 결과·주의할 점은 **[스킬 42종 사용법](docs/skills.md)**, 언제 무엇을 쓰는지는 **[연간 업무 달력](docs/calendar.md)** 에 있습니다.
+> 스킬마다 준비할 파일·말하는 법·받는 결과·주의할 점은 **[스킬 43종 사용법](docs/skills.md)**, 언제 무엇을 쓰는지는 **[연간 업무 달력](docs/calendar.md)** 에 있습니다.
 
 <details open>
-<summary><b>📝 생산·등록 (14)</b></summary>
+<summary><b>📝 생산·등록 (15)</b></summary>
 
 | 스킬 | 하는 일 |
 |---|---|
@@ -151,6 +156,7 @@ flowchart LR
 | [typed-records-check](plugins/records-skills/skills/typed-records-check) | 회의록 구성 요소 8가지, 시청각 생산정보, 🆕 사진 등록대상 선정(연사 대표·노출·흑백 변환·저해상도) — 시청각기록물 관리지침 2024 |
 | [publications-check](plugins/records-skills/skills/publications-check) | 발간등록번호·발간주기·송부 책자 3부 |
 | [admin-artifacts-check](plugins/records-skills/skills/admin-artifacts-check) | 행정박물 기본정보 11항목·유형 7·재질 13종·이관 기한(별표 4·5) |
+| 🆕 [record-by-design](plugins/records-skills/skills/record-by-design) | 생산 시점 기록화 — 맥락(단위과제·생산자·업무활동·관계)과 증거성(SHA-256·사건 이력)을 붙인 BagIt 패키지, 메타데이터 하나에서 등록대장·공개데이터·요약 HTML·카드·RiC-O 연결 데이터, 고정성 재확인 — NAK 8·RiC-O·PREMIS |
 | 🆕 [records-forms](plugins/records-skills/skills/records-forms) | 시행규칙 별지 서식 작성 — 색인목록(쪽표시 자동), 반출·반입서, 보존·복원처리서, 전자매체 수록계획서, 발간등록 신청, 폐기 금지 요청·해제·연장, 부기·정정 요청 |
 
 </details>
@@ -279,7 +285,7 @@ flowchart LR
 python plugins/records-skills/tests/run_tests.py
 ```
 
-117개(veraPDF·ffmpeg 유무에 따라 1~2개 달라짐) — 스킬 42종의 주요 계산과, 보호 훅이 Windows처럼 `python3`가 없거나 가짜일 때도 꺼지지 않는지까지 확인합니다. 필요 패키지: `openpyxl` `pypdf` `pikepdf` `pillow` `numpy` (선택: `python-docx` `python-hwpx` `holidays`, LibreOffice). Python 3.11·3.12·3.13에서 확인했고, [GitHub Actions](.github/workflows/test.yml)로 3.10~3.13을 돌립니다.
+118개(veraPDF·ffmpeg 유무에 따라 1~2개 달라짐) — 스킬 43종의 주요 계산과, 보호 훅이 Windows처럼 `python3`가 없거나 가짜일 때도 꺼지지 않는지까지 확인합니다. 필요 패키지: `openpyxl` `pypdf` `pikepdf` `pillow` `numpy` (선택: `python-docx` `python-hwpx` `holidays`, LibreOffice). Python 3.11·3.12·3.13에서 확인했고, [GitHub Actions](.github/workflows/test.yml)로 3.10~3.13을 돌립니다.
 
 ---
 

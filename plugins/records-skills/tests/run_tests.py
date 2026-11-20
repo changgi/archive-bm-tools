@@ -466,6 +466,28 @@ def main():
     check("대학·의료 가이드: 유사 단위과제로 맞춤(학생증발급→학생증관리 5년)·짧음 2건·의료 135과제 검색",
           csg == 1 and len(sgr) == 3 and sgr[0][6] == "학생증관리" and sgr[0][8] == "5년" and sgr[2][8] == "준영구" and "/135과제" in omd, osg + omd)
 
+    # 생산 시점 기록화(record-by-design): BagIt 패키지·NAK 8 메타데이터·RiC-O·사건 이력·고정성
+    RBD = S("record-by-design", "scripts", "capture.py")
+    open(f"{t}/보고원본.txt", "w", encoding="utf-8").write("제목: 2026년 가상 축제 결과 보고\n시행 기획과-123 (2026. 3. 2.)\n문의 010-1234-5678\n가상시장\n")
+    crb1, orb1 = run([RBD, "capture", f"{t}/보고원본.txt", "--task", "지역축제운영", "--agency", "가상시", "--dept", "기획과", "--person", "김가상",
+                      "--period", "10년", "--activity", "결과 보고", "--relation", "참조:2026-plan", "--id", "R-0001", "-o", f"{t}/산출/기록패키지"])
+    pk = f"{t}/산출/기록패키지/R-0001"
+    mj = json.load(open(f"{pk}/metadata.json", encoding="utf-8")) if os.path.exists(f"{pk}/metadata.json") else {}
+    ld = json.load(open(f"{pk}/context.jsonld", encoding="utf-8")) if os.path.exists(f"{pk}/context.jsonld") else {}
+    pubj = json.load(open(f"{pk}/매개/공개데이터.json", encoding="utf-8")) if os.path.exists(f"{pk}/매개/공개데이터.json") else {}
+    cv1, ov1 = run([RBD, "verify", pk])
+    open(f"{pk}/data/원본/보고원본.txt", "a", encoding="utf-8").write("변조")
+    cv2, ov2 = run([RBD, "verify", pk])
+    nev = sum(1 for _ in open(f"{pk}/events.jsonl", encoding="utf-8")) if os.path.exists(f"{pk}/events.jsonl") else 0
+    open(f"{t}/비밀문서.txt", "w", encoding="utf-8").write("Ⅲ급 비밀\n가상\n")
+    crb2, _ = run([RBD, "capture", f"{t}/비밀문서.txt", "--task", "가", "--agency", "가", "--dept", "가", "--period", "10년", "-o", f"{t}/산출/기록패키지"])
+    crb3, _ = run([RBD, "capture", f"{t}/보고원본.txt", "--task", "가", "--agency", "가", "--dept", "가", "--period", "10년", "--access", "비공개", "-o", f"{t}/산출/기록패키지"])
+    check("생산 시점 기록화: BagIt·NAK 8 무결성·RiC-O 관계·개인정보 후보면 공개 본문 뺌·고정성 통과/변조 실패·비밀 거부·비공개 사유 필수",
+          crb1 == 1 and mj.get("23.2 무결성체크값", "") and mj.get("12.2.2 분류명") == "지역축제운영" and ld.get("@type") == "rico:Record"
+          and ld.get("rico:isRelatedTo", [{}])[0].get("@id") == "urn:records:2026-plan" and "싣지 않음" in pubj.get("설명", "")
+          and os.path.exists(f"{pk}/bagit.txt") and cv1 == 0 and cv2 == 1 and "바뀜" in ov2 and nev == 6 and crb2 == 3 and crb3 == 2,
+          orb1 + ov1 + ov2)
+
     # 청사 이전 대비 기록물 이송·재배치(국가기록원 청사 이전 매뉴얼 2014)
     xlsx(f"{t}/보유현황.xlsx", [["부서", "기록물철 제목", "생산연도", "보존기간", "보관위치", "권수", "비밀구분"],
         ["가과", "가상 계획", "2015", "5년", "사무실", "2", ""], ["가과", "가상 대장", "2010", "영구", "문서고", "1", ""],
