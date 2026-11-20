@@ -963,8 +963,9 @@ def main():
                             ["지적 관리", "지적공부", "V-2", "마이크로필름", "2099-12-31", "본관;분원", "35"],
                             ["계약 관리", "계약철", "V-3", "광디스크", "2025-12-31", "본관;별관", "2"],
                             ["행사 홍보", "홍보철", "V-4", "", "", "", ""]])
+    xlsx(f"{t}/필수피해.xlsx", [["관리번호", "피해정도", "피해내용"], ["V-1", "심각", "소실"], ["V-2", "3", "그을림"], ["V-3", "높음", "눌러붙음"], ["X-9", "2", ""]])
     cvr, ovr = run([S("vital-records", "scripts", "vital_records.py"), f"{t}/단위과제.xlsx", "--files", f"{t}/필수철.xlsx", "--year", "2026",
-                    "--today", "2026-11-20", "-o", f"{t}/산출/필수.xlsx"])
+                    "--today", "2026-11-20", "--damage", f"{t}/필수피해.xlsx", "--set", "발생일=2026-07-24", "-o", f"{t}/산출/필수.xlsx"])
     ok_v = False
     if cvr == 0:
         wv = openpyxl.load_workbook(f"{t}/산출/필수.xlsx")
@@ -975,7 +976,11 @@ def main():
                 and "보존기간 이하" in str(ev_["계약 관리"][10]) and set(pr_) == {"V-1", "V-2", "V-3"}
                 and "복본" in pr_["V-1"] and "두 곳" in pr_["V-1"] and pr_["V-2"] == "" and "10km" in pr_["V-3"] and "만료" in pr_["V-3"]
                 and "2026-10-31" in sc_ and "지남" in sc_)
-    check("필수기록물: 5점 하나·3점 둘 판정, 보호기간>보존기간, 복본·분산·10km·만료, 10/31", ok_v, ovr)
+        dv_ = {r[2]: r for r in wv["피해 평가표"].iter_rows(min_row=6, values_only=True) if r and r[2]}
+        rc_ = [(r[3], r[4]) for r in wv["업무복구 목록"].iter_rows(min_row=2, values_only=True) if isinstance(r[0], int)]
+        ok_v = ok_v and (dv_["V-1"][4] == "심각(5)" and "복본 없음" in str(dv_["V-1"][9]) and "목록" in str(dv_["X-9"][9])
+                         and rc_ == [("V-1", None), ("V-3", "광디스크"), ("V-2", "마이크로필름")] and "이용 대장" in wv.sheetnames)
+    check("필수기록물: 판정, 보호기간>보존기간, 복본·분산·10km·만료, 10/31, 피해 5단계·업무복구 순위", ok_v, ovr)
 
     # 재난 응급복구(NAK 38): 곰팡이 우선·48시간·냉동동결·습식 불가, 대피 우선순위 후보
     xlsx(f"{t}/피해.xlsx", [["관리번호", "제목", "보존기간", "대피등급", "재질", "제본", "훼손유형", "위치", "발견일시", "비고"],

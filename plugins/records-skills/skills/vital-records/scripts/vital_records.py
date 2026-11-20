@@ -16,6 +16,7 @@
 일정(5.4.3): 기록관은 매년 10월 31일까지 필수성·보호기간을 검토·수정해 영구기록물관리기관과 협의·확정, 11월 1일 이후 신설·변경은 즉시 협의
 보호(6장): 이중보호(복본) + 분산보호 — 분산 장소 두 곳 이상, 원격분산은 원본에서 일반적으로 10km 이상, 보호계획은 최소 1년에 한 번 검토,
   수록 매체는 주기적으로 점검. 비상대응 기록물은 현지분산(접근성), 권한보호 기록물은 원격분산
+재난 뒤:  --damage 피해목록 → 피해 평가표(표 16 5단계·표 17), 업무복구 목록(필수·피해 3 이상, 기능성 높은 업무부터), 이용 대장(7.2 승인·반납·통보)
 원칙:  평가 점수는 처리과가 매기고 기록관이 검토한다. 이 스크립트는 점수가 비면 낱말로 '유형 후보'만 붙이고 판정하지 않는다.
 """
 import argparse
@@ -81,6 +82,8 @@ def main() -> int:
     ap.add_argument("--files", help="기록물철 목록 — 필수 단위과제의 철로 관리목록표를 만듦")
     ap.add_argument("--year", type=int, default=dt.date.today().year)
     ap.add_argument("--today", help="일정 판정일(기본: 오늘)")
+    ap.add_argument("--damage", help="재난 뒤 피해 조사 목록(관리번호, 피해정도 1~5 또는 경미·낮음·중간·높음·심각, 피해내용) — 피해 평가표(표 17)와 업무복구 목록(7.4)")
+    ap.add_argument("--set", action="append", default=[], help="피해 평가표 머리 칸: 발생일=… 피해장소=… 피해원인=… 피해규모=… 조사일=… 조사자=… 확인자=…")
     ap.add_argument("-o", "--out", default="산출/필수기록물.xlsx")
     a = ap.parse_args()
     today = dt.date.fromisoformat(a.today) if a.today else dt.date.today()
@@ -97,7 +100,7 @@ def main() -> int:
     ws.append(["표 1 단위과제 필수성 평가표(NAK 2-2:2025 5.3)"])
     ws["A1"].font = Font(bold=True)
     ws.append(["분류체계", "단위과제명", "해당업무 설명", "기능성", "고유성", "증거성", "종합판단", "필수성 판단사유", "보존기간", "보호기간", "확인할 것", "유형 후보(참고)"])
-    vital, issues_n, todo = [], 0, 0
+    vital, issues_n, todo, fscore, allfiles = [], 0, 0, {}, {}
     for n, x in tasks:
         sc = {k: score(x.get(k)) for k in ("기능성", "고유성", "증거성")}
         notes = []
@@ -125,6 +128,7 @@ def main() -> int:
         if verdict == "필수":
             ws.cell(ws.max_row, 7).fill = hl
             vital.append(x.get("과제", ""))
+            fscore[x.get("과제", "")] = sc["기능성"] if isinstance(sc["기능성"], int) else 0
     lst = wb.create_sheet("관리목록표")
     lst.append(["표 4 필수기록물 관리목록표(NAK 2-2:2025 5.6) — 기본 항목 | 보호 항목"])
     lst.append(["단위과제명", "철명(건명)", "관리번호", "생산부서", "생산년도", "생산매체", "보존기간", "보존위치", "보존책임",
@@ -136,6 +140,8 @@ def main() -> int:
         fidx, files = read(a.files, FALIAS)
         vset = set(vital)
         for n, f in files:
+            if f.get("번호"):
+                allfiles[f["번호"]] = f
             if f.get("과제") not in vset:
                 continue
             nfiles += 1
@@ -162,6 +168,65 @@ def main() -> int:
             lst.cell(lst.max_row, 15).value = " · ".join(pn)
     if not nfiles:
         lst.append(["(--files로 기록물철 목록을 주면 필수 단위과제의 철을 채움)"])
+    ndmg = nrec = 0
+    if a.damage:
+        DIDX = {"번호": ["관리번호", "철분류번호", "등록번호"], "정도": ["피해정도", "피해등급"], "내용": ["피해내용", "피해상태", "비고"],
+                "과제": ["단위과제명", "단위과제"], "철": ["철명", "기록물철", "제목"], "매체": ["원본매체", "생산매체"]}
+        _, dmg = read(a.damage, DIDX)
+        head = dict(kv.split("=", 1) for kv in a.set if "=" in kv)
+        dv = wb.create_sheet("피해 평가표")
+        dv.append(["기록물 피해 평가표(NAK 2-2:2025 표 17)"])
+        dv["A1"].font = Font(bold=True)
+        keys = ["발생일", "피해장소", "피해원인", "피해규모", "조사일", "조사자", "확인자"]
+        dv.append(keys)
+        dv.append([head.get(k, "") for k in keys])
+        dv.append([])
+        dv.append(["단위과제", "기록물철", "관리번호", "원본매체", "피해정도", "피해내용", "필수성", "사본매체", "복본위치", "확인할 것"])
+        DLV = {"심각": 5, "높음": 4, "중간": 3, "낮음": 2, "경미": 1}
+        DTXT = {5: "심각", 4: "높음", 3: "중간", 2: "낮음", 1: "경미"}
+        rec = []
+        for n, d in dmg:
+            ndmg += 1
+            f = allfiles.get(d.get("번호", ""), {})
+            raw = re.sub(r"\s", "", d.get("정도", ""))
+            lv = next((v for k, v in DLV.items() if k in raw), None)
+            if lv is None:
+                m = re.search(r"[1-5]", raw)
+                lv = int(m[0]) if m else None
+            task = f.get("과제") or d.get("과제", "")
+            is_vital = task in fscore
+            copy_ = f.get("이중", "")
+            notes = []
+            if lv is None:
+                notes.append("피해정도는 1~5(경미·낮음·중간·높음·심각)")
+            if not f:
+                notes.append("기록물철 목록(--files)에 없는 관리번호 — 미리 만든 목록과 대조(7.4.1)")
+            if lv and lv >= 4 and not copy_:
+                notes.append("현재 기술로 복구 불가한 손상인데 복본 없음")
+            if lv and lv >= 3 and is_vital:
+                if copy_:
+                    rec.append((-fscore.get(task, 0), -lv, task, f.get("철", "") or d.get("철", ""), d.get("번호", ""), copy_, f.get("보호위치", "")))
+                else:
+                    rec.append((-fscore.get(task, 0), -lv, task, f.get("철", "") or d.get("철", ""), d.get("번호", ""), "", ""))
+            dv.append([task, f.get("철", "") or d.get("철", ""), d.get("번호", ""), f.get("매체", "") or d.get("매체", ""),
+                       f"{DTXT[lv]}({lv})" if lv else d.get("정도", ""), d.get("내용", ""), "필수" if is_vital else "", copy_, f.get("보호위치", ""), " · ".join(notes)])
+        dv.append([])
+        for lv in (5, 4, 3, 2, 1):
+            dv.append([f"{DTXT[lv]}({lv})", ["기록매체 특성을 완전히 잃어 활용 불가, 현재 기술로 복구 불가", "절반 이상 해독 가능하나 손상 부분은 복구 불가",
+                                            "일부 소실, 해독 가능, 손상 부분 복구 가능", "기록 부분 직접 손상 없음, 보존처리 필요", "기록 부분 직접 손상 없음, 보존처리 불필요"][5 - lv]])
+        rv = wb.create_sheet("업무복구 목록")
+        rv.append(["복구 순위", "단위과제", "기록물철", "관리번호", "이용할 복본", "복본 위치", "조치"])
+        for i, r in enumerate(sorted(rec), 1):
+            nrec += 1
+            rv.append([i, r[2], r[3], r[4], r[5], r[6], "보호기관 장의 승인 후 복본으로 이용(책임자·목적·대상·기간), 이용 뒤 반납·내역 통보(7.2)" if r[5]
+                       else ("복본 없음·원본은 현재 기술로 복구 불가 — 다른 기관 보유분·관련 기록 확인, 복구 뒤 보호계획 재검토" if -r[1] >= 4
+                             else "복본 없음 — 원본 응급복구(disaster-recovery) 후 이용, 복구 뒤 복본 제작")])
+        rv.append([])
+        rv.append(["순위 기준", "필수 과제 중 피해 '중간(3)' 이상 → 기능성 점수가 높은 업무부터, 같으면 피해가 큰 것부터(7.4.2)"])
+        us = wb.create_sheet("이용 대장")
+        us.append(["관리번호", "이용기관", "이용 책임자", "목적", "대상", "기간", "보호기관 승인일", "이용 매체(복본)", "반납일", "이용 내역 통보일"])
+        for r in sorted(rec):
+            us.append([r[4], "", "", "", "", "", "", r[5] or "", "", ""])
     sch = wb.create_sheet("일정·기준")
     oct31 = dt.date(a.year, 10, 31)
     for line in [
@@ -182,7 +247,8 @@ def main() -> int:
             sh.column_dimensions[openpyxl.utils.get_column_letter(i + 1)].width = w
     os.makedirs(os.path.dirname(a.out) or ".", exist_ok=True)
     wb.save(a.out)
-    print(f"단위과제 {len(tasks)} · 필수 {len(vital)} · 평가 필요 {todo} · 확인할 것 {issues_n} · 관리목록 철 {nfiles} → {a.out}")
+    print(f"단위과제 {len(tasks)} · 필수 {len(vital)} · 평가 필요 {todo} · 확인할 것 {issues_n} · 관리목록 철 {nfiles}"
+          + (f" · 피해 {ndmg}철 · 업무복구 대상 {nrec}" if a.damage else "") + f" → {a.out}")
     return 0
 
 
