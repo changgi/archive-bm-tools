@@ -1291,6 +1291,60 @@ def main():
                  and "\r\n" in icsx and any(r and r[0] == "인력 배치" and r[2] == "미달" and "2명" in r[1] for r in lvv) and lvv[-1][0] == "교육")
     check("연간 일정 NAK 18: 월별 업무·5/31(제33조)·6/30·8/31·10/31 기한 .ics, 수준 체크리스트, 전문요원 1/4", ok_yp, oyp)
 
+    # 과거 공문서 분류번호 → 당시 보존기간(1985·1992·1997 표)
+    xlsx(f"{t}/옛철.xlsx", [["관리번호", "분류번호", "생산연도", "제목", "보존기간"],
+                          ["L-1", "01000", "1988", "기본정책방침 관계철", "10년"], ["L-2", "02110", "1994", "한국표준산업분류 개정", "10년"],
+                          ["L-3", "20112", "1998", "임차대장", "5년"], ["L-4", "99999", "1993", "가상", "3년"], ["L-5", "01000", "1980", "옛 철", ""], ["L-7", "127", "1970", "보존문서 기록대장", "10년"], ["L-8", "111", "1981", "장기계획관계문서", "3년"], ["L-9", "111-24", "1982", "기본운영계획 수정", "1년"], ["L-10", "111-99", "1982", "계획", "3년"],
+                          ["L-6", "01000", "2005", "새 철", ""]])
+    clg, olg = run([S("retention-review", "scripts", "legacy_lookup.py"), f"{t}/옛철.xlsx", "-o", f"{t}/산출/옛철.xlsx"])
+    lg = {r[1]: r for r in openpyxl.load_workbook(f"{t}/산출/옛철.xlsx")["대조"].iter_rows(min_row=2, values_only=True)} if os.path.exists(f"{t}/산출/옛철.xlsx") else {}
+    check("과거 공문서 분류번호(1964·1985·1992·1997표): 판 고르기·당시 보존기간·지금보다 길면 표시·번호 없음·범위 밖 연도",
+          clg == 1 and lg["L-1"][5] == "1985" and "영구" in str(lg["L-1"][10]) and "짧음" in str(lg["L-1"][10])
+          and lg["L-2"][5] == "1992" and "10년" in str(lg["L-2"][10]) and "짧음" not in str(lg["L-2"][10])
+          and lg["L-3"][5] == "1997" and "짧음" in str(lg["L-3"][10]) and "없음" in str(lg["L-4"][10])
+          and lg["L-5"][5] == "1979" and "10년" in str(lg["L-8"][8]) and "짧음" in str(lg["L-8"][10]) and "기본운영계획" in str(lg["L-9"][6]) and "3년" in str(lg["L-9"][7]).split("/")[0] and "짧음" in str(lg["L-9"][10]) and "없음" in str(lg["L-10"][10]) and lg["L-7"][5] == "1964" and "영구" in str(lg["L-7"][10]) and "짧음" in str(lg["L-7"][10]) and "2000년 이후" in str(lg["L-6"][10]), olg + str({k: v[10] for k, v in lg.items()}))
+
+    # 중앙행정기관 고유업무 보존기간 준칙(2021) 대조
+    xlsx(f"{t}/환경기준표.xlsx", [["단위과제코드", "단위과제명", "보존기간"], ["X1", "기본계획 추진실적 작성", "10년"],
+                                ["X2", "시행계획의 적정성 검토", "30년"], ["X3", "가상 전혀 다른 과제", "5년"]])
+    cuq, ouq = run([S("retention-review", "scripts", "unique_task_lookup.py"), f"{t}/환경기준표.xlsx", "--org", "환경부", "-o", f"{t}/산출/고유대조.xlsx"])
+    uq = {r[1]: r for r in openpyxl.load_workbook(f"{t}/산출/고유대조.xlsx")["대조"].iter_rows(min_row=2, values_only=True)} if os.path.exists(f"{t}/산출/고유대조.xlsx") else {}
+    check("중앙행정기관 고유업무 준칙(2021) 대조: 이름 맞춤·짧은 보존기간 표시·같음·안 맞는 과제 제외", cuq == 1
+          and "짧음" in str(uq.get("X1", [""] * 10)[9]) and uq.get("X2", [""] * 10)[9] == "같음" and "X3" not in uq, ouq + str(uq))
+    xlsx(f"{t}/감사기준표.xlsx", [["단위과제코드", "단위과제명", "보존기간"], ["Y1", "공공기관 결산검사 보고", "10년"]])
+    cu12, ou12 = run([S("retention-review", "scripts", "unique_task_lookup.py"), f"{t}/감사기준표.xlsx", "--org", "감사원", "--edition", "2012", "-o", f"{t}/산출/고유대조12.xlsx"])
+    u12 = {r[1]: r for r in openpyxl.load_workbook(f"{t}/산출/고유대조12.xlsx")["대조"].iter_rows(min_row=2, values_only=True)} if os.path.exists(f"{t}/산출/고유대조12.xlsx") else {}
+    check("중앙행정기관 고유업무 준칙 2012판(--edition 2012) 대조", cu12 == 1 and u12.get("Y1", [""] * 10)[6] == "영구" and "짧음" in str(u12.get("Y1", [""] * 10)[9]), ou12 + str(u12))
+    # 기관별 기록물분류기준표(2005~2012 PDF) 색인·읽기·대조
+    csp, osp = run([S("retention-review", "scripts", "scheme_pdf_lookup.py"), "--org", "강릉시", "--year", "2009"])
+    sp_find = csp == 0 and "2008-01-31" in osp and "2009년 말 시행 중" in osp.split("2008-01-31")[1].split("\n")[0]
+    try:
+        from reportlab.pdfgen import canvas as _cv
+        from reportlab.pdfbase import pdfmetrics as _pm
+        from reportlab.pdfbase.cidfonts import UnicodeCIDFont as _cf
+        import pdfplumber  # noqa: F401
+        _pm.registerFont(_cf("HYSMyeongJo-Medium"))
+        cv = _cv.Canvas(f"{t}/분류기준표.pdf")
+        cv.setFont("HYSMyeongJo-Medium", 9)
+        for k, ln in enumerate(["가상시 기록물분류기준표 보졲 기갂",
+                                "4200075 가상시 민원과 총무행정 행정관리 행정관리기타 ZA000017 관인관리 영구 원본 자료관",
+                                "4200075 가상시 민원과 지방자치 주민참여 읍면동주민자치 PA214533 젂세확정일자부여 10년 원본 자료관",
+                                "4200075 가상시 민원과 지방자치 지방산업 지역산업 PA001210 가스안젂관리 20 원본 기록관 없음"]):
+            cv.drawString(40, 800 - 14 * k, ln)
+        cv.save()
+        xlsx(f"{t}/분류목록.xlsx", [["단위업무코드", "단위업무명", "보존기간"], ["PA214533", "전세확정일자부여", "5년"], ["ZA000017", "관인관리", "영구"], ["PA999999", "가상", "3년"]])
+        csp2, osp2 = run([S("retention-review", "scripts", "scheme_pdf_lookup.py"), "--pdf", f"{t}/분류기준표.pdf", "--list", f"{t}/분류목록.xlsx", "-o", f"{t}/산출/분류기준표대조.xlsx"])
+        wsp = openpyxl.load_workbook(f"{t}/산출/분류기준표대조.xlsx") if os.path.exists(f"{t}/산출/분류기준표대조.xlsx") else None
+        dz = {r[1]: r for r in wsp["대조"].iter_rows(min_row=2, values_only=True)} if wsp else {}
+        rd = {r[3]: r for r in wsp["분류기준표"].iter_rows(min_row=2, values_only=True)} if wsp else {}
+        sp_pdf = (csp2 == 1 and "짧음" in str(dz.get("PA214533", [""] * 7)[6]) and dz.get("ZA000017", [""] * 7)[6] == "같음"
+                  and "없음" in str(dz.get("PA999999", [""] * 7)[6]) and rd.get("PA214533", [""] * 7)[4] == "전세확정일자부여"
+                  and rd.get("PA001210", [""] * 7)[5] == "20년")
+        osp += osp2 + str(dz) + str(rd)
+    except ImportError:
+        sp_pdf = True  # reportlab·pdfplumber 없으면 PDF 부분은 건너뜀
+    check("기록물분류기준표 PDF: 판 찾기(그해 말 시행 판)·읽기(글자 보정·줄 넘김)·목록 대조", sp_find and sp_pdf, osp)
+
     # 2026 지침 수행업무 리스트 점검표
     ctk, otk = run([S("evaluation-readiness", "scripts", "task_checklist.py"), "--role", "처리과", "-o", f"{t}/산출/수행업무.xlsx"])
     tk_ok = False
