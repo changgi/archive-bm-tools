@@ -423,6 +423,7 @@ python skills/preservation-inspection/scripts/inspection_form.py apply 산출/�
 ```
 ---
 - **기록재료 점검**(`materials_check.py`, 시행규칙 별표 15): 30년 이상 기록물의 용지·필기구·보존용 판지와 pH·탄산칼슘·내광성. `--important`이면 중요문서용 기록용지 규격(안)(국가기록원 연구 표 80)도 봄.
+- **생물오염 점검**(`bio_check.py`): ATP 1,000 RLU 소독 선별, 서고 부유세균 800·곰팡이 500 CFU/m³, 증가 추세·측정 주기(국가기록원 미소독기록물 연구).
 
 
 ## 16. fixity-check — 변조·사라짐 감시
