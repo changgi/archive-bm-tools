@@ -656,11 +656,14 @@ def main():
         import warnings as _w
         _w.filterwarnings("ignore")
         from hwpx.document import HwpxDocument as _D
+        import importlib.metadata as _md
+        if int(_md.version("python-hwpx").split(".")[0]) >= 7 and importlib.util.find_spec("hwpx_automation") is None:
+            raise ImportError("python-hwpx 7.0은 마크다운 변환이 python-hwpx-automation으로 빠짐")
         _d = _D.new()
         _d.add_paragraph("수신  {{수신}}")
         _tb = _d.add_table(1, 2)
         _tb.set_cell_text(0, 0, "담당자")
-        _d.save_to_path(f"{t}/hw/서식.hwpx")
+        (_d.save_to_path if hasattr(type(_d), "save_to_path") else _d.save)(f"{t}/hw/서식.hwpx")
         open(f"{t}/hw/값.csv", "w", encoding="utf-8").write("키,값\n수신,가상시 기록관장\n칸:담당자,기록연구사 김가상\n")
         c1, o1 = run([S("hwpx-report", "scripts", "make_hwpx.py"), "--md", f"{t}/hw/보고.md", "-o", f"{t}/hw/보고.hwpx"])
         c2, o2 = run([S("hwpx-report", "scripts", "make_hwpx.py"), "--template", f"{t}/hw/서식.hwpx", "--values", f"{t}/hw/값.csv",

@@ -138,7 +138,10 @@ def write_hwpx(path, rows, year):
             t.set_cell_text(i, c, r[k] or "-")
     if len(rows) > 50:
         d.add_paragraph(f"※ 나머지 {len(rows) - 50}건은 붙임 평가심의서.xlsx 참조")
-    d.save_to_path(path)
+    try:
+        d.save_to_path(path)  # python-hwpx 6.x
+    except AttributeError:
+        d.save(path)  # python-hwpx 7.0부터 save(path)로 합쳐짐
     return True
 
 

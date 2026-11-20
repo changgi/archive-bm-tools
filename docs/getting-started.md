@@ -49,7 +49,7 @@ flowchart LR
 터미널(Windows는 **PowerShell**)에 붙여 넣고 Enter:
 
 ```bash
-python -m pip install openpyxl pypdf pikepdf pillow numpy python-docx python-hwpx holidays
+python -m pip install openpyxl pypdf pikepdf pillow numpy python-docx "python-hwpx<7" holidays
 ```
 
 > macOS에서 `python`이 없다고 나오면 `python3 -m pip install ...`로 바꿔 쓰세요.
