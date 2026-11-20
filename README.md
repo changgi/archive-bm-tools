@@ -7,7 +7,7 @@
 생산현황 통보부터 이관·보존·공개·평가·폐기까지 —<br>
 반복되는 점검과 서식 작성은 스크립트가, 판단과 제출은 사람이.
 
-![version](https://img.shields.io/badge/records--skills-v2.12.2-1f6feb)
+![version](https://img.shields.io/badge/records--skills-v2.12.3-1f6feb)
 ![skills](https://img.shields.io/badge/스킬-28종-2da44e)
 ![tests](https://img.shields.io/badge/시험-49%2F49%20통과-2da44e)
 ![python](https://img.shields.io/badge/Python-3.10%2B-3776ab?logo=python&logoColor=white)

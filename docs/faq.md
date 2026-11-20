@@ -43,6 +43,9 @@ PowerShell에서는 `irm https://claude.ai/install.ps1 | iex`를 쓰세요. `&&`
 ### `/`를 눌러도 `records-skills:`가 안 보여요
 `/plugin` → **Installed** 탭에서 `records-skills`가 켜져(enabled) 있는지 봅니다. **Errors** 탭에 이유가 나옵니다. 설치 직후라면 `/reload-plugins`를 실행합니다.
 
+### macOS에서 `python: command not found`
+macOS에는 기본으로 `python3`만 있습니다. 작업 폴더의 `CLAUDE.md`(2.12.3 템플릿)에 "`python`이 없으면 `python3`로 실행"이 들어 있어 Claude가 알아서 바꿔 씁니다. 예전 템플릿을 복사했다면 [`templates/CLAUDE.md`](../plugins/records-skills/templates/CLAUDE.md)를 다시 복사하세요.
+
 ### `ModuleNotFoundError: No module named 'openpyxl'`
 꾸러미가 설치되지 않았습니다.
 ```bash

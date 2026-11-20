@@ -14,6 +14,10 @@
 - 기록관리기준표: `참조/기록관리기준표.xlsx` (기관 파일로 교체)
 - 근거 표준 요약: 각 스킬의 `references/`
 
+## 실행
+- 스킬의 스크립트는 `python`으로 실행한다. `python`이 없으면(macOS 기본) `python3`, Windows에서 둘 다 안 되면 `py`로 실행한다.
+- 필요한 꾸러미가 없다는 오류(`ModuleNotFoundError`)가 나면 담당자에게 알리고, 허락을 받은 뒤 `<위에서 쓴 이름> -m pip install <꾸러미>`로 설치한다.
+
 ## 끝나면
 - 산출물마다 `records-qa-gate`를 실행하고, 실패 항목이 0건일 때만 사람에게 넘긴다.
 - 처리 이력은 `logs/processing_log.jsonl`에 자동으로 남는다(훅).
