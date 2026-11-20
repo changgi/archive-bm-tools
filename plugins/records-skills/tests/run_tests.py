@@ -999,6 +999,14 @@ def main():
     ew = " ".join(str(c) for r in openpyxl.load_workbook(f"{t}/산출/연장.xlsx")["빈칸 점검"].iter_rows(values_only=True) for c in r if c) if ce == 0 else ""
     ca_, oa_ = run([S("records-forms", "scripts", "make_form.py"), "annotate", "--set", "기관명=가상시", "-o", f"{t}/산출/부기.xlsx"])
     at = " ".join(str(c) for r in openpyxl.load_workbook(f"{t}/산출/부기.xlsx")["서식"].iter_rows(values_only=True) for c in r if c) if ca_ == 0 else ""
+    xlsx(f"{t}/촬영원본.xlsx", [["철분류번호", "철제목", "쪽수", "시작", "끝"], ["F-1", "가상 대장", "120", "1", "120"], ["F-2", "", "", "121", "180"]])
+    cmf, omf = run([S("records-forms", "scripts", "make_form.py"), "microfilm", "--list", f"{t}/촬영원본.xlsx", "--set", "필름번호=MF-1", "-o", f"{t}/산출/촬영.xlsx"])
+    clm, olm = run([S("records-forms", "scripts", "make_form.py"), "limited", "--set", "성명(기관·단체명)=가상", "-o", f"{t}/산출/제한열람.xlsx"])
+    lmt = " ".join(str(c) for r in openpyxl.load_workbook(f"{t}/산출/제한열람.xlsx")["서식"].iter_rows(values_only=True) for c in r if c) if clm == 0 else ""
+    mft = [r for r in openpyxl.load_workbook(f"{t}/산출/촬영.xlsx")["서식"].iter_rows(values_only=True)] if cmf == 0 else []
+    check("법정 서식 별지 제5호(마이크로필름 촬영계획서)·제14호(제한적 열람신청서, 주민등록번호는 파일에 안 적음)",
+          any(r[0] == "F-1" and r[4] == "1" for r in mft) and "제37조①" in lmt and "주민등록번호는 이 파일에 적지 않고" in lmt and "주민등록번호\"" not in lmt
+          and "소속" in lmt, omf + olm)
     check("부기·정정 요청서: 처리 방법(훈령 제224호 3단계·시행규칙 제14조 두 선)·조문 번호 차이 안내", ca_ == 0
           and "두 선" in at and "보존매체에도" in at and "제62조의3" in at, oa_)
     check("법정 서식 별지 제1호의2(2027 시행): 이관 기간 연장·일정 연기 목록 빈칸·희망시기·사유", ce == 0
