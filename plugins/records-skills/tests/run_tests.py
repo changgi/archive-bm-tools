@@ -481,6 +481,32 @@ def main():
           cst == 1 and "법정 최소 미달 5" in ost and "확인 필요 1" in ost and sst.get("산업안전보건위원회 운영", ("",))[0] == "2년"
           and sst["산업안전보건위원회 운영"][2] == "3년" and sst["작업환경측정"][2] == "5년" and sst["부가가치세 신고"][2] == "5년"
           and sst["기간제 근로자 급여 지급"][1] == "충족" and sst["복무 관리"][1].startswith("확인 필요") and "회의 운영 일반" not in sst, ost + str(sst))
+    open(f"{t}/법정기준표2.csv", "w", encoding="utf-8-sig").write("단위과제명,보존기간\n장애인 인식개선 교육,1년\n개인정보처리시스템 접속기록 관리,1년\n"
+        "교사내 공기질 측정,5년\n어린이집 CCTV 운영,1년\n재난상황 관리,3년\n공무원 제안 관리,1년\n")
+    cs2, os2 = run([S("retention-review", "scripts", "statutory_check.py"), f"{t}/법정기준표2.csv", "-o", f"{t}/산출/법정점검2.xlsx"])
+    w2 = openpyxl.load_workbook(f"{t}/산출/법정점검2.xlsx") if os.path.exists(f"{t}/산출/법정점검2.xlsx") else None
+    s2 = {}
+    for r in (w2["점검"].iter_rows(min_row=2, values_only=True) if w2 else []):
+        s2.setdefault(r[2], []).append((r[4], r[7], r[10]))
+    cf, ofd = run([S("retention-review", "scripts", "statutory_check.py"), "--find", "인식개선 교육"])
+    check("법정 보존기간(공공기관 공통): 장애인 인식개선 3년(두 법)·재난상황 5년·제안 2년 미달, 접속기록 1년·CCTV 60일 충족, 학교 교사 공기질 제외, 전체 목록 후보 시트·--find",
+          cs2 == 1 and "법정 최소 미달 4" in os2 and any(x[0] == "장애인복지법" and x[2].startswith("법정") for x in s2.get("장애인 인식개선 교육", []))
+          and any(x[1] == "5년" and x[2].startswith("법정") for x in s2.get("재난상황 관리", [])) and any(x[1] == "60일" and x[2] == "충족" for x in s2.get("어린이집 CCTV 운영", []))
+          and any(x[1] == "1년" and x[2] == "충족" for x in s2.get("개인정보처리시스템 접속기록 관리", [])) and "교사내 공기질 측정" not in s2
+          and "전체 목록 후보" in w2.sheetnames and "장애인복지법 제25조의2" in ofd and "전체 목록" in ofd, os2 + str(s2) + ofd[-300:])
+    import importlib.util as _ilu
+    _sp = _ilu.spec_from_file_location("scb", S("retention-review", "scripts", "statutory_catalog_build.py"))
+    _scb = _ilu.module_from_spec(_sp)
+    _sp.loader.exec_module(_scb)
+    _body = ("가상법 시행규칙 제1조(목적) 이 규칙은 가상법 시행에 필요한 사항을 정한다. 제2조(기록의 보존) ① 가상관리자는 점검기록을 작성한 날부터 3년간 보존하여야 한다. "
+             "② 2015년 1월 1일부터 시행한다. 제3조(서류의 보존) 서류의 보존기간은 다음과 같다. 1. 가상 명부 : 5년 2. 가상 대장 : 10년 "
+             "제4조(과태료) 기록을 3년간 보존하지 아니한 자에게는 과태료를 부과한다. 제5조(신고) 변경한 날부터 30일 이내에 신고하여야 한다. "
+             "부 칙 <가상부령 제1호, 2026. 1. 1.> 제1조(시행일) 이 규칙은 공포한 날부터 시행한다. 제2조(경과조치) 종전 기록은 7년간 보존하여야 한다.")
+    _ex = _scb.extract("가상법 시행규칙 [시행 2026. 1. 1.] [가상부령 제1호]", _body)
+    _ks = {(r["조문"].split("(")[0], r["보존기간"]) for r in _ex}
+    check("법정 보존기간 목록 다시 만들기(추출기): 'N년간 보존'·나열형 'N년'·기산 문구, 날짜·과태료·N일 이내 신고·부칙 경과조치 제외",
+          _ks == {("제2조", "3년"), ("제3조", "5년"), ("제3조", "10년")} and any("작성한 날부터" in r["기산(문구)"] for r in _ex)
+          and all(r["원문"].startswith("https://www.law.go.kr/법령/가상법시행규칙/") for r in _ex), str(_ex))
 
     # 생산 시점 기록화(record-by-design): BagIt 패키지·NAK 8 메타데이터·RiC-O·사건 이력·고정성
     RBD = S("record-by-design", "scripts", "capture.py")
