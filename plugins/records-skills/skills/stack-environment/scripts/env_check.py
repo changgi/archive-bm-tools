@@ -247,18 +247,32 @@ def main() -> int:
         mavg = [(sum(p[1] for p, _ in lst) / len(lst), sum(p[2] for p, _ in lst) / len(lst)) for _, lst in sorted(bymon.items())]
         mdt = max((abs(b[0] - a_[0]) for a_, b in zip(mavg, mavg[1:])), default=0)
         mdh = max((abs(b[1] - a_[1]) for a_, b in zip(mavg, mavg[1:])), default=0)
-        if media == "종이":
-            niso.append((stack, max(p[1] for p in pts), min(p[2] for p in pts), max(p[2] for p in pts), dt_max, dh_max, mdt, mdh))
-    if niso:  # 참고: NISO TR01-1995 「종이기록물 저장 환경 가이드라인」(국가기록포털 해외표준) — 법정 기준(별표 6)이 우선, 비교용
-        nz = wb.create_sheet("참고 NISO TR01(종이)")
-        nz.append(["서고", "최고 온도(℃)", "서고 전용 18.3℃(65°F) 이하", "열람 겸용 21.1℃(70°F) 이하", "습도 범위(%)", "30~50% 안",
-                   "하루 온도 폭(℃)", "≤2.2℃(±2°F)", "하루 습도 폭(%)", "≤6%(±3%)", "월 평균 온도 변화(℃)", "≤1.7℃(3°F)", "월 평균 습도 변화(%)", "≤3%"])
+        niso.append((stack, media, max(p[1] for p in pts), min(p[1] for p in pts), min(p[2] for p in pts), max(p[2] for p in pts), dt_max, dh_max, mdt, mdh))
+    if niso:  # 참고 해외 기준(국가기록포털 해외표준, 비규범 비교 — 판정은 시행령 별표 6)
+        nz = wb.create_sheet("참고 해외 기준")
+        nz.append(["서고", "매체", "기준", "항목", "측정", "참고값", "충족"])
         ok = lambda f: "예" if f else "아니오"
-        for st, tmax, hmin, hmax, dtm, dhm, mdt, mdh in niso:
-            nz.append([st, round(tmax, 1), ok(tmax <= 18.3), ok(tmax <= 21.1), f"{hmin:.0f}~{hmax:.0f}", ok(hmin >= 30 and hmax <= 50),
-                       round(dtm, 1), ok(dtm <= 2.2), round(dhm, 1), ok(dhm <= 6), round(mdt, 1), ok(mdt <= 1.7), round(mdh, 1), ok(mdh <= 3)])
+        NAA = {"종이": (20, 2, 50, 5), "자기": (18, 2, 35, 5), "필름": (5, None, 35, 5), "전자": (18, 2, 35, 5)}  # 호주 NAA 물리적 보관 표준 부속표
+        for st, med, tmax, tmin, hmin, hmax, dtm, dhm, mdt, mdh in niso:
+            rows = []
+            if med in ("종이", "행정박물"):
+                rows += [("NISO TR01-1995(미국)", "최고 온도", f"{tmax:.1f}℃", "서고 전용 18.3℃·열람 겸용 21.1℃ 이하", ok(tmax <= 21.1) + ("" if tmax <= 18.3 else " (서고 전용 기준은 초과)")),
+                         ("NISO TR01-1995(미국)", "습도 범위", f"{hmin:.0f}~{hmax:.0f}%", "30~50%", ok(hmin >= 30 and hmax <= 50)),
+                         ("NISO TR01-1995(미국)", "하루 폭", f"{dtm:.1f}℃ · {dhm:.0f}%", "≤2.2℃(±2°F) · ≤6%(±3%)", ok(dtm <= 2.2 and dhm <= 6)),
+                         ("NISO TR01-1995(미국)", "월 평균 변화", f"{mdt:.1f}℃ · {mdh:.0f}%", "≤1.7℃(3°F) · ≤3%", ok(mdt <= 1.7 and mdh <= 3))]
+            rows += [("Archives NZ 저장 표준 S2(뉴질랜드) 요건 26~29", "습도 범위(보존기록)", f"{hmin:.0f}~{hmax:.0f}%", "30~60%, 넘지 않음", ok(hmin >= 30 and hmax <= 60)),
+                     ("Archives NZ 저장 표준 S2(뉴질랜드) 요건 26~29", "최고 온도", f"{tmax:.1f}℃", "25℃ 넘지 않음", ok(tmax <= 25)),
+                     ("Archives NZ 저장 표준 S2(뉴질랜드) 요건 26~29", "하루 변동", f"{dtm:.1f}℃ · {dhm:.0f}%", "≤4℃ · ≤10%", ok(dtm <= 4 and dhm <= 10)),
+                     ("Archives NZ 저장 표준 S2(뉴질랜드) 요건 26~29", "기간 전체 변동(1년 자료면 연간)", f"{tmax - tmin:.1f}℃ · {hmax - hmin:.0f}%", "≤10℃ · ≤20%", ok(tmax - tmin <= 10 and hmax - hmin <= 20))]
+            if med in NAA:
+                tc, tt, hc, ht = NAA[med]
+                tr = f"{tc}±{tt}℃" if tt else f"{tc}℃ 미만"
+                okt = (tmax <= tc + tt and tmin >= tc - tt) if tt else tmax < tc
+                rows.append(("NAA 물리적 보관 표준(호주) 부속표", "온도·습도", f"{tmin:.1f}~{tmax:.1f}℃ · {hmin:.0f}~{hmax:.0f}%", f"{tr} · {hc}±{ht}%", ok(okt and hc - ht <= hmin and hmax <= hc + ht)))
+            for r in rows:
+                nz.append([st, med, *r])
         nz.append([])
-        nz.append(["안내", "NISO TR01-1995 제안값(비규범, 비교용): 온도 서고 전용 65°F·열람 겸용 70°F 이하, 습도 30~50%, 하루 ±2°F·±3%, 월 변화 3°F·3%, 창·형광등 빛은 415nm 이하 차단, SO2·NO2·O3 5~10ppb, 공기 여과 서고 90~95%. 국내 법정 기준은 시행령 별표 6(종이 20±2℃·50±5%)이다."])
+        nz.append(["안내", "", "해외 기준은 비교용 참고값이다. 판정은 시행령 별표 6(예: 종이 20±2℃·50±5%)이 기준. 그 밖의 참고: NISO TR01 — 창·형광등 빛 415nm 이하 차단, SO2·NO2·O3 5~10ppb, 서고 공기 여과 90~95% / NZ S2 — 감시 기록 보관(요건 30) / NAA — 컬러 사진·필름은 5℃ 미만 35%, 흑백 18℃ 미만 35%."])
     ar = wb.create_sheet("서고 면적")
     ar.append(["항목", "값", "근거"])
     if not a.books and a.pages:

@@ -1315,9 +1315,10 @@ def main():
         area = [r for r in we["서고 면적"].iter_rows(values_only=True)]
         ok_env = (sm["1서고"][7] == 62.5 and sm["1서고"][9] == 29 and str(sm["1서고"][13]).startswith("조치 필요")
                   and sm["2서고"][3] == "40±5%" and str(sm["2서고"][13]).startswith("기준 안") and "198.0㎡" in str(area[1][1]) and "부족" in str(area[2][2]))
-        nzr = [r for r in we["참고 NISO TR01(종이)"].iter_rows(min_row=2, max_row=2, values_only=True)] if "참고 NISO TR01(종이)" in we.sheetnames else []
-        ok_env = ok_env and bool(nzr) and nzr[0][0] == "1서고" and "2서고" not in [r[0] for r in we["참고 NISO TR01(종이)"].iter_rows(min_row=2, values_only=True)]
-    check("서고 환경: 별표 6 매체별 기준, 이탈 시간, 면적 계산, 종이 서고 NISO TR01 참고 비교", ok_env, ov)
+        nzr = [r for r in we["참고 해외 기준"].iter_rows(min_row=2, values_only=True) if r and r[0]] if "참고 해외 기준" in we.sheetnames else []
+        ok_env = ok_env and any(r[0] == "1서고" and r[2].startswith("NISO") for r in nzr) and not any(r[0] == "2서고" and r[2].startswith("NISO") for r in nzr) \
+            and any(r[0] == "2서고" and r[2].startswith("NAA") and "18±2℃" in r[5] for r in nzr) and any("NZ" in r[2] for r in nzr)
+    check("서고 환경: 별표 6 매체별 기준, 이탈 시간, 면적 계산, 해외 기준(NISO TR01·NZ S2·NAA) 참고 비교", ok_env, ov)
 
     # 법정 서식: 색인목록 쪽표시·100매, 반출 30년 이상 경고, 폐기 금지 요청서
     xlsx(f"{t}/색인원본.xlsx", [["철분류번호", "철제목", "생산연도", "생산일자", "등록번호", "제목", "쪽수", "기록물형태", "보존기간"],
@@ -1453,6 +1454,7 @@ def main():
         lab_ = {r[0]: r for r in openpyxl.load_workbook(f"{t}/산출/응급.xlsx")["포장 라벨"].iter_rows(min_row=2, values_only=True)}
         wd_ = openpyxl.load_workbook(f"{t}/산출/응급.xlsx")
         stD = {r[0]: r for r in wd_["상태 체크리스트(부속서 D)"].iter_rows(min_row=2, values_only=True)}
+        assert "건조 방식·외부 위탁" in wd_.sheetnames and any("1.2입방피트" in str(r[1]) for r in wd_["건조 방식·외부 위탁"].iter_rows(values_only=True))
         envE = " ".join(str(c) for r in wd_["작업공간(부속서 E)"].iter_rows(values_only=True) for c in r if c)
         kitA = [r[1] for r in wd_["물품·장비(부속서 A)"].iter_rows(min_row=2, values_only=True)]
         ok_annex = (stD["R-2"][1] == "③" and stD["R-3"][2] == "E" and stD["R-3"][4] == "○" and stD["R-1"][7] == 3 and stD["R-1"][6] == "1"
