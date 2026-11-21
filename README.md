@@ -9,7 +9,7 @@
 
 ![version](https://img.shields.io/badge/records--skills-v2.22.0-1f6feb)
 ![skills](https://img.shields.io/badge/스킬-44종-2da44e)
-![tests](https://img.shields.io/badge/시험-127%2F127%20통과-2da44e)
+![tests](https://img.shields.io/badge/시험-128%2F128%20통과-2da44e)
 ![python](https://img.shields.io/badge/Python-3.10%2B-3776ab?logo=python&logoColor=white)
 ![law](https://img.shields.io/badge/근거-시행령%202026.8.25.-8250df)
 ![license](https://img.shields.io/badge/코드-MIT-lightgrey)
@@ -39,7 +39,7 @@
 ## 🆕 v2.22.0에서 달라진 것
 
 - 🆕 **record-by-design**(43번째 스킬): 현용 단계에서 만든 파일이 "누가·무슨 업무로·왜·무엇과 이어져" 만들었는지와 원본 그대로임을 스스로 증명하는 기록 패키지로 만들고, 같은 메타데이터에서 여러 매개로 다시 만듭니다. `batch`로 목록 한 장에서 여러 패키지를, `catalog`로 패키지 전체의 목록·공개데이터(JSONL)·연결 그래프(JSON-LD)·검색 페이지를 만듭니다. [사용법](docs/skills.md#43-record-by-design--생산-시점-기록화)
-- 🔭 **근거 자료 변화 감시**: 국가기록포털·법제처 입법예고·국가법령정보센터 29곳을 매주(GitHub Actions) 지난번과 비교해, 새 게시물·첨부·법령 시행일이 바뀌면 보고서와 PR을 엽니다. [사용법](docs/skills.md#3-records-qa-gate--내보내기-전-품질-관문)
+- 🔭 **근거 자료 변화 감시**: 국가기록포털·법제처 입법예고·국가법령정보센터 33곳을 매주(GitHub Actions) 지난번과 비교해, 새 게시물·첨부·법령 시행일이 바뀌면 보고서와 PR을 엽니다. [사용법](docs/skills.md#3-records-qa-gate--내보내기-전-품질-관문)
 - 🔁 **생산 시점 기록화 자동화**: `sweep`(업무 폴더에서 새·바뀐 파일만, 바뀐 파일은 '개정' 관계), `catalog`에 OAI-PMH Dublin Core·Atom 피드·schema.org 구조화 데이터·CSVW·sitemap 추가
 - 🧭 **업무과정 분석·평가 작업지**(KS X ISO TR 26122·TR 21946): 기록관리기준표를 만들거나 정비할 때 단위과제별 순차 분석·기록 요구·위험 평가, `sweep` 설정 초안까지
 - 🔒 **비밀기록물 공개 지침 3종 반영**: 보존기간 말일 ≥ 보호기간 말일 계산 바로잡음, 유형별 이관 준비·재분류 검토서 시트
@@ -50,6 +50,7 @@
 - 🗄️ **데이터세트 평가·폐기 준비**(실행매뉴얼 2020): 보존기간+처분제약이 지난 데이터 영역 → 평가심의서, 확인용 SQL(SELECT만), 폐기 결과 기록부
 - 📗 **간행물 2026 송부지침**(2026. 10.): 기관 기호표·발간주기 기호·생략대상 유형과 기관·비공개 사유 점검
 - 🏺 **행정박물 관리대상 선별**(행정박물 관리지침 2021 표 4): 7개 기준 처리과·기록관 점수 → 70점 중 36점 이상 관리대상, 공직자 선물·관인 폐기공고 안내
+- 🏥 **의료법 법정 보존기간 점검**: 의료기관 기준표 대조에 「의료법 시행규칙」 제15조① 9종(진료기록부·수술기록 10년, 환자 명부·검사소견·방사선 사진·간호·조산 5년, 진단서 부본 3년, 처방전 2년)을 넣어 더 짧은 과제를 '법정 최소 미달'로 표시. 스킬이 근거로 쓰는 법령 4개(의료법 시행규칙·정보공개법 시행규칙·재난안전법·개인정보 보호법)를 감시 목록에 추가
 - python-hwpx 7.0 호환, GitHub Actions에서 LibreOffice까지 설치해 시험
 
 ### v2.21.0
@@ -299,7 +300,7 @@ flowchart LR
 python plugins/records-skills/tests/run_tests.py
 ```
 
-127개(veraPDF·ffmpeg 유무에 따라 1~2개 달라짐) — 스킬 44종의 주요 계산과, 보호 훅이 Windows처럼 `python3`가 없거나 가짜일 때도 꺼지지 않는지까지 확인합니다. 필요 패키지: `openpyxl` `pypdf` `pikepdf` `pillow` `numpy` (선택: `python-docx` `python-hwpx` `holidays`, LibreOffice). Python 3.11·3.12·3.13에서 확인했고, [GitHub Actions](.github/workflows/test.yml)로 3.10~3.13을 돌립니다.
+128개(veraPDF·ffmpeg 유무에 따라 1~2개 달라짐) — 스킬 44종의 주요 계산과, 보호 훅이 Windows처럼 `python3`가 없거나 가짜일 때도 꺼지지 않는지까지 확인합니다. 필요 패키지: `openpyxl` `pypdf` `pikepdf` `pillow` `numpy` (선택: `python-docx` `python-hwpx` `holidays`, LibreOffice). Python 3.11·3.12·3.13에서 확인했고, [GitHub Actions](.github/workflows/test.yml)로 3.10~3.13을 돌립니다.
 
 ---
 

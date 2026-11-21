@@ -465,6 +465,14 @@ def main():
     cmd, omd = run([S("retention-review", "scripts", "sector_guide_lookup.py"), "--sector", "의료", "--find", "응급의료"])
     check("대학·의료 가이드: 유사 단위과제로 맞춤(학생증발급→학생증관리 5년)·짧음 2건·의료 135과제 검색",
           csg == 1 and len(sgr) == 3 and sgr[0][6] == "학생증관리" and sgr[0][8] == "5년" and sgr[2][8] == "준영구" and "/135과제" in omd, osg + omd)
+    open(f"{t}/의료기준표.csv", "w", encoding="utf-8-sig").write("단위과제명,보존기간\n의무기록 관리,5년\n처방전 관리,1년\n수술기록 관리,10년\n간호기록 관리,3년\n진단서 발급,3년\n외래진료계획 수립,5년\n")
+    cml, oml = run([S("retention-review", "scripts", "sector_guide_lookup.py"), f"{t}/의료기준표.csv", "--sector", "의료", "-o", f"{t}/산출/의료가이드.xlsx"])
+    wml = openpyxl.load_workbook(f"{t}/산출/의료가이드.xlsx") if os.path.exists(f"{t}/산출/의료가이드.xlsx") else None
+    mlr = {r[2]: (r[14], r[15], r[16]) for r in wml["대조"].iter_rows(min_row=2, values_only=True)} if wml else {}
+    check("의료법 시행규칙 제15조①: 진료기록 5년·처방전 1년·간호기록 3년 법정 최소 미달, 수술기록 10년·진단서 3년 충족, 해당 없는 과제 비움",
+          cml == 1 and "법정 최소 미달 3" in oml and mlr.get("의무기록 관리", ("",))[0] == "2호 진료기록부" and mlr["처방전 관리"][1] == "2년"
+          and mlr["간호기록 관리"][2].startswith("법정 최소 미달") and mlr["수술기록 관리"][2] == "충족" and mlr["진단서 발급"][2] == "충족"
+          and not mlr["외래진료계획 수립"][0] and "의료법 법정 보존기간" in wml.sheetnames, oml + str(mlr))
 
     # 생산 시점 기록화(record-by-design): BagIt 패키지·NAK 8 메타데이터·RiC-O·사건 이력·고정성
     RBD = S("record-by-design", "scripts", "capture.py")
