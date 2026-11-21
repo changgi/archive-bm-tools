@@ -465,6 +465,67 @@ def main():
     cmd, omd = run([S("retention-review", "scripts", "sector_guide_lookup.py"), "--sector", "의료", "--find", "응급의료"])
     check("대학·의료 가이드: 유사 단위과제로 맞춤(학생증발급→학생증관리 5년)·짧음 2건·의료 135과제 검색",
           csg == 1 and len(sgr) == 3 and sgr[0][6] == "학생증관리" and sgr[0][8] == "5년" and sgr[2][8] == "준영구" and "/135과제" in omd, osg + omd)
+    open(f"{t}/의료기준표.csv", "w", encoding="utf-8-sig").write("단위과제명,보존기간\n의무기록 관리,5년\n처방전 관리,1년\n수술기록 관리,10년\n간호기록 관리,3년\n진단서 발급,3년\n외래진료계획 수립,5년\n")
+    cml, oml = run([S("retention-review", "scripts", "sector_guide_lookup.py"), f"{t}/의료기준표.csv", "--sector", "의료", "-o", f"{t}/산출/의료가이드.xlsx"])
+    wml = openpyxl.load_workbook(f"{t}/산출/의료가이드.xlsx") if os.path.exists(f"{t}/산출/의료가이드.xlsx") else None
+    mlr = {r[2]: (r[14], r[15], r[16]) for r in wml["대조"].iter_rows(min_row=2, values_only=True)} if wml else {}
+    check("의료법 시행규칙 제15조①: 진료기록 5년·처방전 1년·간호기록 3년 법정 최소 미달, 수술기록 10년·진단서 3년 충족, 해당 없는 과제 비움",
+          cml == 1 and "법정 최소 미달 3" in oml and mlr.get("의무기록 관리", ("",))[0] == "2호 진료기록부" and mlr["처방전 관리"][1] == "2년"
+          and mlr["간호기록 관리"][2].startswith("법정 최소 미달") and mlr["수술기록 관리"][2] == "충족" and mlr["진단서 발급"][2] == "충족"
+          and not mlr["외래진료계획 수립"][0] and "의료법 법정 보존기간" in wml.sheetnames, oml + str(mlr))
+    open(f"{t}/법정기준표.csv", "w", encoding="utf-8-sig").write("단위과제명,보존기간,단위과제 설명\n무기계약직 근로계약 관리,1년,\n기간제 근로자 급여 지급,3년,\n"
+        "산업안전보건위원회 운영,1년,\n작업환경측정,3년,\n소방시설 자체점검,1년,\n부가가치세 신고,3년,\n회의 운영 일반,1년,\n복무 관리,1년,휴가계획 취합\n")
+    cst, ost = run([S("retention-review", "scripts", "statutory_check.py"), f"{t}/법정기준표.csv", "-o", f"{t}/산출/법정점검.xlsx"])
+    sst = {r[2]: (r[7], r[10], r[11]) for r in openpyxl.load_workbook(f"{t}/산출/법정점검.xlsx")["점검"].iter_rows(min_row=2, values_only=True)} if os.path.exists(f"{t}/산출/법정점검.xlsx") else {}
+    check("법정 보존기간(근로기준법·산안법·국세기본법·소방): 미달 5·제안(2년→3년, 5년→5년)·충족·설명 낱말은 '확인 필요'·해당 없는 과제 제외",
+          cst == 1 and "법정 최소 미달 5" in ost and "확인 필요 1" in ost and sst.get("산업안전보건위원회 운영", ("",))[0] == "2년"
+          and sst["산업안전보건위원회 운영"][2] == "3년" and sst["작업환경측정"][2] == "5년" and sst["부가가치세 신고"][2] == "5년"
+          and sst["기간제 근로자 급여 지급"][1] == "충족" and sst["복무 관리"][1].startswith("확인 필요") and "회의 운영 일반" not in sst, ost + str(sst))
+    open(f"{t}/법정기준표2.csv", "w", encoding="utf-8-sig").write("단위과제명,보존기간\n장애인 인식개선 교육,1년\n개인정보처리시스템 접속기록 관리,1년\n"
+        "교사내 공기질 측정,5년\n어린이집 CCTV 운영,1년\n재난상황 관리,3년\n공무원 제안 관리,1년\n사회보장급여 신청 및 조사,10년\n")
+    cs2, os2 = run([S("retention-review", "scripts", "statutory_check.py"), f"{t}/법정기준표2.csv", "-o", f"{t}/산출/법정점검2.xlsx"])
+    w2 = openpyxl.load_workbook(f"{t}/산출/법정점검2.xlsx") if os.path.exists(f"{t}/산출/법정점검2.xlsx") else None
+    s2 = {}
+    for r in (w2["점검"].iter_rows(min_row=2, values_only=True) if w2 else []):
+        s2.setdefault(r[2], []).append((r[4], r[7], r[10]))
+    cf, ofd = run([S("retention-review", "scripts", "statutory_check.py"), "--find", "인식개선 교육"])
+    check("법정 보존기간(공공기관 공통): 장애인 인식개선 3년(두 법)·재난상황 5년·제안 2년 미달, 접속기록 1년·CCTV 60일 충족, 학교 교사 공기질 제외, 전체 목록 후보 시트·--find",
+          cs2 == 1 and "법정 최소 미달 4" in os2 and "파기 상한 초과 1" in os2 and any(x[0] == "장애인복지법" and x[2].startswith("법정") for x in s2.get("장애인 인식개선 교육", []))
+          and any(x[1] == "5년" and x[2].startswith("법정") for x in s2.get("재난상황 관리", [])) and any(x[1] == "60일" and x[2] == "충족" for x in s2.get("어린이집 CCTV 운영", []))
+          and any(x[1] == "1년" and x[2] == "충족" for x in s2.get("개인정보처리시스템 접속기록 관리", [])) and "교사내 공기질 측정" not in s2
+          and "전체 목록 후보" in w2.sheetnames and "장애인복지법 제25조의2" in ofd and "전체 목록" in ofd, os2 + str(s2) + ofd[-300:])
+    import importlib.util as _ilu
+    _sp = _ilu.spec_from_file_location("scb", S("retention-review", "scripts", "statutory_catalog_build.py"))
+    _scb = _ilu.module_from_spec(_sp)
+    _sp.loader.exec_module(_scb)
+    _body = ("가상법 시행규칙 제1조(목적) 이 규칙은 가상법 시행에 필요한 사항을 정한다. 제2조(기록의 보존) ① 가상관리자는 점검기록을 작성한 날부터 3년간 보존하여야 한다. "
+             "② 2015년 1월 1일부터 시행한다. 제3조(서류의 보존) 서류의 보존기간은 다음과 같다. 1. 가상 명부 : 5년 2. 가상 대장 : 10년 "
+             "제4조(과태료) 기록을 3년간 보존하지 아니한 자에게는 과태료를 부과한다. 제5조(신고) 변경한 날부터 30일 이내에 신고하여야 한다. "
+             "부 칙 <가상부령 제1호, 2026. 1. 1.> 제1조(시행일) 이 규칙은 공포한 날부터 시행한다. 제2조(경과조치) 종전 기록은 7년간 보존하여야 한다.")
+    _ex = _scb.extract("가상법 시행규칙 [시행 2026. 1. 1.] [가상부령 제1호]", _body)
+    _ks = {(r["조문"].split("(")[0], r["보존기간"]) for r in _ex}
+    check("법정 보존기간 목록 다시 만들기(추출기): 'N년간 보존'·나열형 'N년'·기산 문구, 날짜·과태료·N일 이내 신고·부칙 경과조치 제외",
+          _ks == {("제2조", "3년"), ("제3조", "5년"), ("제3조", "10년")} and any("작성한 날부터" in r["기산(문구)"] for r in _ex)
+          and all(r["원문"].startswith("https://www.law.go.kr/법령/가상법시행규칙/") for r in _ex), str(_ex))
+    _ex2 = _scb.extract("가상법 [시행 2026. 1. 1.]", "가상법 제1조(목적) 목적이다. 제2조(정보의 파기) 가상정보는 수집한 날부터 5년이 지나면 파기하여야 한다. "
+                        "제3조(서식) 결의서 보존기간 10년 접수 제4조(편철) 신청서는 편철하여 3년간 보존 2. 대장은 1년간 보존 제5조(보존) 기록부의 보존 기간은 마지막으로 적은 날부터 5년으로 하고, 방법은 따로 정한다.")
+    _k2 = {(r["조문"].split("(")[0], r["보존기간"], r["성격"]) for r in _ex2}
+    check("법정 보존기간 추출 2차: '5년이 지나면 파기'는 상한, 서식 칸 '보존기간 10년'·나열 '3년간 보존 2.'·'보존 기간은 … 5년으로 하고'는 최소 보존",
+          ("제2조", "5년", "지나면 파기(상한)") in _k2 and ("제3조", "10년", "최소 보존") in _k2 and ("제4조", "3년", "최소 보존") in _k2
+          and ("제4조", "1년", "최소 보존") in _k2 and ("제5조", "5년", "최소 보존") in _k2, str(_k2))
+    _pg = ('<tr class="dt"><td class="tNone">1</td><td class="tit" rowspan="2"><input type="hidden" id="list" value="jo" /><a onclick="ordinInfPop(\'111\',\'ELIS\');">'
+           '가상군 위원회 조례<br /><span>[시행 2026. 1. 1.][조례 제1호, 2026. 1. 1., 제정]</span></a></td><td rowspan="2">가상군</td>'
+           '<td><a onclick="ordinInfPop(\'111\',\'ELIS\',\'\',\'Y\',\'0009\');"> 제9조 회의록 </a></td><td><a onclick="ordinInfPop(\'111\');"> ... 회의록을 5년간 보존하여야 한다. </a></td></tr>'
+           '<tr class="dt"><td class="tNone">2</td><td><a onclick="ordinInfPop(\'111\');"> 제10조 수당 </a></td><td><a onclick="ordinInfPop(\'111\');"> ... 최근 3년간 보존하여야 할 ... </a></td></tr>')
+    _calls = []
+    _scb.get = lambda u: (_calls.append(u), _pg if len(_calls) == 1 else "")[1]
+    _scb.DELAY = 0
+    _or = _scb.search_ordin("년간 보존")
+    check("자치법규 조문 검색 해석: 법규명·시행일·지자체·조문을 쪽 넘어가며 이어 붙임(rowspan), 빈 쪽에서 멈춤",
+          len(_or) == 2 and _or[0]["기관"] == "가상군" and _or[1]["조문"] == "제10조 수당" and "가상군 위원회 조례" in _or[1]["자치법규"] and len(_calls) == 2, str(_or))
+    cog, oog = run([S("retention-review", "scripts", "statutory_check.py"), "--find", "직장협의회 회의록", "--org", "칠곡군"])
+    check("법정 보존기간 전체 목록의 자치법규: --org로 그 지자체 조례만(칠곡군 공무원직장협의회 회의록 3년)",
+          cog == 0 and "[자치법규·칠곡군]" in oog and "양양군" not in oog, oog[-400:])
 
     # 생산 시점 기록화(record-by-design): BagIt 패키지·NAK 8 메타데이터·RiC-O·사건 이력·고정성
     RBD = S("record-by-design", "scripts", "capture.py")
@@ -605,7 +666,7 @@ def main():
     # 근거 자료 변화 감시(오프라인): 기준선 → 새 첨부·게시물·법령 시행일 바뀜 감지
     SW = S("records-qa-gate", "scripts", "source_watch.py")
     os.makedirs(f"{t}/감시", exist_ok=True)
-    pg1 = '<div id="contents"><a href="/d?up_filename=가상지침.pdf">가상지침</a><a href="/x?board_seq=101">가상 공지</a></div>'
+    pg1 = '<div id="contents"><a href="/d?up_filename=가상지침.pdf">가상지침</a><a href="/x?board_seq=101">가상 공지</a><a href="foreignStandardDetail.do?abroad_seq=7&amp;page=1" title="새창으로 열리는 사이트">가상 해외표준</a><a href="foreignStandardDetail.do?abroad_seq=9">900101-1234567</a></div>'
     lw1 = '<div id="contents">[시행 2026. 10. 2.] 제36728호, 2026. 9. 29., 타법개정</div>'
     open(f"{t}/감시/a.html", "w", encoding="utf-8").write(pg1)
     open(f"{t}/감시/l.html", "w", encoding="utf-8").write(lw1)
@@ -616,12 +677,13 @@ def main():
     swa = ["--sources", f"{t}/감시/src.json", "--baseline", f"{t}/감시/base.json", "--offline", f"{t}/감시/off.json"]
     csw1, _ = run([SW, *swa, "--update", "--report", f"{t}/감시/r1.md"])
     csw2, _ = run([SW, *swa, "--report", f"{t}/감시/r2.md"])
-    open(f"{t}/감시/a.html", "w", encoding="utf-8").write(pg1.replace("</div>", '<a href="/d?up_filename=새지침(2027).pdf">새지침</a></div>'))
+    open(f"{t}/감시/a.html", "w", encoding="utf-8").write(pg1.replace("</div>", '<a href="/d?up_filename=새지침(2027).pdf">새지침</a><a href="foreignStandardDetail.do?abroad_seq=208">가상 새 해외표준</a></div>'))
     open(f"{t}/감시/l.html", "w", encoding="utf-8").write(lw1.replace("2026. 10. 2.", "2027. 4. 14."))
     csw3, osw3 = run([SW, *swa, "--report", f"{t}/감시/r3.md"])
     rsw = open(f"{t}/감시/r3.md", encoding="utf-8").read() if os.path.exists(f"{t}/감시/r3.md") else ""
-    check("근거 변화 감시: 첫 기록·변화 없음 0·새 첨부와 법령 시행일 바뀜 감지(종료 1)·반영할 곳 표시",
-          csw1 == 0 and csw2 == 0 and csw3 == 1 and "새지침(2027).pdf" in rsw and "[시행 2027. 4. 14.]" in rsw and "가상 스킬" in rsw, osw3 + rsw[:400])
+    check("근거 변화 감시: 첫 기록·변화 없음 0·새 첨부·새 해외표준(abroad_seq)·주민등록번호 모양 가림·법령 시행일 바뀜 감지(종료 1)·반영할 곳 표시",
+          csw1 == 0 and csw2 == 0 and csw3 == 1 and "새지침(2027).pdf" in rsw and "가상 새 해외표준" in rsw
+          and "900101-1234567" not in open(f"{t}/감시/base.json", encoding="utf-8").read() and "[시행 2027. 4. 14.]" in rsw and "가상 스킬" in rsw, osw3 + rsw[:400])
 
     # 행정박물 관리대상 선별(행정박물 관리지침 2021 표 4)
     _k = ["중요도", "인물", "상징", "예술", "희소", "활용", "보존"]

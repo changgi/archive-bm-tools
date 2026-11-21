@@ -1,12 +1,13 @@
 name: 근거 자료 변화 감시
 
 # 스킬이 기대는 출처(국가기록포털 표준·지침·매뉴얼·분류기준·업무안내 자료, 법제처 입법예고, 국가법령정보센터)를
-# 매주 열어 지난번 기준선과 비교한다. 변화가 있으면 보고서와 새 기준선을 담은 PR을 연다.
+# 3주에 한 번 열어 지난번 기준선과 비교한다(잘 바뀌지 않는 자료라 매주는 과함). 변화가 있으면 보고서와 새 기준선을 담은 PR을 연다.
 # 스킬 수정(반영)은 그 PR에서 사람이나 Claude 세션이 한다 — 이 작업은 고치지 않는다.
 
 on:
   schedule:
-    - cron: "17 0 * * 1"   # 매주 월요일 09:17 KST
+    - cron: "17 0 * * 1"   # 매주 월요일 09:17 KST에 깨어나, 아래 '주기 확인'이 3주째에만 실제 비교를 한다
+    # 기준일 2026-12-14(월)부터 3주마다: 12-14, 2027-01-04, 01-25 … (수동 실행 workflow_dispatch는 언제나 비교)
   workflow_dispatch:
 
 permissions:
@@ -27,11 +28,24 @@ jobs:
       LC_ALL: C.UTF-8
       TZ: Asia/Seoul
     steps:
+      - name: 주기 확인(3주)
+        id: cycle
+        run: |
+          anchor=2026-12-14
+          days=$(( ( $(date -u +%s) - $(date -u -d "$anchor" +%s) ) / 86400 ))
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then run=true
+          elif [ "$days" -ge 0 ] && [ $(( days / 7 % 3 )) -eq 0 ]; then run=true
+          else run=false; fi
+          echo "run=$run" >> "$GITHUB_OUTPUT"
+          echo "기준일 $anchor부터 ${days}일 — 이번 주 비교: $run" >> "$GITHUB_STEP_SUMMARY"
       - uses: actions/checkout@v4
+        if: steps.cycle.outputs.run == 'true'
       - uses: actions/setup-python@v5
+        if: steps.cycle.outputs.run == 'true'
         with:
           python-version: "3.12"
       - name: 출처 비교
+        if: steps.cycle.outputs.run == 'true'
         id: watch
         run: |
           set +e
@@ -45,7 +59,7 @@ jobs:
           if [ "$rc" -ge 2 ]; then echo "::warning::출처를 받지 못했거나 입력 오류(rc=$rc)"; fi
           exit 0
       - name: 변화가 있으면 PR
-        if: steps.watch.outputs.rc == '1'
+        if: steps.cycle.outputs.run == 'true' && steps.watch.outputs.rc == '1'
         env:
           GH_TOKEN: ${{ github.token }}
         run: |

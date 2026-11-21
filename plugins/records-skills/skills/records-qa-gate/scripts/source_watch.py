@@ -53,6 +53,9 @@ def clean(t):
     return re.sub(r"\s+", " ", html.unescape(re.sub(r"<[^>]+>", " ", t))).strip()
 
 
+RRN = re.compile(r"(?<!\d)\d{6}-?[1-4]\d{6}(?!\d)")
+
+
 def fingerprint(page, kind):
     """쪽에서 비교할 항목(키→이름)과 본문 해시."""
     items = {}
@@ -72,7 +75,8 @@ def fingerprint(page, kind):
         title = re.search(r'title="([^"]*)"', attrs)
         tt = html.unescape(title.group(1)).strip() if title else ""
         label = (tt if len(tt) > 3 and not re.search(r"상세|이동|바로가기|다운로드|새창|열기", tt) else text or tt)[:200]
-        for pat, tag in ((r"board_seq=(\d+)", "게시물"), (r"ogLmPp/(\d+)(?!/myOpn)", "입법예고"), (r"bg_no=(\d+)", "간행물"), (r"[?&](?:amp;)?seq=(\d{3,})", "게시물"),
+        label = RRN.sub("******-*******", label)  # 주민등록번호 모양(시험용 게시물 제목 등)은 기준선·보고서에 남기지 않음
+        for pat, tag in ((r"board_seq=(\d+)", "게시물"), (r"ogLmPp/(\d+)(?!/myOpn)", "입법예고"), (r"bg_no=(\d+)", "간행물"), (r"abroad_seq=(\d+)", "해외표준"), (r"[?&](?:amp;)?seq=(\d{3,})", "게시물"),
                          (r"fn_\w*[Dd]etail\w*\(\s*'?(\d{3,})", "게시물")):
             g = re.search(pat, attrs)
             if g and label and "myOpn" not in attrs:
