@@ -43,7 +43,7 @@ NUM = r"(?:\d+)"
 NOTP = r"(?!\s*(?:기록|적|성|물관리|보존시설|보존기록물관리))"
 PERIOD = re.compile(rf"(영구(?:히)?{NOTP}|준영구{NOTP}|{NUM}\s*(?:년|개월|일|시간)(?:\s*(?:간|동안|이상|이내|까지))?)")
 VERB = re.compile(r"(보존|보관|비치|유지|저장|관리)(?:하여야|해야|하여야만|하고|한다|할 수|할 것|하도록|하여 두어야|해 두어야|하며|기간)")
-ART = re.compile(r"(?<![가-힣])(제\d+조(?:의\d+)?)\s*\(([^)]{1,60})\)")
+ART = re.compile(r"(?<![가-힣])(제\d+(?:-\d+)?조(?:의\d+)?)\s*\(([^)]{1,60})\)")  # 제6-21조(금융투자업규정 등 행정규칙 꼴)도
 NOISE = re.compile(r"행정처분|처분기준|과태료|벌칙|영업정지|업무정지|아니한 경우|않은 경우|위반")
 SNIP = re.compile(r"((?:\d+)\s*(?:년|개월)\s*(?:간|동안|이상)?|영구(?:히)?(?!\s*(?:기록|적|성))|준영구(?!\s*(?:기록|적)))\s*(?:[^.│┃]{0,25}?)(보존|보관|비치)(?:하여야|해야|할 것|ㆍ관리하여야|하고|한다)")
 DELAY = 0.7
@@ -161,10 +161,12 @@ def kind(name):
 def extract(name, t):
     law = re.sub(r"\s*\[.*", "", name).strip()
     shi = re.search(r"\[시행 ([^\]]+)\]", name)
-    st = t.find("제1조(")
-    if st < 0:
-        return []
-    t = t[st:]
+    t = re.sub(r"(\d)\s*연간", r"\1년간", t)  # 옛 법령의 '3연간(三年間)'
+    first = re.search(r"(?<![가-힣])제\s*1(?:-1)?\s*조(?:의\d+)?\s*\(", t)  # '제1조 (목적)'·'제1-1조(목적)'
+    if first:
+        t = t[first.start():]
+    else:  # 조문 번호 없이 1. 가. 로만 적은 지침·예규 — 본문 전체를 한 덩어리로 읽음
+        t = "제0조(본문) " + t
     cut = re.search(r"부\s*칙\s*(?:\([^)]{0,80}\)\s*)?<[^>]{0,40}제\s*[\d-]+호", t)
     t = t[:cut.start()] if cut else t
     rows, seen = [], set()
@@ -173,7 +175,9 @@ def extract(name, t):
     def add(jo, title, rec, per, base, subj, sent, kind_="최소 보존"):
         rows.append({"출처": "법령", "성격": kind_, "법령": law, "종류": kind(name), "시행": shi.group(1) if shi else "", "조문": f"{jo}({title})", "의무자": subj,
                      "기록(문구)": rec[-120:], "보존기간": re.sub(r"\s+|(간|동안)$", "", per), "기산(문구)": base, "문장": sent[:400],
-                     "원문": f"https://www.law.go.kr/법령/{law.replace(' ', '')}/{jo}"})
+                     "원문": f"https://www.law.go.kr/법령/{law.replace(' ', '')}" + ("" if jo == "제0조" else f"/{jo}")})
+        if jo == "제0조":
+            rows[-1]["조문"] = "본문(조문 번호 없음)"
 
     for i, m in enumerate(ms):
         jo, title = m.group(1), m.group(2).strip()
@@ -189,9 +193,11 @@ def extract(name, t):
                 add(jo, title, lm.group(2).strip(), lm.group(3), "", "", body[max(0, lm.start() - 120): lm.end() + 20])
         for s in [x.strip() for x in re.split(r"(?<=다\.)\s+|(?=[①-⑳])", body) if x.strip()]:
             s = s[:900]
-            if re.search(r"1\s*년\s*[,ㆍ·]\s*3\s*년\s*[,ㆍ·]\s*5\s*년", s):  # 보존기간 구분(1년, 3년, 5년 …)을 늘어놓은 안내
-                continue
+            # 보존기간 구분(1년, 3년, 5년 … / 영구, 준영구, 30년 …)을 늘어놓은 부분은 의무가 아님 — 그 부분의 기간만 뺌
+            enum = [m.span() for m in re.finditer(r"(?:(?:\d+\s*년|준?영구|임기중)\s*[,ㆍ·]\s*){2,}(?:\d+\s*년|준?영구|임기중)", s)]
             for pm in PERIOD.finditer(s):
+                if any(a0 <= pm.start() < a1 for a0, a1 in enum):
+                    continue
                 p = pm.group(1)
                 tail = re.sub(r"\([^)]{0,60}\)", "", s[pm.end(): pm.end() + 110])[:45]
                 head = s[max(0, pm.start() - 50): pm.start()]

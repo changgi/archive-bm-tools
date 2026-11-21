@@ -193,7 +193,7 @@ def main() -> int:
             r["판정"] = jd.judge(r.get("문장", ""), r.get("성격", ""))[1]
             if x["종류"] == "행정규칙":
                 jo = r["조문"].split("(")[0]
-                r.update({"출처": "행정규칙", "종류": x.get("규칙종류", ""), "원문": f"https://www.law.go.kr/행정규칙/{x['이름'].replace(' ', '')}/{jo}"})
+                r.update({"출처": "행정규칙", "종류": x.get("규칙종류", ""), "원문": f"https://www.law.go.kr/행정규칙/{x['이름'].replace(' ', '')}" + ("" if jo == "본문" else f"/{jo}")})
         src = "법령" if x["종류"] == "법령" else "행정규칙"
         before = {key(r): r for r in cat if same(r, x, src)}
         after = {key(r): r for r in rows}
