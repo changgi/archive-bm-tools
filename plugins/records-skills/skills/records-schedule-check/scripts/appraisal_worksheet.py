@@ -41,6 +41,25 @@ HINTS = [(r"법령|조례|규칙|훈령|예규|고시", "영구", "법령·자�
 RANK = {p: i for i, p in enumerate(PERIODS)}
 
 
+_SD = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "retention-review", "scripts")
+try:  # retention-review 법정 보존기간 점검 표(개별 법령 최소 보존기간·파기 상한)로 '법규상 요구' 칸을 미리 채움
+    sys.path.insert(0, _SD)
+    import statutory_check as SC
+    _ROWS = SC.load()
+except Exception:
+    SC, _ROWS = None, []
+finally:
+    if _SD in sys.path:
+        sys.path.remove(_SD)
+
+
+def legal(task, desc):
+    if not SC:
+        return []
+    hits, via = SC.match(_ROWS, task, desc)
+    return [(h, via) for h in hits]
+
+
 def load(path):
     if path.lower().endswith((".xlsx", ".xlsm")):
         import openpyxl
@@ -112,7 +131,7 @@ def main() -> int:
                [6, 34, 30, 14, 10, 40, 40, 16, 24])
     sq = sheet("순차 분석", ["단위과제", "순서", "시작 계기(채움)", "행위(채움)", "행위자·직위(채움)", "남는 기록(채움)", "생산 시스템(채움)", "변형·예외(채움)",
                          "규칙·근거(채움)", "다음 과정·연결(채움)"], [30, 6, 18, 26, 16, 26, 16, 20, 20, 20])
-    rq = sheet("기록 요구", ["단위과제", "업무상 필요(채움)", "법규상 요구(채움)", "사회적 기대(채움)", "업무상 중요 영역", "현 보존기간", "확인 단서(별표 1·준칙)"],
+    rq = sheet("기록 요구", ["단위과제", "업무상 필요(채움)", "법규상 요구(법정 보존기간 후보 — 확인·보완)", "사회적 기대(채움)", "업무상 중요 영역", "현 보존기간", "확인 단서(별표 1·준칙)"],
                [30, 26, 26, 26, 12, 10, 44])
     rk = sheet("위험 평가", ["단위과제", "위험(채움)", "가능성 1~5", "영향 1~5", "점수", "등급", "처리 방안(채움)"], [30, 40, 10, 10, 8, 8, 40])
     dv = DataValidation(type="whole", operator="between", formula1="1", formula2="5", allow_blank=True)
@@ -136,7 +155,15 @@ def main() -> int:
                     cue.append(why)
         if not p:
             cue.append("보존기간이 7종(영구~1년)이 아님")
-        rq.append([x["과제"], "", "", "", "", x["보존"], " · ".join(cue)])
+        law = []
+        for h, via in legal(x["과제"], x["설명"]):
+            law.append(f"「{h['법령']}」 {h['조항']} {h['기록 종류']} {h['최소 보존기간']}" + (" 지나면 파기" if (h.get("성격") or "").startswith("지나면") else "")
+                       + (" (설명 낱말)" if via == "설명" else ""))
+            ly, cy = SC.years(h["최소 보존기간"]), SC.years(p) if p else None
+            if ly and cy and not (h.get("성격") or "").startswith("지나면") and cy < ly:
+                cue.append(f"법정 최소 {h['최소 보존기간']}(「{h['법령']}」 {h['조항']}): 현재 {p} — 늘려야 함")
+                short += 1
+        rq.append([x["과제"], "", "; ".join(law), "", "", x["보존"], " · ".join(cue)])
         yn.add(f"E{rq.max_row}")
         rk.append([x["과제"], "", None, None, f'=IF(AND(ISNUMBER(C{rk.max_row + 1}),ISNUMBER(D{rk.max_row + 1})),C{rk.max_row + 1}*D{rk.max_row + 1},"")',
                    f'=IF(E{rk.max_row + 1}="","",IF(E{rk.max_row + 1}>=15,"높음",IF(E{rk.max_row + 1}>=8,"보통","낮음")))', ""])
