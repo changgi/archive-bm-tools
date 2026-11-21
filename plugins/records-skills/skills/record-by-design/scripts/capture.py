@@ -107,6 +107,25 @@ def write_tags(pkg):
             f.write(f"{sha256(os.path.join(pkg, rel))}  {rel}\n")
 
 
+def legal_basis(task, desc=""):
+    """retention-review 법정 보존기간 점검 표(statutory_minimum.csv)에서 단위과제·업무 활동에 해당하는 법정 기간과 근거를 찾는다."""
+    here = os.path.dirname(os.path.abspath(__file__))
+    sd = os.path.join(here, "..", "..", "retention-review", "scripts")
+    if not os.path.isfile(os.path.join(sd, "statutory_check.py")):
+        return []
+    sys.path.insert(0, sd)
+    try:
+        import statutory_check as sc
+        hits, via = sc.match(sc.load(), task, desc)
+    except Exception:
+        return []
+    finally:
+        sys.path.remove(sd)
+    return [{"법령": h["법령"], "조항": h["조항"], "기록 종류": h["기록 종류"], "법정 기간": h["최소 보존기간"],
+             "성격": h.get("성격") or "최소 보존", "기산": h.get("기산", ""), "적용 대상": h.get("적용 대상", ""), "맞춘 곳": via,
+             "_연": sc.years(h["최소 보존기간"])} for h in hits]
+
+
 def context_ld(meta):
     rid = f"urn:records:{meta['3.1 기본식별자']}"
     g = {"@context": {"rico": "https://www.ica.org/standards/RiC/ontology#", "nak8": "urn:nak8:", "dcterms": "http://purl.org/dc/terms/"},
@@ -128,6 +147,10 @@ def context_ld(meta):
         rel.append({"rico:relationType": r["22.1 관계유형"], "@id": f"urn:records:{r['22.2 관계대상식별자']}"})
     if rel:
         g["rico:isRelatedTo"] = rel
+    rules = [{"@type": "rico:Rule", "rico:name": f"「{b['법령']}」 {b['조항']}", "rico:hasOrHadSubject": b["기록 종류"],
+              "nak8:법정기간": b["법정 기간"], "nak8:성격": b["성격"]} for b in meta.get("보존기간 법적근거", [])]
+    if rules:
+        g["rico:isOrWasRegulatedBy"] = rules
     return g
 
 
@@ -219,6 +242,8 @@ def cmd_capture(a):
             "12.2.2 분류명": a.task, "13.1 생산일시": made, "15.1 보존기간": a.period, "16 보존장소": a.place,
             "17.3.1 공개구분": a.access, "17.3.2 공개제한사유": a.reason or "", "23.1 무결성체크법": "SHA-256", "23.2 무결성체크값": h,
             "업무활동": a.activity or "", "생산목적": a.purpose or "", "22 관계": [], "_자동추출후보": auto, "_개인정보후보": len(pii)}
+    basis = legal_basis(a.task, " ".join(x for x in (a.activity, a.purpose) if x))
+    meta["보존기간 법적근거"] = [{k: v for k, v in b.items() if not k.startswith("_")} for b in basis]
     for r in a.relation or []:
         t, _, target = r.partition(":")
         if target:
@@ -227,6 +252,8 @@ def cmd_capture(a):
     event(pkg, "생산", f"원본 {os.path.basename(src)} · 생산일시 {made}")
     event(pkg, "등록", f"기본식별자 {rid} · 단위과제 {a.task} · 보존기간 {a.period}")
     event(pkg, "메시지 다이제스트 계산", f"SHA-256 {h}")
+    if basis:
+        event(pkg, "보존기간 법적근거 확인", "; ".join(f"「{b['법령']}」 {b['조항']} {b['기록 종류']} {b['법정 기간']}({b['성격']})" for b in basis))
     open_ = derive(pkg)
     event(pkg, "파생", "매개 4종(등록대장.csv·공개데이터.json·요약.html·카드.txt)과 context.jsonld를 metadata.json에서 만듦")
     write_bag(pkg, meta)
@@ -240,10 +267,19 @@ def cmd_capture(a):
         issues.append(f"자동 추출 후보로 채운 요소: {', '.join(auto)} — 담당자 확인")
     if pii:
         issues.append(f"개인정보 후보 {len(pii)}건 — 공개 매개에서 본문 요약 뺌")
+    yp = {"영구": 1000, "준영구": 999}.get(a.period) or int(re.match(r"\d+", a.period).group(0))
+    for b in basis:
+        if b["_연"] is None:
+            continue
+        if b["성격"].startswith("지나면") and yp > b["_연"]:
+            issues.append(f"보존기간({a.period})이 「{b['법령']}」 {b['조항']}의 파기 기한({b['법정 기간']})보다 김 — {b['기록 종류']}이면 기한 뒤 파기 대상인지 확인(공공기록물로 등록된 기록은 공공기록물법 절차)")
+        elif not b["성격"].startswith("지나면") and yp < b["_연"]:
+            issues.append(f"보존기간({a.period})이 「{b['법령']}」 {b['조항']} 법정 최소({b['법정 기간']}, {b['기록 종류']})보다 짧음" + (" — 업무 활동·목적 낱말로 맞춘 후보" if b["맞춘 곳"] == "설명" else " — 보존기간을 늘림"))
     if fmt not in OPEN_FORMATS:
         issues.append(f"포맷 {fmt}: 장기보존 권고 포맷이 아님 — preservation-convert로 보존 포맷 사본 검토")
     with open(os.path.join(pkg, "점검.md"), "w", encoding="utf-8") as f:
         f.write(f"# 기록 패키지 점검 — {rid}\n\n- 원본 SHA-256: `{h}` (복사본과 일치)\n- 공개 매개 본문 포함: {'예' if open_ else '아니오'}\n")
+        f.write("".join(f"- 보존기간 법적근거: 「{b['법령']}」 {b['조항']} — {b['기록 종류']} {b['법정 기간']}({b['성격']}{', 기산 ' + b['기산'] if b['기산'] else ''})\n" for b in basis))
         f.write("".join(f"- 확인: {x}\n" for x in issues) or "- 확인할 것 없음\n")
         f.write("\n나중에 `python capture.py verify <패키지>`로 고정성을 다시 확인하면 events.jsonl에 사건이 쌓입니다.\n")
     print(f"패키지 {pkg} · SHA-256 {h[:12]}… · 확인 {len(issues)}건")

@@ -685,6 +685,23 @@ def main():
           csw1 == 0 and csw2 == 0 and csw3 == 1 and "새지침(2027).pdf" in rsw and "가상 새 해외표준" in rsw
           and "900101-1234567" not in open(f"{t}/감시/base.json", encoding="utf-8").read() and "[시행 2027. 4. 14.]" in rsw and "가상 스킬" in rsw, osw3 + rsw[:400])
 
+    # 생산 시점 기록화 + 법정 보존기간: 메타데이터·연결 그래프·점검에 법적 근거, 평가 작업지 '법규상 요구'
+    open(f"{t}/처방묶음.txt", "w", encoding="utf-8").write("가상 처방전 묶음\n")
+    crx, orx = run([RBD, "capture", f"{t}/처방묶음.txt", "--task", "처방전 관리", "--agency", "가상병원", "--dept", "약제과", "--person", "김가상",
+                    "--role", "기안자", "--title", "가상 처방전", "--period", "1년", "--id", "RX-1", "-o", f"{t}/산출/법정패키지"])
+    mrx = json.load(open(f"{t}/산출/법정패키지/RX-1/metadata.json", encoding="utf-8")) if os.path.exists(f"{t}/산출/법정패키지/RX-1/metadata.json") else {}
+    grx = json.load(open(f"{t}/산출/법정패키지/RX-1/context.jsonld", encoding="utf-8")) if mrx else {}
+    prx = open(f"{t}/산출/법정패키지/RX-1/점검.md", encoding="utf-8").read() if mrx else ""
+    erx = open(f"{t}/산출/법정패키지/RX-1/events.jsonl", encoding="utf-8").read() if mrx else ""
+    open(f"{t}/평가과제.csv", "w", encoding="utf-8-sig").write("단위과제명,보존기간,업무설명\n직장 내 장애인 인식개선 교육,1년,교육 실시\n회의 운영,3년,\n")
+    caw, oaw = run([S("records-schedule-check", "scripts", "appraisal_worksheet.py"), f"{t}/평가과제.csv", "-o", f"{t}/산출/법정작업지.xlsx"])
+    awr = {r[0]: (r[2], r[6]) for r in openpyxl.load_workbook(f"{t}/산출/법정작업지.xlsx")["기록 요구"].iter_rows(min_row=2, values_only=True)} if os.path.exists(f"{t}/산출/법정작업지.xlsx") else {}
+    check("생산 시점 법정 근거: 처방전 1년 → 의료법 시행규칙 제15조①3호 2년(metadata·RiC-O isOrWasRegulatedBy·사건·점검 '짧음'), 평가 작업지 법규상 요구 채움",
+          crx == 1 and mrx.get("보존기간 법적근거", [{}])[0].get("조항") == "제15조①3호" and grx.get("rico:isOrWasRegulatedBy", [{}])[0].get("nak8:법정기간") == "2년"
+          and "보존기간 법적근거 확인" in erx and "법정 최소(2년, 처방전)보다 짧음" in prx
+          and "장애인복지법" in (awr.get("직장 내 장애인 인식개선 교육", ("",))[0] or "") and "늘려야 함" in (awr["직장 내 장애인 인식개선 교육"][1] or "")
+          and not awr.get("회의 운영", ("x",))[0], orx + prx + oaw + str(awr))
+
     # 행정박물 관리대상 선별(행정박물 관리지침 2021 표 4)
     _k = ["중요도", "인물", "상징", "예술", "희소", "활용", "보존"]
     xlsx(f"{t}/박물후보.xlsx", [["행정박물명", "생산일자", "생산부서", "유형", "수량", "비고"] + [f"처리과_{k}" for k in _k] + [f"기록관_{k}" for k in _k],
