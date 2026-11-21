@@ -1,0 +1,7 @@
+Source-Organization: 가상시
+Organization-Address: 재무과
+External-Identifier: 20261121-9b45f1b8ff
+External-Description: 가상 무대장비 임차 계약
+Bagging-Date: 2026-11-21
+Payload-Oxum: 49.1
+Bag-Software-Agent: records-skills record-by-design

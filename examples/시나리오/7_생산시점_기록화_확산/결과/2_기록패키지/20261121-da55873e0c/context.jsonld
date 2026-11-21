@@ -1,0 +1,37 @@
+{
+  "@context": {
+    "rico": "https://www.ica.org/standards/RiC/ontology#",
+    "nak8": "urn:nak8:",
+    "dcterms": "http://purl.org/dc/terms/"
+  },
+  "@id": "urn:records:20261121-da55873e0c",
+  "@type": "rico:Record",
+  "rico:title": "2026 가상 축제 운영 계획",
+  "rico:identifier": "20261121-da55873e0c",
+  "rico:hasCreator": {
+    "@id": "urn:agent:가상시/문화과",
+    "@type": "rico:CorporateBody",
+    "rico:name": "가상시 문화과"
+  },
+  "rico:isOrWasIncludedIn": {
+    "@id": "urn:task:지역축제운영",
+    "@type": "rico:RecordSet",
+    "rico:name": "지역축제운영",
+    "rico:hasRecordSetType": "단위과제"
+  },
+  "rico:creationDate": "2026-05-01",
+  "rico:hasContentOfSomeType": "일반문서",
+  "rico:conditionsOfAccess": "공개",
+  "nak8:보존기간": "5년",
+  "rico:hasInstantiation": {
+    "@type": "rico:Instantiation",
+    "rico:hasExtent": "59 Byte",
+    "dcterms:format": "TXT",
+    "nak8:무결성체크값": "da55873e0cbd79f826e38e34444e54192bf9a0790e90beed1d0b2fed77a47f6c"
+  },
+  "rico:isAssociatedWithActivity": {
+    "@type": "rico:Activity",
+    "rico:name": "축제 계획·결과 보고",
+    "rico:history": ""
+  }
+}

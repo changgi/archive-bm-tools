@@ -1,0 +1,60 @@
+{
+ "@context": "http://www.w3.org/ns/csvw",
+ "url": "기록목록.csv",
+ "dc:title": "기록 패키지 목록",
+ "dc:language": "ko",
+ "tableSchema": {
+  "columns": [
+   {
+    "name": "c0",
+    "titles": "3.1 기본식별자"
+   },
+   {
+    "name": "c1",
+    "titles": "4.1 제목"
+   },
+   {
+    "name": "c2",
+    "titles": "1.2 기관명"
+   },
+   {
+    "name": "c3",
+    "titles": "1.3 부서명"
+   },
+   {
+    "name": "c4",
+    "titles": "13.1 생산일시",
+    "datatype": "date"
+   },
+   {
+    "name": "c5",
+    "titles": "12.2.2 분류명"
+   },
+   {
+    "name": "c6",
+    "titles": "15.1 보존기간"
+   },
+   {
+    "name": "c7",
+    "titles": "17.3.1 공개구분"
+   },
+   {
+    "name": "c8",
+    "titles": "9.1 포맷명"
+   },
+   {
+    "name": "c9",
+    "titles": "23.2 무결성체크값"
+   },
+   {
+    "name": "c10",
+    "titles": "관계"
+   },
+   {
+    "name": "c11",
+    "titles": "고정성"
+   }
+  ],
+  "primaryKey": "c0"
+ }
+}
