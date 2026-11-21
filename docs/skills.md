@@ -663,6 +663,13 @@ python skills/dataset-schedule/scripts/dataset_screen.py 시스템목록.xlsx --
 python skills/dataset-schedule/scripts/dataset_schedule.py 스키마.csv --org "○○시" --system "민원시스템" -o 산출/데이터세트_기준표.xlsx
 ```
 
+
+**평가·폐기 준비(실행매뉴얼 2020 3.3·3.4)** 단위기능별 보존기간·기산일 컬럼·처분제약(소송·감사 보류 연수)·연도별 건수로, 보존기간과 보류기간이 모두 지난 데이터 영역을 찾아 '평가 상정 목록'과 영역별 '평가심의서'를 만듭니다. 건수를 세는 확인용 SELECT만 쓰고 DELETE는 주석으로만 둡니다(운영부서가 영향도 검증 후 평가심의 결과로 실행). 삭제 뒤에는 '폐기 결과 기록부'에 범위·폐기량·방식·일시·근거를 남깁니다. 평가심의 없이 운영부서가 임의로 지우면 기록물 무단 폐기가 될 수 있습니다.
+
+```bash
+python skills/dataset-schedule/scripts/dataset_disposal.py 단위기능.xlsx --system 가상민원시스템 -o 산출/데이터세트_평가.xlsx
+```
+
 ---
 
 - **SIARD 2.1 점검**(`siard_check.py`, NAK 35 부속서 B): ZIP·암호화 금지·content/header만·siardversion/2.1·이름 규칙·metadata↔content 대응·열 수.
