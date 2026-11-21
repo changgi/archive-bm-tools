@@ -114,6 +114,7 @@ def main() -> int:
     ap.add_argument("--catalog", default=CATALOG)
     ap.add_argument("--max", type=int, default=200, help="원문을 받을 최대 개수")
     ap.add_argument("--delay", type=float, default=0.7)
+    ap.add_argument("--workers", type=int, default=3, help="원문을 동시에 받을 개수(기본 3 — 사이트에 부담을 주지 않게 4 이하 권장)")
     ap.add_argument("--offline", help="(시험용) {'최신': [...], '본문': {seq: 텍스트}} JSON")
     a = ap.parse_args()
     DELAY = a.delay
@@ -137,14 +138,21 @@ def main() -> int:
     allpick = [x for x in items if x["이름"] in names or (x["구분"] == "제정" and x["종류"] == "법령")]
     pick = allpick[: a.max]
     changes, newrows, fail = [], {}, []
-    for x in pick:
+    def fetch(x):  # 원문 받기만 동시에 하고(무료·추가 비용 없음), 추출·비교는 아래에서 차례로
+        if off:
+            return off["본문"][x["seq"]]
+        t = body(x)
+        time.sleep(DELAY)
+        return t
+    from concurrent.futures import ThreadPoolExecutor
+    with ThreadPoolExecutor(max_workers=max(1, min(a.workers, 4))) as ex:
+        futs = [(x, ex.submit(fetch, x)) for x in pick]
+    for x, fu in futs:
         try:
-            t = off["본문"][x["seq"]] if off else body(x)
+            t = fu.result()
         except Exception as e:
             fail.append(f"{x['이름']}: {e}")
             continue
-        if not off:
-            time.sleep(DELAY)
         label = f"{x['이름']} [시행 {x['시행'].replace('-', '. ')}.]" if x["시행"] else x["이름"]
         rows = b.extract(label, t)
         for r in rows:
