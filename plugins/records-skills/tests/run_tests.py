@@ -520,7 +520,9 @@ def main():
     cs2, os2 = run([RBD, "sweep", f"{t}/업무폴더", "-o", f"{t}/산출/수집"])
     open(f"{t}/업무폴더/지역축제운영/계획.txt", "w", encoding="utf-8").write("가상 축제 계획 수정\n")
     cs3, os3 = run([RBD, "sweep", f"{t}/업무폴더", "-o", f"{t}/산출/수집"])
-    run([RBD, "catalog", f"{t}/산출/수집", "-o", f"{t}/산출/수집목록"])
+    run([RBD, "catalog", f"{t}/산출/수집", "-o", f"{t}/산출/수집목록", "--base-url", "https://example.invalid/r"])
+    sjl = open(f"{t}/산출/수집목록/목록.html", encoding="utf-8").read() if os.path.exists(f"{t}/산출/수집목록/목록.html") else ""
+    sjok = '"@type": "ArchiveComponent"' in sjl and os.path.exists(f"{t}/산출/수집목록/기록목록.csv-metadata.json") and os.path.exists(f"{t}/산출/수집목록/sitemap.xml")
     oai = open(f"{t}/산출/수집목록/oai_dc.xml", encoding="utf-8").read() if os.path.exists(f"{t}/산출/수집목록/oai_dc.xml") else ""
     atom = open(f"{t}/산출/수집목록/feed.atom", encoding="utf-8").read() if os.path.exists(f"{t}/산출/수집목록/feed.atom") else ""
     import xml.dom.minidom as _md
@@ -528,9 +530,9 @@ def main():
         _md.parseString(oai.encode()); _md.parseString(atom.encode()); xok = True
     except Exception:
         xok = False
-    check("업무과정 분석 작업지·조례 10년 확인 단서·위험 수식 → 기록화설정 → sweep 중복 없음·개정 관계 → oai_dc·Atom 유효",
+    check("업무과정 분석 작업지·조례 10년 확인 단서·위험 수식 → 기록화설정 → sweep 중복 없음·개정 관계 → oai_dc·Atom 유효·schema.org·CSVW·sitemap",
           caw == 0 and "영구 이상인지 확인" in str(awr[0][6]) and str(aww["위험 평가"]["E2"].value).startswith("=IF(") and acfg["폴더"]["지역축제운영"]["dept"] == "문화과"
-          and "새로 기록화 0" in os2 and "새로 기록화 1" in os3 and oai.count("<record>") == 2 and "개정:urn:records:" in oai and xok and atom.count("<entry>") == 2,
+          and "새로 기록화 0" in os2 and "새로 기록화 1" in os3 and oai.count("<record>") == 2 and "개정:urn:records:" in oai and xok and atom.count("<entry>") == 2 and sjok,
           oaw + os2 + os3)
 
     # 2026년도 간행물 발간등록 및 송부지침(2026. 10.): 기관 기호표·발간주기 기호·생략대상 유형·기관·비공개 사유

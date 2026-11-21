@@ -40,7 +40,7 @@
 
 - 🆕 **record-by-design**(43번째 스킬): 현용 단계에서 만든 파일이 "누가·무슨 업무로·왜·무엇과 이어져" 만들었는지와 원본 그대로임을 스스로 증명하는 기록 패키지로 만들고, 같은 메타데이터에서 여러 매개로 다시 만듭니다. `batch`로 목록 한 장에서 여러 패키지를, `catalog`로 패키지 전체의 목록·공개데이터(JSONL)·연결 그래프(JSON-LD)·검색 페이지를 만듭니다. [사용법](docs/skills.md#43-record-by-design--생산-시점-기록화)
 - 🔭 **근거 자료 변화 감시**: 국가기록포털·법제처 입법예고·국가법령정보센터 29곳을 매주(GitHub Actions) 지난번과 비교해, 새 게시물·첨부·법령 시행일이 바뀌면 보고서와 PR을 엽니다. [사용법](docs/skills.md#3-records-qa-gate--내보내기-전-품질-관문)
-- 🔁 **생산 시점 기록화 자동화**: `sweep`(업무 폴더에서 새·바뀐 파일만, 바뀐 파일은 '개정' 관계), `catalog`에 OAI-PMH Dublin Core·Atom 피드 추가
+- 🔁 **생산 시점 기록화 자동화**: `sweep`(업무 폴더에서 새·바뀐 파일만, 바뀐 파일은 '개정' 관계), `catalog`에 OAI-PMH Dublin Core·Atom 피드·schema.org 구조화 데이터·CSVW·sitemap 추가
 - 🧭 **업무과정 분석·평가 작업지**(KS X ISO TR 26122·TR 21946): 기록관리기준표를 만들거나 정비할 때 단위과제별 순차 분석·기록 요구·위험 평가, `sweep` 설정 초안까지
 - 🔒 **비밀기록물 공개 지침 3종 반영**: 보존기간 말일 ≥ 보호기간 말일 계산 바로잡음, 유형별 이관 준비·재분류 검토서 시트
 - 📚 **KS 12종**: 원문은 유료라 공개 초록·목차로 범위를 확인해 [대응표](plugins/records-skills/skills/records-qa-gate/references/ks-standards-2026-11-21.md)로 정리
