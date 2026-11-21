@@ -59,4 +59,9 @@
 - 호주 NAA: 메시지 관리 가이드라인(공식·비공식 소통) → email-appraisal 참고, 기록의 폐기·처분승인 절차 → disposal-dossier 참고.
 - 국제기구: ISO 14721(OAIS), ISAD(G)·ISAAR, MoReq2, 재난계획 → 해당 스킬 references 배경.
 
+- 2026-11-21 원문 대조(무료 첨부 4건):
+  - '화재예방 자가 점검 양식'(문화기관용, NFPA 계열, 5쪽) → security-disaster-plan `fire_selfcheck.py`(구역 구성만 따르고 문장은 새로 씀, 31항목·시정 추적).
+  - 영국 PRO RMS 2.2 '기록업무의 기록화'(조직 지도화·시리즈 기술·평가 기록) → record-by-design `catalog`의 `맥락지도.html`·`.mmd`, 평가 기록은 disposal-dossier·events.jsonl이 이미 맡음.
+  - 영국 RMS 1.1 '파일 생산'·2.1 '기록물 추적' → 국내는 시행규칙 반출·반입(records-forms)·school-records 문서고 대장으로 대응, 새 스크립트 없음.
+
 받은 파일은 작업 폴더에만 두고 킷에는 서식(RAMP 일괄등록 서식 xlsx)만 넣었다. 첨부 원문은 저작권·갱신 문제로 옮겨 싣지 않는다.

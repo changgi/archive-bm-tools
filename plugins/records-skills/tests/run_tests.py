@@ -522,7 +522,9 @@ def main():
     cs3, os3 = run([RBD, "sweep", f"{t}/업무폴더", "-o", f"{t}/산출/수집"])
     run([RBD, "catalog", f"{t}/산출/수집", "-o", f"{t}/산출/수집목록", "--base-url", "https://example.invalid/r"])
     sjl = open(f"{t}/산출/수집목록/목록.html", encoding="utf-8").read() if os.path.exists(f"{t}/산출/수집목록/목록.html") else ""
-    sjok = '"@type": "ArchiveComponent"' in sjl and os.path.exists(f"{t}/산출/수집목록/기록목록.csv-metadata.json") and os.path.exists(f"{t}/산출/수집목록/sitemap.xml")
+    run([RBD, "catalog", f"{t}/산출/수집", "-o", f"{t}/산출/수집목록공개", "--public-only"])
+    mapok = os.path.exists(f"{t}/산출/수집목록/맥락지도.html") and "지역축제운영" in open(f"{t}/산출/수집목록/맥락지도.mmd", encoding="utf-8").read()
+    sjok = mapok and '"@type": "ArchiveComponent"' in sjl and os.path.exists(f"{t}/산출/수집목록/기록목록.csv-metadata.json") and os.path.exists(f"{t}/산출/수집목록/sitemap.xml")
     oai = open(f"{t}/산출/수집목록/oai_dc.xml", encoding="utf-8").read() if os.path.exists(f"{t}/산출/수집목록/oai_dc.xml") else ""
     atom = open(f"{t}/산출/수집목록/feed.atom", encoding="utf-8").read() if os.path.exists(f"{t}/산출/수집목록/feed.atom") else ""
     import xml.dom.minidom as _md
@@ -571,6 +573,24 @@ def main():
     check("데이터세트 평가: 5년 기산 2020 이하 300건·10년+제약3 기산 2012 이하 120건·영구 제외·DELETE는 주석·폐기 기록부",
           cdd == 0 and ddl["민원접수"][4] == 2020 and ddl["민원접수"][5] == 300 and ddl["소송자료"][4] == 2012 and ddl["소송자료"][5] == 120
           and "평가·폐기 대상 아님" in ddl["허가대장"][6] and all(q.startswith(("SELECT", "--")) for q in dsq) and "폐기 결과 기록부" in ddw.sheetnames, odd + str(ddl))
+
+    # 화재 예방 자체 점검표(해외표준 '화재예방 자가 점검 양식' 구성): 빈 점검표 → 아니오 시정 추적·연속 아니오
+    FS = S("security-disaster-plan", "scripts", "fire_selfcheck.py")
+    run([FS, "--blank", "--areas", "전 층 공통,서고", "-o", f"{t}/산출/화재_빈.xlsx"])
+    fwb = openpyxl.load_workbook(f"{t}/산출/화재_빈.xlsx")
+    fws = fwb.active
+    for r in fws.iter_rows(min_row=2):
+        if isinstance(r[0].value, int):
+            r[3].value = "예"
+    fws["D2"], fws["D3"], fws["F3"] = "아니오", "아니오", "총무과"
+    fws["H3"] = "2026-11-01"
+    fwb.save(f"{t}/화재_지난.xlsx")
+    fws["H3"] = None
+    fwb.save(f"{t}/화재_이번.xlsx")
+    cfs, ofs = run([FS, "--results", f"{t}/화재_이번.xlsx", "--previous", f"{t}/화재_지난.xlsx", "-o", f"{t}/산출/화재_결과.xlsx"])
+    fsm = list(openpyxl.load_workbook(f"{t}/산출/화재_결과.xlsx")["요약"].iter_rows(min_row=2, max_row=2, values_only=True))[0] if os.path.exists(f"{t}/산출/화재_결과.xlsx") else ()
+    check("화재 자체 점검: 구역 선택 15항목·아니오 2·시정 미완 2·연속 아니오 2",
+          fws.max_row >= 16 and fsm[:4] == (15, 2, 2, 2), ofs + str(fsm))
 
     # 근거 자료 변화 감시(오프라인): 기준선 → 새 첨부·게시물·법령 시행일 바뀜 감지
     SW = S("records-qa-gate", "scripts", "source_watch.py")

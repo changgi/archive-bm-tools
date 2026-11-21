@@ -429,7 +429,8 @@ def cmd_catalog(a):
     ids = {m["3.1 기본식별자"] for m in metas}
     e = html.escape
     rows = []
-    for m in sorted(metas, key=lambda x: x.get("13.1 생산일시", "")):
+    shown = pub if a.public_only else metas  # 목록.html·맥락지도는 기본이 내부용(비공개 제목 포함) — 게시할 때는 --public-only
+    for m in sorted(shown, key=lambda x: x.get("13.1 생산일시", "")):
         rid = m["3.1 기본식별자"]
         rel = " ".join(f'<a href="#{e(x["22.2 관계대상식별자"])}">{e(x["22.1 관계유형"])}: {e(x["22.2 관계대상식별자"])}</a>' if x["22.2 관계대상식별자"] in ids
                        else f'{e(x["22.1 관계유형"])}: {e(x["22.2 관계대상식별자"])}' for x in m.get("22 관계", []))
@@ -444,7 +445,7 @@ def cmd_catalog(a):
 table{{border-collapse:collapse;width:100%}}th,td{{border-bottom:1px solid #ddd;padding:8px;text-align:left;vertical-align:top}}th{{color:#5b5248;font-size:13px}}
 input{{font:inherit;font-size:16px;padding:8px 12px;width:min(100%,360px);margin:8px 0 16px}}small{{color:#5b5248}}tr:target{{background:#fff1c9}}
 @media(max-width:640px){{thead{{display:none}}tr{{display:block;border-bottom:1px solid #ddd;padding:10px 0}}td{{display:grid;grid-template-columns:6.5em 1fr;gap:8px;border:0;padding:3px 0}}td::before{{content:attr(data-l);color:#5b5248;font-size:12px}}td:empty{{display:none}}}}</style></head><body>
-<h1>기록 패키지 목록</h1><p><small>{len(metas)}건 · 공개 {len(pub)}건 · 각 행은 패키지의 metadata.json에서 만들었습니다. 관계 링크를 누르면 이어진 기록으로 갑니다.</small></p>
+<h1>기록 패키지 목록</h1><p><small>{'공개 기록만 · ' if a.public_only else '내부용(비공개 제목 포함) · '}{len(shown)}건 · 공개 {len(pub)}건 · 각 행은 패키지의 metadata.json에서 만들었습니다. 관계 링크를 누르면 이어진 기록으로 갑니다.</small></p>
 <label>찾기 <input id="q" type="search" placeholder="제목·단위과제·부서"></label>
 <table><thead><tr><th>생산일</th><th>제목</th><th>단위과제</th><th>보존</th><th>공개</th><th>관계</th><th>SHA-256·고정성</th></tr></thead><tbody>{''.join(rows)}</tbody></table>
 <script>document.getElementById('q').addEventListener('input',e=>{{const v=e.target.value.toLowerCase();for(const r of document.querySelectorAll('tbody tr'))r.hidden=v&&!r.dataset.q.includes(v)}})</script></body></html>"""
@@ -461,6 +462,40 @@ input{{font:inherit;font-size:16px;padding:8px 12px;width:min(100%,360px);margin
     json.dump({"@context": "http://www.w3.org/ns/csvw", "url": "기록목록.csv", "dc:title": "기록 패키지 목록", "dc:language": "ko",
                "tableSchema": {"columns": [{"name": f"c{i}", "titles": t, **({"datatype": "date"} if t.startswith("13.1") else {})} for i, t in enumerate(cols + ["관계", "고정성"])],
                                "primaryKey": "c0"}}, open(os.path.join(a.out, "기록목록.csv-metadata.json"), "w", encoding="utf-8"), ensure_ascii=False, indent=1)
+    # 맥락 지도: 기관 → 부서 → 단위과제 → 기록(영국 PRO RMS 2.2 '조직 지도화' 개념, 국가기록포털 해외표준) — 기록이 어떤 조직·기능에서 나왔는지 한눈에
+    tree = {}
+    for m in shown:
+        tree.setdefault(m.get("1.2 기관명", "") or "(기관 미상)", {}).setdefault(m.get("1.3 부서명", "") or "(부서 미상)", {}).setdefault(m["12.2.2 분류명"], []).append(m)
+    parts = []
+    for ag, depts in sorted(tree.items()):
+        n_ag = sum(len(v) for d in depts.values() for v in d.values())
+        parts.append(f"<details open><summary><b>{e(ag)}</b> <small>{n_ag}건</small></summary><ul>")
+        for dp, tasks in sorted(depts.items()):
+            parts.append(f"<li><details open><summary>{e(dp)} <small>{sum(len(v) for v in tasks.values())}건</small></summary><ul>")
+            for tk, ms in sorted(tasks.items()):
+                parts.append(f"<li><details><summary>{e(tk)} <small>{len(ms)}건 · 보존 {e(', '.join(sorted({x['15.1 보존기간'] for x in ms})))}</small></summary><ul>"
+                             + "".join(f'<li><a href="목록.html#{e(x["3.1 기본식별자"])}">{e(x["4.1 제목"])}</a> <small>{e(x.get("13.1 생산일시", "")[:10])}</small></li>' for x in sorted(ms, key=lambda y: y.get("13.1 생산일시", "")))
+                             + "</ul></details></li>")
+            parts.append("</ul></details></li>")
+        parts.append("</ul></details>")
+    open(os.path.join(a.out, "맥락지도.html"), "w", encoding="utf-8").write(
+        '<!DOCTYPE html><html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>기록 맥락 지도</title>'
+        "<style>body{font:15px/1.6 system-ui,'Malgun Gothic',sans-serif;margin:24px auto;max-width:900px;padding:0 16px;color:#1d1a16;background:#fffdf8}"
+        "ul{list-style:none;padding-left:1.1em;border-left:1px solid #e4dccb}summary{cursor:pointer;padding:2px 0}small{color:#5b5248}</style></head><body>"
+        f"<h1>기록 맥락 지도</h1><p><small>기관 → 부서 → 단위과제 → 기록. {len(shown)}건{' (공개만)' if a.public_only else ' (내부용)'}, 제목을 누르면 목록의 그 기록으로 갑니다.</small></p>{''.join(parts)}</body></html>")
+    ids_ = {}
+    def nid(k):
+        return ids_.setdefault(k, f"n{len(ids_)}")
+    mm = ["flowchart LR"]
+    for ag, depts in sorted(tree.items()):
+        mm.append(f'  {nid(("a", ag))}["{ag}"]')
+        for dp, tasks in sorted(depts.items()):
+            mm.append(f'  {nid(("a", ag))} --> {nid(("d", ag, dp))}["{dp}"]')
+            for tk, ms in sorted(tasks.items()):
+                mm.append(f'  {nid(("d", ag, dp))} --> {nid(("t", ag, dp, tk))}["{tk} ({len(ms)}건)"]')
+    open(os.path.join(a.out, "맥락지도.mmd"), "w", encoding="utf-8").write("\n".join(mm).replace('"', "'").replace("['", '["').replace("']", '"]') + "\n")
+    if base and not a.public_only:
+        print("주의: --base-url로 게시할 때는 --public-only를 함께 쓰세요(목록.html·맥락지도에 비공개 제목이 들어 있음).", file=sys.stderr)
     if base:
         open(os.path.join(a.out, "sitemap.xml"), "w", encoding="utf-8").write(
             '<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">'
@@ -525,6 +560,7 @@ def main() -> int:
     g = sub.add_parser("catalog", help="패키지 폴더 전체로 목록·공개데이터·연결 그래프·검색 페이지")
     g.add_argument("root")
     g.add_argument("--verify", action="store_true")
+    g.add_argument("--public-only", action="store_true", help="목록.html·맥락지도에 공개 기록만(밖에 게시할 때)")
     g.add_argument("--base-url", help="게시할 주소(있으면 schema.org url·sitemap.xml을 씀)")
     g.add_argument("-o", "--out", default="산출/기록목록")
     w = sub.add_parser("sweep", help="업무 폴더에서 아직 기록화하지 않은 파일만 패키지로(반복 실행용)")
