@@ -31,20 +31,20 @@
 | 지침 | 2020 | 비밀기록물 관리 실무 지침 개정판 | 열지 않음(비밀 관련 — 담당자 확인) |
 | 지침 | 2020 | 국가기록원 시소러스 지침 | 영구기록물관리기관 기술 — archival-description 참고 |
 | 지침 | 2020 | 국가기록원 전거레코드 지침 | 영구기록물관리기관 기술 — archival-description 참고 |
-| 지침 | 2011 | 지방이전 정부기관 기록물 관리지침 | office-relocation(청사 이전 매뉴얼과 함께) |
+| 지침 | 2011 | 지방이전 정부기관 기록물 관리지침 | office-relocation 박스 라벨(00001·권수·생산부서)·신청사 서고 산정(140%·이동식 50%·하중)·이전비용 견적 수식(참고 1) |
 | 지침 | 2006 | 마이크로필름 지침 | records-forms microfilm(별지 제5호) — 신규 촬영 드묾 |
 | 매뉴얼 | 2025 | 재난 피해 종이기록물 응급복구 매뉴얼 | disaster-recovery |
 | 매뉴얼 | 2024 | 종이기록물 복원처리 매뉴얼 | 국가기록원 복원 — preservation-inspection restoration_plan 참고 |
 | 매뉴얼 | 2024 | 재난 피해 기록물 응급복구 가이드 라인(영문) | 이미지 PDF(본문 텍스트 없음) — disaster-recovery 참고 |
 | 매뉴얼 | 2023 | 중앙행정기관 단위과제정비 매뉴얼(2차 개정판) | records-schedule-check 정비 문제유형(8유형 15개선안), agency-closure merge_schedule |
-| 매뉴얼 | 2023 | 재난 피해 기록물 응급복구 가이드 라인 | 이미지 PDF — disaster-recovery 참고 |
+| 매뉴얼 | 2023 | 재난 피해 기록물 응급복구 가이드 라인 | 이미지 PDF를 글자 인식(tesseract kor)으로 읽음 → disaster-recovery 체크리스트 5항목(출처 유지·-20~-30℃ 냉동·작업공간 20±2℃·50±5%·업무 일지·문서고 2층 이상) |
 | 매뉴얼 | 2022 | 기록물 소독대상 선별 및 처리 매뉴얼 | preservation-inspection bio_check --traps(해충 1·2등급, 재포획 시 전량 저산소), ATP 1,000 RLU |
 | 매뉴얼 | 2021 | 2021년도 대학 기록물 보존기간 책정기준 가이드 | retention-review sector_guide_lookup.py --sector 대학(201과제) |
 | 매뉴얼 | 2016 | 의료기관 표준 기록관리기준표 운영 가이드 | retention-review sector_guide_lookup.py --sector 의료(135과제·공개여부·접근권한) |
 | 매뉴얼 | 2014 | 공공기관 청사 이전 대비 기록관리 업무 매뉴얼 | 새 스킬 office-relocation |
-| 매뉴얼 | 2010 | 30년경과 비공개기록물 공개재분류 가이드북(특수기록관 기록물) | 이미지 PDF — disclosure-reclass 참고 |
+| 매뉴얼 | 2010 | 30년경과 비공개기록물 공개재분류 가이드북(특수기록관 기록물) | 글자 인식으로 188쪽 읽음 — 특수기록관 대상, 30년 경과 일괄 공개 원칙은 disclosure-reclass가 반영 |
 | 매뉴얼 | 2010 | 비밀기록물 재분류 매뉴얼 | 열지 않음(비밀 관련 — 담당자 확인) |
-| 매뉴얼 | 2009 | 기록물 공개재분류 실용매뉴얼 : 기록관편 | 이미지 PDF — disclosure-reclass 참고 |
+| 매뉴얼 | 2009 | 기록물 공개재분류 실용매뉴얼 : 기록관편 | 글자 인식으로 160쪽 읽음 — 업무단계별 체크리스트는 NAK 16-1 부속서 J(disclosure-reclass)와 같은 내용, 인용 조문은 개정 전 번호라 현행 법령으로 봄 |
 | 규격·서식 | 2024 | 기록물 생산현황 통보서식 | production-status-report(서식 1~11) |
 | 규격·서식 | 2024 | 기록물통합서비스플랫폼 기록물 일괄등록 규격 | listing-qa ramp_batch.py |
 | 규격·서식 | 2024 | 기록물통합서비스플랫폼 기록물 일괄등록 서식 | listing-qa assets/RAMP_일괄등록_서식_2024.xlsx |

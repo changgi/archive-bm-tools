@@ -498,9 +498,9 @@ def main():
     rlf = " ".join(str(c) for sh in wrl.worksheets for r in sh.iter_rows(values_only=True) for c in r if c) if wrl else ""
     dzr = [r for r in wrl["평가·폐기 후보"].iter_rows(min_row=2, values_only=True)] if wrl else []
     bxr = [r for r in wrl["이송 박스"].iter_rows(min_row=2, values_only=True)] if wrl else []
-    check("청사 이전: 보존기간 확인·평가폐기 후보(만료)·관리번호(부서→연도→보존기간)·이송 박스·비밀 제외·점검표",
+    check("청사 이전: 보존기간 확인·평가폐기 후보(만료)·관리번호(부서→연도→보존기간)·이송 박스·비밀 제외·점검표·박스 라벨 00001·서고 140%·이전비용 수식",
           crl == 0 and len(dzr) == 1 and dzr[0][2] == "가상 계획" and "보존기간 없음" in rlf and "비밀철" not in rlf and "1건 — 목록에서 뺐음" in rlf
-          and len({r[0] for r in bxr}) == 4 and "선탑" in rlf, orl + str(bxr))
+          and len({r[0] for r in bxr}) == 4 and "선탑" in rlf and "00001" in rlf and "140%" in rlf and "=ROUND((F" in rlf, orl + str(bxr))
 
     # 사진 등록대상 선별(국가기록원 시청각기록물 관리지침 2024 3.2)
     try:

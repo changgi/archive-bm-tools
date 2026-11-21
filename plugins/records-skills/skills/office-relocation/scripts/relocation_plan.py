@@ -4,6 +4,8 @@
 사용:  python relocation_plan.py 보유현황목록.xlsx --year 2026 [--per-box 10] [--org 기관명] -o 산출/청사이전.xlsx
 목록 열(머리글 이름으로 찾음): 부서(처리과·생산부서), 기록물철 제목(철제목·제목), 생산연도, 보존기간, 보관위치(위치), 권수, 쪽수, 비밀구분
 근거:  국가기록원 「공공기관 청사 이전 대비 기록관리 업무 매뉴얼」(2014. 12.) 제2장(기본계획·보유현황·평가폐기·이송재배치)·부록 1 추진상황 점검표
+       「지방이전 정부기관 기록물관리 지침」(2011) Ⅲ.5 박스 작업(박스번호·권수·생산부서), Ⅳ 보존서고 면적(보존량의 약 140%, 이동식 서가 면적 50% 안팎 감축,
+       하중 고정식 750·이동식 1,000~1,200kgf/㎡), Ⅳ.4 유형별 소요예산(예시), 참고 1 이전비용 산출 내역서(항목·관리경비 5%·기업이윤 10%·부가세 10%)
 원칙:  계획과 목록만 만든다. 폐기·이송은 절차에 따라 사람이 한다. 비밀구분 철은 목록에 넣지 않고 건수만 센다.
 """
 import argparse
@@ -40,6 +42,7 @@ def main() -> int:
     ap.add_argument("--year", type=int, required=True, help="기준 연도(평가·폐기 후보 계산)")
     ap.add_argument("--per-box", type=int, default=10, help="이송 박스 하나에 담을 권 수")
     ap.add_argument("--org", default="")
+    ap.add_argument("--growth-years", type=int, default=10, help="신청사 서고 산정에 넣을 앞으로의 연수")
     ap.add_argument("-o", "--out", default="산출/청사이전.xlsx")
     a = ap.parse_args()
     if a.list.lower().endswith((".xlsx", ".xlsm")):
@@ -129,6 +132,59 @@ def main() -> int:
     pl.append(["박스번호", "부서", "보존기간", "관리번호 범위", "권수", "신청사 서고", "서가 번호", "배가 확인", "목록-실물 대조"])
     for bno, xs in boxes.items():
         pl.append([bno, xs[0]["부서"], xs[0]["보존"], f"{xs[0]['관리번호']}~{xs[-1]['관리번호']}", sum(x["권"] for x in xs), "", "", "", ""])
+    lab = wb.create_sheet("박스 라벨")
+    lab.append(["박스번호", "권수", "생산부서", "보존기간", "관리번호 범위", "동봉 목록"])
+    for k, (bno, xs) in enumerate(boxes.items(), 1):
+        lab.append([f"{k:05d}", sum(x["권"] for x in xs), xs[0]["부서"], xs[0]["보존"], f"{xs[0]['관리번호']}~{xs[-1]['관리번호']}", "박스별 기록물 목록 1부"])
+    lab.append([])
+    lab.append(["지침 예시", "박스 앞면에 박스번호(00001)·권수(박스 안 철 수)·생산부서를 붙이고, 박스별 목록 1부를 넣어 봉함"])
+    # 신청사 서고 산정
+    total = sum(x["권"] for x in items)
+    yrs = collections.Counter()
+    for x in items:
+        if re.fullmatch(r"\d{4}", str(x["연도"])):
+            yrs[int(x["연도"])] += x["권"]
+    recent = [yrs.get(y, 0) for y in range(a.year - 5, a.year)]
+    per_year = round(sum(recent) / 5) if any(recent) else 0
+    proj = total + per_year * a.growth_years
+    need = round(proj * 1.4)
+    kind = "A형(1만 권 기준)" if need < 40000 else "B형(4만 권 이상)" if need < 150000 else "C형(15만 권 이상)" if need < 300000 else "D형(30만 권 이상)"
+    sz = wb.create_sheet("신청사 서고 산정")
+    sz.append(["항목", "값", "근거·설명"])
+    for row in (["현재 보유량(권)", total, "보유현황 목록 합계(비밀 제외)"],
+                ["최근 5년 연평균 생산(권)", per_year, f"{a.year - 5}~{a.year - 1} 생산연도 권수 평균 — 추가 이관 예상량 추정에 씀"],
+                [f"{a.growth_years}년 뒤 예상량(권)", proj, "현재 + 연평균 × 기간(--growth-years)"],
+                ["필요 수용량(권)", need, "작업공간을 고려해 보존기록물량 대비 약 140% 확보(지침 Ⅳ.2)"],
+                ["서가 방식", "이동식 검토", "이동식 서가(모빌렉)는 소요면적 50% 안팎 감축 — 하중 1,000~1,200kgf/㎡ 이상 필요, 고정식은 750kgf/㎡ 이상"],
+                ["비밀기록물", f"{secret}건", "별도 전용서고 필요(공공기록물법 제32조, 시행령 제66조) — 목록에서 뺀 건수"],
+                ["소요예산 유형(예시)", kind, "지침 Ⅳ.4 예시(2011, 백만원): A 33.2 · B 74.4 · C 225.3 · D 431.2 — 현재 단가로 다시 산출"],
+                ["보존환경", "stack-environment로 점검", "현행 기준은 시행령 별표 6(지침의 표는 2011년 값)"]):
+        sz.append(row)
+    # 이전비용 견적 점검(수량·단가는 기관 견적으로 채움, 금액은 수식)
+    ct = wb.create_sheet("이전비용 견적 점검")
+    ct.append(["구분", "항목", "수량", "단가(원)", "일수·할증", "금액(원)", "지침 예시(2011, 참고)"])
+    rows = [("운반임", "화물차(5톤 윙바디 등) 대수", None, None, 1, "65대 × 290,000원 × 1일"),
+            ("작업임", "반출·이송·상차·하차·이송·반입(R/T)", None, None, 1.5, "1,147.9 R/T × 2,056~2,267원 × 할증 1.5, 6항목"),
+            ("포장·정리", "발지 작업 인원", None, None, None, "12명 × 84,686원 × 10일"),
+            ("포장·정리", "착지 작업 인원", None, None, None, "12명 × 84,686원 × 10일"),
+            ("옵션비", "모빌렉 해체·설치(련)", None, None, 1, "180련 × 400,000원"),
+            ("옵션비", "항온항습기 이전", None, None, 1, "1대 × 45,000,000원(100평)"),
+            ("옵션비", "공기청정기 이전", None, None, 1, "3대 × 1,500,000원"),
+            ("포장재료", "서류박스·테이프·물품송표·바구니", 1, None, 1, "17,900,000원")]
+    for i, (g, item, q, u, d, ex) in enumerate(rows, 2):
+        ct.append([g, item, q, u, d, f"=IF(AND(C{i}<>\"\",D{i}<>\"\"),C{i}*D{i}*IF(E{i}=\"\",1,E{i}),\"\")", ex])
+    n = len(rows) + 1
+    ct.append(["소계", "", "", "", "", f"=SUM(F2:F{n})", ""])
+    ct.append(["관리경비", "소계의 5%", "", "", "", f"=ROUND(F{n + 1}*0.05,0)", "5%"])
+    ct.append(["기업이윤", "(소계+관리경비)의 10%", "", "", "", f"=ROUND((F{n + 1}+F{n + 2})*0.1,0)", "10%"])
+    ct.append(["부가세", "(소계+관리경비+기업이윤)의 10%", "", "", "", f"=ROUND((F{n + 1}+F{n + 2}+F{n + 3})*0.1,0)", "10%"])
+    ct.append(["보험료", "이송 중 분실·파손 대비", "", "", "", "", "5,000,000원"])
+    ct.append(["합계", "천 원 단위 절사", "", "", "", f"=ROUNDDOWN(SUM(F{n + 1}:F{n + 5}),-3)", ""])
+    ct.append([])
+    ct.append(["주의", "작업임 6항목은 항목마다 한 줄씩 늘려 적는다. 수량·단가는 기관이 받은 견적으로 채운다(예시 단가를 그대로 쓰지 않음)."])
+    ct.column_dimensions["B"].width = 36
+    ct.column_dimensions["G"].width = 44
+    sz.column_dimensions["C"].width = 70
     cs = wb.create_sheet("추진상황 점검표")
     cs.append(["영역", "점검항목", "수행주체", "준비", "진행", "완료", "산출물·비고"])
     for row in CHECK:
