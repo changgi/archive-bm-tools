@@ -84,7 +84,9 @@ def fingerprint(page, kind):
     text = clean(body)
     text = re.sub(r"(조회수?|조회|방문자|접속자)\s*[:：]?\s*[\d,]+", "", text)
     text = re.sub(r"\d{4}-\d{2}-\d{2} \d{2}:\d{2}(:\d{2})?", "", text)
-    return items, hashlib.sha256(text.encode()).hexdigest(), len(text)
+    # 순서 바뀜·조회수 같은 숫자만 바뀐 것은 변화로 보지 않음: 숫자만인 낱말을 빼고 낱말 집합으로 해시(같은 길이·다른 순서 오탐 방지)
+    words = sorted(set(w for w in text.split() if not re.fullmatch(r"[\d,.:()/-]+", w)))
+    return items, hashlib.sha256(" ".join(words).encode()).hexdigest(), len(text)
 
 
 def main() -> int:
