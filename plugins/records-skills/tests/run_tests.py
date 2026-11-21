@@ -340,7 +340,7 @@ def main():
         log2 = {r["원본"]: r for r in csv.DictReader(open(f"{t}/산출/보존포맷/변환이력.csv", encoding="utf-8-sig"))}
         ko = log["한글회의록.txt"]
         ko_ok = ko["판정"] == "통과" or (ko["글꼴"].startswith("CharSet 없음") and "TrueType 한글 글꼴" in ko["비고"])
-        ok_pa = log["회의록.txt"]["판정"] == "통과" and log["회의록.txt"]["PDF/A 선언"] == "PDF/A-1b" and "날짜 맞춤" in log["회의록.txt"]["비고"] \
+        ok_pa = log["회의록.txt"]["판정"] == "통과" and log["회의록.txt"]["PDF/A 선언"] == "PDF/A-1b" and ("날짜 맞춤" in log["회의록.txt"]["비고"] or not log["회의록.txt"]["비고"]) \
             and log["list.csv"]["판정"] == "통과" and log["공문.hwp"]["판정"] == "보류" and log2["회의록.txt"]["판정"] == "건너뜀" and ko_ok
         check("보존포맷: PDF/A-1b 변환·날짜 맞춤(6.7.3)·OTF 한글 대체 글꼴 CharSet 경고(6.3.5)·HWP 보류·덮어쓰기 안 함", ok_pa,
               str({k: (v["판정"], v["PDF/A 선언"], v["글꼴"], v["비고"]) for k, v in log.items()}))
@@ -466,6 +466,104 @@ def main():
     check("대학·의료 가이드: 유사 단위과제로 맞춤(학생증발급→학생증관리 5년)·짧음 2건·의료 135과제 검색",
           csg == 1 and len(sgr) == 3 and sgr[0][6] == "학생증관리" and sgr[0][8] == "5년" and sgr[2][8] == "준영구" and "/135과제" in omd, osg + omd)
 
+    # 생산 시점 기록화(record-by-design): BagIt 패키지·NAK 8 메타데이터·RiC-O·사건 이력·고정성
+    RBD = S("record-by-design", "scripts", "capture.py")
+    open(f"{t}/보고원본.txt", "w", encoding="utf-8").write("제목: 2026년 가상 축제 결과 보고\n시행 기획과-123 (2026. 3. 2.)\n문의 010-1234-5678\n가상시장\n")
+    crb1, orb1 = run([RBD, "capture", f"{t}/보고원본.txt", "--task", "지역축제운영", "--agency", "가상시", "--dept", "기획과", "--person", "김가상",
+                      "--period", "10년", "--activity", "결과 보고", "--relation", "참조:2026-plan", "--id", "R-0001", "-o", f"{t}/산출/기록패키지"])
+    pk = f"{t}/산출/기록패키지/R-0001"
+    mj = json.load(open(f"{pk}/metadata.json", encoding="utf-8")) if os.path.exists(f"{pk}/metadata.json") else {}
+    ld = json.load(open(f"{pk}/context.jsonld", encoding="utf-8")) if os.path.exists(f"{pk}/context.jsonld") else {}
+    pubj = json.load(open(f"{pk}/매개/공개데이터.json", encoding="utf-8")) if os.path.exists(f"{pk}/매개/공개데이터.json") else {}
+    cv1, ov1 = run([RBD, "verify", pk])
+    open(f"{pk}/data/원본/보고원본.txt", "a", encoding="utf-8").write("변조")
+    cv2, ov2 = run([RBD, "verify", pk])
+    nev = sum(1 for _ in open(f"{pk}/events.jsonl", encoding="utf-8")) if os.path.exists(f"{pk}/events.jsonl") else 0
+    open(f"{t}/비밀문서.txt", "w", encoding="utf-8").write("Ⅲ급 비밀\n가상\n")
+    crb2, _ = run([RBD, "capture", f"{t}/비밀문서.txt", "--task", "가", "--agency", "가", "--dept", "가", "--period", "10년", "-o", f"{t}/산출/기록패키지"])
+    crb3, _ = run([RBD, "capture", f"{t}/보고원본.txt", "--task", "가", "--agency", "가", "--dept", "가", "--period", "10년", "--access", "비공개", "-o", f"{t}/산출/기록패키지"])
+    check("생산 시점 기록화: BagIt·NAK 8 무결성·RiC-O 관계·개인정보 후보면 공개 본문 뺌·고정성 통과/변조 실패·비밀 거부·비공개 사유 필수",
+          crb1 == 1 and mj.get("23.2 무결성체크값", "") and mj.get("12.2.2 분류명") == "지역축제운영" and ld.get("@type") == "rico:Record"
+          and ld.get("rico:isRelatedTo", [{}])[0].get("@id") == "urn:records:2026-plan" and "싣지 않음" in pubj.get("설명", "")
+          and os.path.exists(f"{pk}/bagit.txt") and cv1 == 0 and cv2 == 1 and "바뀜" in ov2 and nev == 6 and crb2 == 3 and crb3 == 2,
+          orb1 + ov1 + ov2)
+
+    # 생산 시점 기록화 일괄·목록: 목록 한 행 = 파일 하나, 패키지 전체로 목록·공개데이터·연결 그래프·검색 페이지
+    os.makedirs(f"{t}/일괄", exist_ok=True)
+    open(f"{t}/일괄/계획.txt", "w", encoding="utf-8").write("가상 계획\n")
+    open(f"{t}/일괄/결과.txt", "w", encoding="utf-8").write("가상 결과\n")
+    open(f"{t}/일괄/비밀.txt", "w", encoding="utf-8").write("Ⅱ급 비밀\n")
+    open(f"{t}/일괄/목록.csv", "w", encoding="utf-8").write("파일,제목,생산일자,식별자,관계,요약,공개구분\n계획.txt,가상 계획,2026-01-10,B-1,,계획 요약,공개\n"
+                                                         "결과.txt,가상 결과,2026-03-02,B-2,근거:B-1,결과 요약,비공개\n비밀.txt,가상,2026-03-03,B-3,,,공개\n")
+    cbt, obt = run([RBD, "batch", f"{t}/일괄/목록.csv", "--task", "지역축제운영", "--agency", "가상시", "--dept", "기획과", "--period", "10년", "-o", f"{t}/산출/일괄"])
+    btr = list(csv.reader(open(f"{t}/산출/일괄/일괄_결과.csv", encoding="utf-8-sig")))[1:] if os.path.exists(f"{t}/산출/일괄/일괄_결과.csv") else []
+    cct, oct_ = run([RBD, "catalog", f"{t}/산출/일괄", "--verify", "-o", f"{t}/산출/기록목록"])
+    ctl = list(csv.reader(open(f"{t}/산출/기록목록/기록목록.csv", encoding="utf-8-sig")))[1:] if os.path.exists(f"{t}/산출/기록목록/기록목록.csv") else []
+    publ = open(f"{t}/산출/기록목록/공개데이터.jsonl", encoding="utf-8").read() if os.path.exists(f"{t}/산출/기록목록/공개데이터.jsonl") else ""
+    grh = json.load(open(f"{t}/산출/기록목록/연결그래프.jsonld", encoding="utf-8")) if os.path.exists(f"{t}/산출/기록목록/연결그래프.jsonld") else {}
+    cpg = open(f"{t}/산출/기록목록/목록.html", encoding="utf-8").read() if os.path.exists(f"{t}/산출/기록목록/목록.html") else ""
+    check("기록화 일괄·목록: 비공개는 사유 없으면 입력 오류·비밀 거부·결과표·목록 고정성 통과·공개데이터는 공개만·연결 그래프·관계 링크",
+          cbt == 1 and [r[3] for r in btr] == ["만듦(확인 있음)", "입력 오류", "거부"] and cct == 0 and len(ctl) == 1 and ctl[0][-1] == "통과"
+          and "B-1" in publ and "B-2" not in publ and len(grh.get("@graph", [])) == 1 and 'id="B-1"' in cpg, obt + oct_ + str(btr))
+
+    # 업무과정 분석 작업지(KS X ISO TR 26122·TR 21946) → 기록화설정 → sweep(새 파일·개정본) → catalog의 oai_dc·Atom
+    open(f"{t}/과제목록.csv", "w", encoding="utf-8").write("대기능,단위과제,보존기간,처리과,단위과제 설명\n일반행정,조례 제정·개정,10년,기획과,조례 입안\n문화,지역축제운영,5년,문화과,축제\n")
+    caw, oaw = run([S("records-schedule-check", "scripts", "appraisal_worksheet.py"), f"{t}/과제목록.csv", "--agency", "가상시", "-o", f"{t}/산출/업무분석.xlsx"])
+    aww = openpyxl.load_workbook(f"{t}/산출/업무분석.xlsx") if os.path.exists(f"{t}/산출/업무분석.xlsx") else None
+    awr = [r for r in aww["기록 요구"].iter_rows(min_row=2, values_only=True)] if aww else []
+    acfg = json.load(open(f"{t}/산출/업무분석_기록화설정.json", encoding="utf-8")) if os.path.exists(f"{t}/산출/업무분석_기록화설정.json") else {}
+    os.makedirs(f"{t}/업무폴더/지역축제운영", exist_ok=True)
+    acfg["기본"]["dept"], acfg["기본"]["period"] = "기획과", "10년"
+    json.dump(acfg, open(f"{t}/업무폴더/기록화설정.json", "w", encoding="utf-8"), ensure_ascii=False)
+    open(f"{t}/업무폴더/지역축제운영/계획.txt", "w", encoding="utf-8").write("가상 축제 계획\n")
+    run([RBD, "sweep", f"{t}/업무폴더", "-o", f"{t}/산출/수집"])
+    cs2, os2 = run([RBD, "sweep", f"{t}/업무폴더", "-o", f"{t}/산출/수집"])
+    open(f"{t}/업무폴더/지역축제운영/계획.txt", "w", encoding="utf-8").write("가상 축제 계획 수정\n")
+    cs3, os3 = run([RBD, "sweep", f"{t}/업무폴더", "-o", f"{t}/산출/수집"])
+    run([RBD, "catalog", f"{t}/산출/수집", "-o", f"{t}/산출/수집목록"])
+    oai = open(f"{t}/산출/수집목록/oai_dc.xml", encoding="utf-8").read() if os.path.exists(f"{t}/산출/수집목록/oai_dc.xml") else ""
+    atom = open(f"{t}/산출/수집목록/feed.atom", encoding="utf-8").read() if os.path.exists(f"{t}/산출/수집목록/feed.atom") else ""
+    import xml.dom.minidom as _md
+    try:
+        _md.parseString(oai.encode()); _md.parseString(atom.encode()); xok = True
+    except Exception:
+        xok = False
+    check("업무과정 분석 작업지·조례 10년 확인 단서·위험 수식 → 기록화설정 → sweep 중복 없음·개정 관계 → oai_dc·Atom 유효",
+          caw == 0 and "영구 이상인지 확인" in str(awr[0][6]) and str(aww["위험 평가"]["E2"].value).startswith("=IF(") and acfg["폴더"]["지역축제운영"]["dept"] == "문화과"
+          and "새로 기록화 0" in os2 and "새로 기록화 1" in os3 and oai.count("<record>") == 2 and "개정:urn:records:" in oai and xok and atom.count("<entry>") == 2,
+          oaw + os2 + os3)
+
+    # 근거 자료 변화 감시(오프라인): 기준선 → 새 첨부·게시물·법령 시행일 바뀜 감지
+    SW = S("records-qa-gate", "scripts", "source_watch.py")
+    os.makedirs(f"{t}/감시", exist_ok=True)
+    pg1 = '<div id="contents"><a href="/d?up_filename=가상지침.pdf">가상지침</a><a href="/x?board_seq=101">가상 공지</a></div>'
+    lw1 = '<div id="contents">[시행 2026. 10. 2.] 제36728호, 2026. 9. 29., 타법개정</div>'
+    open(f"{t}/감시/a.html", "w", encoding="utf-8").write(pg1)
+    open(f"{t}/감시/l.html", "w", encoding="utf-8").write(lw1)
+    json.dump({"출처": [{"이름": "가상 표준", "주소": "https://example.invalid/a", "종류": "목록", "반영": "가상 스킬"},
+                       {"이름": "가상 법령", "주소": "https://example.invalid/l", "종류": "법령", "반영": "law-check", "본문비교": False}]},
+              open(f"{t}/감시/src.json", "w", encoding="utf-8"), ensure_ascii=False)
+    json.dump({"가상 표준": f"{t}/감시/a.html", "가상 법령": f"{t}/감시/l.html"}, open(f"{t}/감시/off.json", "w", encoding="utf-8"), ensure_ascii=False)
+    swa = ["--sources", f"{t}/감시/src.json", "--baseline", f"{t}/감시/base.json", "--offline", f"{t}/감시/off.json"]
+    csw1, _ = run([SW, *swa, "--update", "--report", f"{t}/감시/r1.md"])
+    csw2, _ = run([SW, *swa, "--report", f"{t}/감시/r2.md"])
+    open(f"{t}/감시/a.html", "w", encoding="utf-8").write(pg1.replace("</div>", '<a href="/d?up_filename=새지침(2027).pdf">새지침</a></div>'))
+    open(f"{t}/감시/l.html", "w", encoding="utf-8").write(lw1.replace("2026. 10. 2.", "2027. 4. 14."))
+    csw3, osw3 = run([SW, *swa, "--report", f"{t}/감시/r3.md"])
+    rsw = open(f"{t}/감시/r3.md", encoding="utf-8").read() if os.path.exists(f"{t}/감시/r3.md") else ""
+    check("근거 변화 감시: 첫 기록·변화 없음 0·새 첨부와 법령 시행일 바뀜 감지(종료 1)·반영할 곳 표시",
+          csw1 == 0 and csw2 == 0 and csw3 == 1 and "새지침(2027).pdf" in rsw and "[시행 2027. 4. 14.]" in rsw and "가상 스킬" in rsw, osw3 + rsw[:400])
+
+    # 행정박물 관리대상 선별(행정박물 관리지침 2021 표 4)
+    _k = ["중요도", "인물", "상징", "예술", "희소", "활용", "보존"]
+    xlsx(f"{t}/박물후보.xlsx", [["행정박물명", "생산일자", "생산부서", "유형", "수량", "비고"] + [f"처리과_{k}" for k in _k] + [f"기록관_{k}" for k in _k],
+        ["가상 현판", "2020-01-02", "총무과", "상징류", "1", ""] + ["4"] * 14, ["가상 선물 도자기", "2024-05-01", "국제과", "그 밖의 유형", "1", "증정 선물"] + ["2"] * 14,
+        ["가상 직인", "2023-01-01", "총무과", "관인류", "1", ""] + ["3"] * 7])
+    cas, oas = run([S("admin-artifacts-check", "scripts", "artifact_select.py"), f"{t}/박물후보.xlsx", "-o", f"{t}/산출/박물선별.xlsx"])
+    asr = [r for r in openpyxl.load_workbook(f"{t}/산출/박물선별.xlsx")["선별 결과"].iter_rows(min_row=2, values_only=True)] if os.path.exists(f"{t}/산출/박물선별.xlsx") else []
+    check("행정박물 선별: 56점 관리대상·28점 비대상·기록관 점수 미완·공직자선물 신고·관인 폐기공고 안내·표 4 체크리스트",
+          cas == 0 and [r[9] for r in asr] == ["관리대상", "비대상", "점수 미완"] and asr[0][8] == 56 and "100달러" in str(asr[1][10]) and "폐기공고" in str(asr[2][10]), oas + str(asr))
+
     # 청사 이전 대비 기록물 이송·재배치(국가기록원 청사 이전 매뉴얼 2014)
     xlsx(f"{t}/보유현황.xlsx", [["부서", "기록물철 제목", "생산연도", "보존기간", "보관위치", "권수", "비밀구분"],
         ["가과", "가상 계획", "2015", "5년", "사무실", "2", ""], ["가과", "가상 대장", "2010", "영구", "문서고", "1", ""],
@@ -476,9 +574,9 @@ def main():
     rlf = " ".join(str(c) for sh in wrl.worksheets for r in sh.iter_rows(values_only=True) for c in r if c) if wrl else ""
     dzr = [r for r in wrl["평가·폐기 후보"].iter_rows(min_row=2, values_only=True)] if wrl else []
     bxr = [r for r in wrl["이송 박스"].iter_rows(min_row=2, values_only=True)] if wrl else []
-    check("청사 이전: 보존기간 확인·평가폐기 후보(만료)·관리번호(부서→연도→보존기간)·이송 박스·비밀 제외·점검표",
+    check("청사 이전: 보존기간 확인·평가폐기 후보(만료)·관리번호(부서→연도→보존기간)·이송 박스·비밀 제외·점검표·박스 라벨 00001·서고 140%·이전비용 수식",
           crl == 0 and len(dzr) == 1 and dzr[0][2] == "가상 계획" and "보존기간 없음" in rlf and "비밀철" not in rlf and "1건 — 목록에서 뺐음" in rlf
-          and len({r[0] for r in bxr}) == 4 and "선탑" in rlf, orl + str(bxr))
+          and len({r[0] for r in bxr}) == 4 and "선탑" in rlf and "00001" in rlf and "140%" in rlf and "=ROUND((F" in rlf, orl + str(bxr))
 
     # 사진 등록대상 선별(국가기록원 시청각기록물 관리지침 2024 3.2)
     try:
@@ -656,11 +754,14 @@ def main():
         import warnings as _w
         _w.filterwarnings("ignore")
         from hwpx.document import HwpxDocument as _D
+        import importlib.metadata as _md
+        if int(_md.version("python-hwpx").split(".")[0]) >= 7 and importlib.util.find_spec("hwpx_automation") is None:
+            raise ImportError("python-hwpx 7.0은 마크다운 변환이 python-hwpx-automation으로 빠짐")
         _d = _D.new()
         _d.add_paragraph("수신  {{수신}}")
         _tb = _d.add_table(1, 2)
         _tb.set_cell_text(0, 0, "담당자")
-        _d.save_to_path(f"{t}/hw/서식.hwpx")
+        (_d.save_to_path if hasattr(type(_d), "save_to_path") else _d.save)(f"{t}/hw/서식.hwpx")
         open(f"{t}/hw/값.csv", "w", encoding="utf-8").write("키,값\n수신,가상시 기록관장\n칸:담당자,기록연구사 김가상\n")
         c1, o1 = run([S("hwpx-report", "scripts", "make_hwpx.py"), "--md", f"{t}/hw/보고.md", "-o", f"{t}/hw/보고.hwpx"])
         c2, o2 = run([S("hwpx-report", "scripts", "make_hwpx.py"), "--template", f"{t}/hw/서식.hwpx", "--values", f"{t}/hw/값.csv",
@@ -916,16 +1017,19 @@ def main():
     cw = openpyxl.load_workbook(f"{t}/비밀/점검.xlsx")
     cj = {r[1]: r[5] for r in cw["점검"].iter_rows(min_row=2, values_only=True)}
     ct = {(r[0], r[1]): r[3] for r in cw["이관 시기"].iter_rows(min_row=2, values_only=True)}
+    cprep = {r[0]: r for r in cw["이관 준비"].iter_rows(min_row=2, values_only=True)}
     c10 = {r[0]: r for r in cw["서식 10 수치"].iter_rows(min_row=2, values_only=True)}
     c2, o2 = run([S("production-status-report", "scripts", "fill_official_form.py"), f"{t}/생산등록.xlsx", "--form", form, "--year", "2025",
                   "--secret", f"{t}/비밀/점검.xlsx", "-o", f"{t}/비밀/통보서식.xlsx"])
     sw = openpyxl.load_workbook(f"{t}/비밀/통보서식.xlsx")
-    check("비밀기록물: 훅 차단·사본 제외(사본 '이관' 표시)·불확실 보호기간·보존<보호·원본 파기, 이관 시기(제68조② 기산일+5년), 서식 10 (가)(나)·11 목록",
-          code_h == 2 and "가-3" not in cj and "사본 예고문" in cj.get("가-7", "") and "처리 후" in cj["가-2"] and "보존기간 ≥ 보호기간" in cj["가-4"] and "'파기'" in cj["가-4"] and cj["가-1"] == "통과"
+    check("비밀기록물: 훅 차단·사본 제외(사본 '이관' 표시)·불확실 보호기간·보존 말일<보호 말일·원본 파기·유형별 이관 준비, 이관 시기(제68조② 기산일+5년), 서식 10 (가)(나)·11 목록",
+          code_h == 2 and "가-3" not in cj and "사본 예고문" in cj.get("가-7", "") and "처리 후" in cj["가-2"] and "최소 10년" in cj["가-4"] and "'파기'" in cj["가-4"] and cj["가-1"] == "통과"
           and ct[("가-5", "처리과→기록관")] == 2026 and ct[("가-6", "기록관→영구")] == 2028 and ct[("가-9", "기록관→영구")] == 2041 and ct[("가-8", "처리과→기록관")] in ("", None)
           and c10[7][2] == 1 and c10[7][4] == 4 and c10[12][2] == 1 and c10[15][2] == 1
           and sw["서식 10"]["F7"].value == 1 and sw["서식 10"]["I7"].value == 4 and sw["서식 11"]["B6"].value == "가-5" and sw["서식 11"]["B14"].value == "가-6"
-          and sw["서식 11"]["A2"].value.startswith("(생산기간 : 2022"), o1 + o2 + str(cj) + str(ct))
+          and sw["서식 11"]["A2"].value.startswith("(생산기간 : 2022")
+          and cprep.get("가-5", [None, ""])[1] == "유형1" and "대각선" in cprep["가-5"][4] and cprep.get("가-6", [None, ""])[1] == "유형2" and "별도서고" in cprep["가-6"][2]
+          and any(r[0] == "가-6" and "보호기간 만료" in r[7] for r in cw["재분류 검토서"].iter_rows(min_row=2, values_only=True)), o1 + o2 + str(cj) + str(ct))
 
     # 서식 9 회의록 생산목록(시행령 제18조①②): 회의체마다 한 줄, 미개최 0, 약칭·서면 무록·지정회의 속기록 부족
     xlsx(f"{t}/회의체.xlsx", [["회의체명", "속기록지정", "부서명", "회의호수", "근거구분", "근거명칭", "근거조항", "최초구성일", "회의기능", "위원장", "위원"],

@@ -95,16 +95,30 @@ def main() -> int:
                 t.set_cell_text(h["target_cell"]["row"], h["target_cell"]["col"], v)
                 filled += 1
         else:
-            filled += doc.replace_text_in_runs("{{" + k + "}}", v)
+            filled += doc.text.replace("{{" + k + "}}", v)
     md = open(a.md, encoding="utf-8").read() if a.md else ""
     if md:
-        doc.text.append_markdown(md)
+        try:
+            doc.text.append_markdown(md)  # python-hwpx 6.x
+        except AttributeError:
+            try:
+                from hwpx_automation.markdown import append_markdown  # python-hwpx 7.0부터 따로 나뉨
+            except ImportError:
+                print('입력 오류: python-hwpx 7.0은 마크다운 변환이 빠졌습니다. python -m pip install "python-hwpx<7" 또는 python-hwpx-automation을 설치하세요.', file=sys.stderr)
+                return 2
+            append_markdown(doc, md)
     if a.header:
-        doc.set_header_text(a.header)
+        try:
+            doc.set_header_text(a.header)  # python-hwpx 6.x
+        except AttributeError:
+            doc.page.set_header(text=a.header)  # 7.0
     if a.page_number:
         doc.page.set_page_number()
     os.makedirs(os.path.dirname(a.out) or ".", exist_ok=True)
-    doc.save_to_path(a.out)
+    try:
+        doc.save_to_path(a.out)  # python-hwpx 6.x
+    except AttributeError:
+        doc.save(a.out)  # python-hwpx 7.0부터 save(path)로 합쳐짐
 
     chk = HwpxDocument.open(a.out)
     rep = chk.validate()

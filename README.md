@@ -1,15 +1,15 @@
 <div align="center">
 
-<img src=".github/assets/banner.svg" alt="archive-bm-tools — 기록관리 담당자를 위한 Claude 스킬 42종" width="100%">
+<img src=".github/assets/banner.svg" alt="archive-bm-tools — 기록관리 담당자를 위한 Claude 스킬 43종" width="100%">
 
 **공공기관 기록관리 담당자를 위한 Claude 플러그인 마켓플레이스**
 
 생산현황 통보부터 이관·보존·공개·평가·폐기까지 —<br>
 반복되는 점검과 서식 작성은 스크립트가, 판단과 제출은 사람이.
 
-![version](https://img.shields.io/badge/records--skills-v2.21.0-1f6feb)
-![skills](https://img.shields.io/badge/스킬-42종-2da44e)
-![tests](https://img.shields.io/badge/시험-117%2F117%20통과-2da44e)
+![version](https://img.shields.io/badge/records--skills-v2.22.0-1f6feb)
+![skills](https://img.shields.io/badge/스킬-43종-2da44e)
+![tests](https://img.shields.io/badge/시험-122%2F122%20통과-2da44e)
 ![python](https://img.shields.io/badge/Python-3.10%2B-3776ab?logo=python&logoColor=white)
 ![law](https://img.shields.io/badge/근거-시행령%202026.8.25.-8250df)
 ![license](https://img.shields.io/badge/코드-MIT-lightgrey)
@@ -36,7 +36,18 @@
 
 ---
 
-## 🆕 v2.21.0에서 달라진 것
+## 🆕 v2.22.0에서 달라진 것
+
+- 🆕 **record-by-design**(43번째 스킬): 현용 단계에서 만든 파일이 "누가·무슨 업무로·왜·무엇과 이어져" 만들었는지와 원본 그대로임을 스스로 증명하는 기록 패키지로 만들고, 같은 메타데이터에서 여러 매개로 다시 만듭니다. `batch`로 목록 한 장에서 여러 패키지를, `catalog`로 패키지 전체의 목록·공개데이터(JSONL)·연결 그래프(JSON-LD)·검색 페이지를 만듭니다. [사용법](docs/skills.md#43-record-by-design--생산-시점-기록화)
+- 🔭 **근거 자료 변화 감시**: 국가기록포털·법제처 입법예고·국가법령정보센터 29곳을 매주(GitHub Actions) 지난번과 비교해, 새 게시물·첨부·법령 시행일이 바뀌면 보고서와 PR을 엽니다. [사용법](docs/skills.md#3-records-qa-gate--내보내기-전-품질-관문)
+- 🔁 **생산 시점 기록화 자동화**: `sweep`(업무 폴더에서 새·바뀐 파일만, 바뀐 파일은 '개정' 관계), `catalog`에 OAI-PMH Dublin Core·Atom 피드 추가
+- 🧭 **업무과정 분석·평가 작업지**(KS X ISO TR 26122·TR 21946): 기록관리기준표를 만들거나 정비할 때 단위과제별 순차 분석·기록 요구·위험 평가, `sweep` 설정 초안까지
+- 🔒 **비밀기록물 공개 지침 3종 반영**: 보존기간 말일 ≥ 보호기간 말일 계산 바로잡음, 유형별 이관 준비·재분류 검토서 시트
+- 📚 **KS 12종**: 원문은 유료라 공개 초록·목차로 범위를 확인해 [대응표](plugins/records-skills/skills/records-qa-gate/references/ks-standards-2026-11-21.md)로 정리
+- 🏺 **행정박물 관리대상 선별**(행정박물 관리지침 2021 표 4): 7개 기준 처리과·기록관 점수 → 70점 중 36점 이상 관리대상, 공직자 선물·관인 폐기공고 안내
+- python-hwpx 7.0 호환, GitHub Actions에서 LibreOffice까지 설치해 시험
+
+### v2.21.0
 
 국가기록포털 **표준·지침·매뉴얼** 6개 탭(표준 33·지침 18·매뉴얼 12·규격서식 5·KS 11·해외 120)과 **기록물분류기준** 3개 메뉴를 전부 열어, 첨부 파일까지 읽고 스크립트로 옮겼습니다. 게시물마다 어느 스킬이 맡는지는 [전수 대응표](plugins/records-skills/skills/records-qa-gate/references/standards-menu-2026-11-21.md)에 있습니다.
 
@@ -71,6 +82,8 @@ DB구축 업체가 넘긴 목록이랑 이미지 폴더, 일괄등록 규격대�
 | 이관 연장 | 기록관 미설치·수시 참고 시 기산일부터 10년 범위 | **기록관과 협의해 1년 범위**, 별지 제1호의2 목록 첨부(미설치 기관은 5년) |
 | 암호화 기록물 | — | 이관 때 **암호화 기록물 목록과 해제 정보 첨부**(시행령 제31조의2) |
 
+**2027. 4. 14.부터(법률 개정, 2026. 10. 13. 공포):** 영구기록물관리기관 이관 대상이 '보존기간 30년 이상'에서 **'영구 + 대통령령으로 정하는 기록물'**로 바뀌고, 기록관·특수기록관이 없는 기관을 위한 **준기록관**이 생깁니다. 기록물공개심의회는 7~15명(민간 3분의 2 이상)으로 늘고 **지방자치단체지정기록물**이 신설됩니다. 받치는 시행령 개정은 아직 나오지 않아, transfer-schedule은 30년·준영구에 '확인' 표시만 붙입니다([확인 기록](plugins/records-skills/skills/records-qa-gate/references/law-check-2026-11-20.md)).
+
 **경과조치(부칙):**
 - 2027. 1. 1. 당시 2년 범위로 보관 중인 비전자기록물과 그 전에 받은 연장은 **종전 규정**을 따릅니다.
 - 2026. 8. 25. 당시 기산일부터 5년이 이미 지난 30년 이상 기록물(종료연도 2020년 이전)의 영구 이관은 **종전 10년** 기준입니다.
@@ -82,7 +95,7 @@ DB구축 업체가 넘긴 목록이랑 이미지 폴더, 일괄등록 규격대�
 
 ```mermaid
 flowchart LR
-    A["📝 생산·등록<br/>14종"] --> B["📦 이관·인수<br/>6종"]
+    A["📝 생산·등록<br/>15종"] --> B["📦 이관·인수<br/>6종"]
     B --> C["🛡️ 보존<br/>10종"]
     C --> D["🔓 공개·활용<br/>3종"]
     D --> E["⚖️ 평가·폐기<br/>3종"]
@@ -98,7 +111,7 @@ flowchart LR
 
 | 단계 | 할 일 | 자세히 |
 |---|---|---|
-| ① | **Python 3.10+** 설치 (Windows는 **Git for Windows**도) + `python -m pip install openpyxl pypdf pikepdf pillow numpy python-docx python-hwpx holidays` | [1단계](docs/getting-started.md#1단계-python-설치-스크립트를-돌리는-엔진) |
+| ① | **Python 3.10+** 설치 (Windows는 **Git for Windows**도) + `python -m pip install openpyxl pypdf pikepdf pillow numpy python-docx "python-hwpx<7" holidays` | [1단계](docs/getting-started.md#1단계-python-설치-스크립트를-돌리는-엔진) |
 | ② | **Claude Code** 설치·로그인 — Windows `irm https://claude.ai/install.ps1 \| iex` · macOS `curl -fsSL https://claude.ai/install.sh \| bash` | [2단계](docs/getting-started.md#2단계-claude-code-설치와-로그인) |
 | ③ | 저장소는 **공개** — 권한 없이 바로 설치(방화벽 환경이면 `gh auth login`) | [3단계](docs/getting-started.md#3단계-저장소-접근-권한) |
 | ④ | 플러그인 설치 (아래) | [4단계](docs/getting-started.md#4단계-플러그인-설치) |
@@ -129,12 +142,12 @@ flowchart LR
 
 ---
 
-## 🧰 스킬 42종
+## 🧰 스킬 43종
 
-> 스킬마다 준비할 파일·말하는 법·받는 결과·주의할 점은 **[스킬 42종 사용법](docs/skills.md)**, 언제 무엇을 쓰는지는 **[연간 업무 달력](docs/calendar.md)** 에 있습니다.
+> 스킬마다 준비할 파일·말하는 법·받는 결과·주의할 점은 **[스킬 43종 사용법](docs/skills.md)**, 언제 무엇을 쓰는지는 **[연간 업무 달력](docs/calendar.md)** 에 있습니다.
 
 <details open>
-<summary><b>📝 생산·등록 (14)</b></summary>
+<summary><b>📝 생산·등록 (15)</b></summary>
 
 | 스킬 | 하는 일 |
 |---|---|
@@ -151,6 +164,7 @@ flowchart LR
 | [typed-records-check](plugins/records-skills/skills/typed-records-check) | 회의록 구성 요소 8가지, 시청각 생산정보, 🆕 사진 등록대상 선정(연사 대표·노출·흑백 변환·저해상도) — 시청각기록물 관리지침 2024 |
 | [publications-check](plugins/records-skills/skills/publications-check) | 발간등록번호·발간주기·송부 책자 3부 |
 | [admin-artifacts-check](plugins/records-skills/skills/admin-artifacts-check) | 행정박물 기본정보 11항목·유형 7·재질 13종·이관 기한(별표 4·5) |
+| 🆕 [record-by-design](plugins/records-skills/skills/record-by-design) | 생산 시점 기록화 — 맥락(단위과제·생산자·업무활동·관계)과 증거성(SHA-256·사건 이력)을 붙인 BagIt 패키지, 메타데이터 하나에서 등록대장·공개데이터·요약 HTML·카드·RiC-O 연결 데이터, 고정성 재확인 — NAK 8·RiC-O·PREMIS |
 | 🆕 [records-forms](plugins/records-skills/skills/records-forms) | 시행규칙 별지 서식 작성 — 색인목록(쪽표시 자동), 반출·반입서, 보존·복원처리서, 전자매체 수록계획서, 발간등록 신청, 폐기 금지 요청·해제·연장, 부기·정정 요청 |
 
 </details>
@@ -279,7 +293,7 @@ flowchart LR
 python plugins/records-skills/tests/run_tests.py
 ```
 
-117개(veraPDF·ffmpeg 유무에 따라 1~2개 달라짐) — 스킬 42종의 주요 계산과, 보호 훅이 Windows처럼 `python3`가 없거나 가짜일 때도 꺼지지 않는지까지 확인합니다. 필요 패키지: `openpyxl` `pypdf` `pikepdf` `pillow` `numpy` (선택: `python-docx` `python-hwpx` `holidays`, LibreOffice). Python 3.11·3.12·3.13에서 확인했고, [GitHub Actions](.github/workflows/test.yml)로 3.10~3.13을 돌립니다.
+122개(veraPDF·ffmpeg 유무에 따라 1~2개 달라짐) — 스킬 43종의 주요 계산과, 보호 훅이 Windows처럼 `python3`가 없거나 가짜일 때도 꺼지지 않는지까지 확인합니다. 필요 패키지: `openpyxl` `pypdf` `pikepdf` `pillow` `numpy` (선택: `python-docx` `python-hwpx` `holidays`, LibreOffice). Python 3.11·3.12·3.13에서 확인했고, [GitHub Actions](.github/workflows/test.yml)로 3.10~3.13을 돌립니다.
 
 ---
 

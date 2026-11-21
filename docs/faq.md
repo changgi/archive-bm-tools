@@ -59,7 +59,7 @@ macOS에는 기본으로 `python3`만 있습니다. 작업 폴더의 `CLAUDE.md`
 ### `ModuleNotFoundError: No module named 'openpyxl'`
 꾸러미가 설치되지 않았습니다.
 ```bash
-python -m pip install openpyxl pypdf pikepdf pillow numpy python-docx python-hwpx holidays
+python -m pip install openpyxl pypdf pikepdf pillow numpy python-docx "python-hwpx<7" holidays
 ```
 Claude에게 "필요한 파이썬 꾸러미 설치해줘"라고 해도 됩니다.
 

@@ -8,6 +8,7 @@ description: 기관 기록관리기준표(기록관리표)의 단위과제별 �
 1. `python "${CLAUDE_PLUGIN_ROOT}"/skills/records-schedule-check/scripts/schedule_check.py 기준표.xlsx --previous 지난해기준표.xlsx -o 산출/기준표_점검.xlsx`
 2. '점검 결과'를 항목별로 묶어 보고한다. 책정 사유가 막연하면 retention-review/references/byeolpyo1-retention-criteria.md의 별표 1 해당 호를 근거 후보로 제시하되, 확정은 담당자가 한다.
 3. '고시 대상'은 정리기간 종료 직후 관보·공보·홈페이지에 고시할 단위과제 초안이다(시행령 제25조⑤). 보존기간은 관할 영구기록물관리기관과 협의해 확정한다(시행령 제26조③, 2026. 8. 25. 신설).
+- 새로 만들거나 정비할 때: `python "${CLAUDE_PLUGIN_ROOT}"/skills/records-schedule-check/scripts/appraisal_worksheet.py 단위과제.xlsx --agency 기관명 -o 산출/업무분석.xlsx` — KS X ISO TR 26122(업무과정 분석)·TR 21946(평가)의 절 구성을 칸으로 옮긴 작업지(맥락 검토·기능 분석·순차 분석·기록 요구·위험 평가). 별표 1·준칙 확인 단서를 붙이고, 판단은 비워 둔다. 같이 나오는 `_기록화설정.json`은 record-by-design `sweep`에 그대로 쓴다(단위과제 이름 하위 폴더 = 그 과제).
 4. 시행령 제25조가 2026. 8. 25. 개정으로 '기록관리기준표'를 '기록관리표'로 바꿨다. 보고서에는 두 이름을 함께 적는다.
 
 

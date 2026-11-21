@@ -1,0 +1,66 @@
+name: 근거 자료 변화 감시
+
+# 스킬이 기대는 출처(국가기록포털 표준·지침·매뉴얼·분류기준·업무안내 자료, 법제처 입법예고, 국가법령정보센터)를
+# 매주 열어 지난번 기준선과 비교한다. 변화가 있으면 보고서와 새 기준선을 담은 PR을 연다.
+# 스킬 수정(반영)은 그 PR에서 사람이나 Claude 세션이 한다 — 이 작업은 고치지 않는다.
+
+on:
+  schedule:
+    - cron: "17 0 * * 1"   # 매주 월요일 09:17 KST
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+  issues: write
+
+concurrency:
+  group: source-watch
+  cancel-in-progress: false
+
+jobs:
+  watch:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      PYTHONIOENCODING: utf-8
+      LC_ALL: C.UTF-8
+      TZ: Asia/Seoul
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: 출처 비교
+        id: watch
+        run: |
+          set +e
+          d=$(date +%Y-%m-%d)
+          mkdir -p docs/source-watch
+          python plugins/records-skills/skills/records-qa-gate/scripts/source_watch.py --update --report "docs/source-watch/$d.md"
+          rc=$?
+          echo "rc=$rc" >> "$GITHUB_OUTPUT"
+          echo "day=$d" >> "$GITHUB_OUTPUT"
+          cat "docs/source-watch/$d.md" >> "$GITHUB_STEP_SUMMARY"
+          if [ "$rc" -ge 2 ]; then echo "::warning::출처를 받지 못했거나 입력 오류(rc=$rc)"; fi
+          exit 0
+      - name: 변화가 있으면 PR
+        if: steps.watch.outputs.rc == '1'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          b="source-watch/${{ steps.watch.outputs.day }}"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git switch -c "$b"
+          git add docs/source-watch plugins/records-skills/skills/records-qa-gate/references/source_baseline.json
+          git commit -m "근거 자료 변화 감지 ${{ steps.watch.outputs.day }}"
+          git push -u origin "$b"
+          {
+            echo "자동 감시가 출처 변화를 찾았습니다. 아래 보고서의 🆕 항목을 열어 읽고, '반영할 곳' 스킬을 이 브랜치에서 고친 뒤 시험을 돌려 주세요."
+            echo
+            cat "docs/source-watch/${{ steps.watch.outputs.day }}.md"
+          } > /tmp/body.md
+          gh pr create --title "근거 자료 변화 ${{ steps.watch.outputs.day }} — 반영 필요" --body-file /tmp/body.md --base main --head "$b" \
+            || gh issue create --title "근거 자료 변화 ${{ steps.watch.outputs.day }} — 반영 필요(브랜치 $b)" --body-file /tmp/body.md
+          # 저장소 설정에서 'Actions가 PR을 만들도록 허용'이 꺼져 있으면 이슈로 남긴다.
