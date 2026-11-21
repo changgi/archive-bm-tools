@@ -520,6 +520,16 @@ def main():
     check("법정 보존기간 추출 3차: '제4-14조' 꼴·'제1-1조 (목적)' 띄어쓰기, 나열 속 기간만 빼고 같은 문장의 '10년간 보존'은 살림, 조문 번호 없는 지침은 '본문'으로 읽음",
           _k3 == {("제4-14조", "5년"), ("제5조", "10년")} and [(r["조문"], r["보존기간"]) for r in _ex4] == [("본문(조문 번호 없음)", "3년")]
           and _ex4[0]["원문"].endswith("/가상지침"), str(_ex3) + str(_ex4))
+    _ex5 = _scb.extract("옛근로법 [시행 1998. 2. 20.]", "옛근로법 제41조(계약서류의 보존) 사용자는 근로자명부와 중요한 서류를 3연간 보존하여야 한다.")
+    _hs = S("retention-review", "scripts", "statutory_history.py")
+    with open(f"{t}/연혁.csv", "w", encoding="utf-8-sig", newline="") as _f:
+        _f.write("기록 종류,법령,판본 시행일,다음 판본 시행일,조문,보존기간,성격,공포,문장\n"
+                 "휴가 서류,가상법,1997-12-24,2007-04-11,제41조(계약서류의 보존),2년,최소 보존,,가\n휴가 서류,가상법,2008-01-01,,제42조(계약 서류의 보존),3년,최소 보존,,나\n")
+    _, oh1 = run([_hs, "--find", "휴가", "--year", "2003", "-o", f"{t}/연혁.csv"])
+    _, oh2 = run([_hs, "--find", "휴가", "--year", "2015", "-o", f"{t}/연혁.csv"])
+    check("법정 보존기간 연혁: 옛 법령 '3연간(三年間)'을 3년으로 읽음, 생산연도로 그때 시행 중이던 법정 기간 찾기(2003년 → 2년, 2015년 → 3년)",
+          [(r["조문"].split("(")[0], r["보존기간"]) for r in _ex5] == [("제41조", "3년")] and "2년" in oh1 and "3년" not in oh1.split("\n")[0]
+          and "3년" in oh2 and "1줄" in oh1 and "1줄" in oh2, str(_ex5) + oh1 + oh2)
     _pg = ('<tr class="dt"><td class="tNone">1</td><td class="tit" rowspan="2"><input type="hidden" id="list" value="jo" /><a onclick="ordinInfPop(\'111\',\'ELIS\');">'
            '가상군 위원회 조례<br /><span>[시행 2026. 1. 1.][조례 제1호, 2026. 1. 1., 제정]</span></a></td><td rowspan="2">가상군</td>'
            '<td><a onclick="ordinInfPop(\'111\',\'ELIS\',\'\',\'Y\',\'0009\');"> 제9조 회의록 </a></td><td><a onclick="ordinInfPop(\'111\');"> ... 회의록을 5년간 보존하여야 한다. </a></td></tr>'

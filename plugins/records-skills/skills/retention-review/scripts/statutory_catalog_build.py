@@ -161,6 +161,7 @@ def kind(name):
 def extract(name, t):
     law = re.sub(r"\s*\[.*", "", name).strip()
     shi = re.search(r"\[시행 ([^\]]+)\]", name)
+    t = re.sub(r"(\d)\s*연간", r"\1년간", t)  # 옛 법령의 '3연간(三年間)'
     first = re.search(r"(?<![가-힣])제\s*1(?:-1)?\s*조(?:의\d+)?\s*\(", t)  # '제1조 (목적)'·'제1-1조(목적)'
     if first:
         t = t[first.start():]
