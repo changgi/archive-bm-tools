@@ -561,6 +561,17 @@ def main():
           and "개인정보(가린 이름)" in sj["진단평가 의뢰서 제출(1-6 손○○)"] and "5.7" in sj["방과후 신청서"] and st_["2019학년도 제1회 졸업대장"] == "이관 늦음"
           and sc_["학교 관인"] == "관할 교육(지원)청 기록관" and sc_["방과후 신청서"] == "가상초", osr + str(sj))
 
+    # 행정정보 데이터세트 평가·폐기 준비(실행매뉴얼 2020 3.3·3.4): 보존기간+처분제약 경과 영역, 영구 제외, SQL은 SELECT만 실행형
+    open(f"{t}/단위기능.csv", "w", encoding="utf-8").write("단위기능,테이블,기산일컬럼,보존기간,처분제약,연도별건수\n민원접수,TB_CIVIL,END_DT,5년,0,2018:100;2019:200;2021:300\n"
+        "소송자료,TB_SUIT,END_DT,10년,3,2010:50;2012:70\n허가대장,TB_PERMIT,ISSUE_DT,영구,0,\n")
+    cdd, odd = run([S("dataset-schedule", "scripts", "dataset_disposal.py"), f"{t}/단위기능.csv", "--system", "가상민원", "--today", "2026-11-21", "-o", f"{t}/산출/데이터세트_평가.xlsx"])
+    ddw = openpyxl.load_workbook(f"{t}/산출/데이터세트_평가.xlsx") if os.path.exists(f"{t}/산출/데이터세트_평가.xlsx") else None
+    ddl = {r[0]: r for r in ddw["평가 상정 목록"].iter_rows(min_row=2, values_only=True)} if ddw else {}
+    dsq = [r[2] for r in ddw["확인용 SQL"].iter_rows(min_row=2, values_only=True)] if ddw else []
+    check("데이터세트 평가: 5년 기산 2020 이하 300건·10년+제약3 기산 2012 이하 120건·영구 제외·DELETE는 주석·폐기 기록부",
+          cdd == 0 and ddl["민원접수"][4] == 2020 and ddl["민원접수"][5] == 300 and ddl["소송자료"][4] == 2012 and ddl["소송자료"][5] == 120
+          and "평가·폐기 대상 아님" in ddl["허가대장"][6] and all(q.startswith(("SELECT", "--")) for q in dsq) and "폐기 결과 기록부" in ddw.sheetnames, odd + str(ddl))
+
     # 근거 자료 변화 감시(오프라인): 기준선 → 새 첨부·게시물·법령 시행일 바뀜 감지
     SW = S("records-qa-gate", "scripts", "source_watch.py")
     os.makedirs(f"{t}/감시", exist_ok=True)
