@@ -186,6 +186,8 @@ def extract(name, t):
                 add(jo, title, lm.group(2).strip(), lm.group(3), "", "", body[max(0, lm.start() - 120): lm.end() + 20])
         for s in [x.strip() for x in re.split(r"(?<=다\.)\s+|(?=[①-⑳])", body) if x.strip()]:
             s = s[:900]
+            if re.search(r"1\s*년\s*[,ㆍ·]\s*3\s*년\s*[,ㆍ·]\s*5\s*년", s):  # 보존기간 구분(1년, 3년, 5년 …)을 늘어놓은 안내
+                continue
             for pm in PERIOD.finditer(s):
                 p = pm.group(1)
                 tail = re.sub(r"\([^)]{0,60}\)", "", s[pm.end(): pm.end() + 110])[:45]
