@@ -5,7 +5,7 @@
 
 사용:  python statutory_history.py --build [-o ../assets/law/statutory_history.csv] [--law 근로기준법] [--workers 3]
        python statutory_history.py --find 휴가 [--year 2012]      # 표에서 찾기(인터넷 없음)
-원칙:  외부 API·비용 없음. 법령(법률·시행령·시행규칙)만 본다 — 행정규칙(고시 등)은 연혁 화면이 달라 아직 넣지 않음.
+원칙:  외부 API·비용 없음. 법령(법률·시행령·시행규칙)과 행정규칙(고시 등, admRulHstListR 연혁 목록)을 본다.
        조문 번호는 판본마다 바뀔 수 있어 번호가 아니라 점검 표의 '낱말'로 같은 기록을 찾는다. 원문은 3개씩 동시에, 요청마다 0.7초 쉼.
 """
 import argparse
@@ -68,6 +68,25 @@ def find_current(name):
     return None, None
 
 
+def find_admin(name):
+    """현행 행정규칙(고시·훈령 등)의 admRulSeq."""
+    h = get(f"{BASE}admRulSc.do?menuId=5&subMenuId=41&tabMenuId=183&query={urllib.parse.quote(name)}")
+    for seq in dict.fromkeys(re.findall(r"lawInfPop\('(\d+)'", h)):
+        vs = admin_versions(seq)
+        if vs and re.sub(r"\s|\(.*?\)", "", vs[-1]["이름"]) == re.sub(r"\s|\(.*?\)", "", name):
+            return seq
+    return None
+
+
+def admin_versions(seq):
+    h = get(f"{BASE}admRulHstListR.do?admRulSeq={seq}")
+    out = []
+    for m in re.finditer(r"admRulViewHst\('Y','(\d+)'\)[^>]*>\s*\d+\.\s*([^<]+)<br\s*/?>\s*<div[^>]*>\s*\[시행\s*(\d{4})\.\s*(\d{1,2})\.\s*(\d{1,2})\.\]\s*\[[^\],]*,\s*(\d{4})\.\s*(\d{1,2})\.\s*(\d{1,2})\.", h):
+        out.append({"seq": m.group(1), "이름": m.group(2).strip(), "시행": f"{m.group(3)}{int(m.group(4)):02d}{int(m.group(5)):02d}",
+                    "공포": f"{m.group(6)}{int(m.group(7)):02d}{int(m.group(8)):02d}", "행정규칙": True})
+    return sorted(out, key=lambda v: v["시행"])
+
+
 def versions(seq, lsid):
     h = get(f"{BASE}lsHstListR.do?lsiSeq={seq}&lsId={lsid}&chrClsCd=010202&ancYnChk=0")
     ko = h.split('data-id="ENG"')[0] if 'data-id="ENG">' in h else h
@@ -90,7 +109,8 @@ def body(v):
     if fn and os.path.exists(fn):
         with open(fn, encoding="utf-8") as f:
             return f.read()
-    t = get(f"{BASE}lsInfoR.do?lsiSeq={v['seq']}&chrClsCd=010202&urlMode=lsInfoP&efYd={v['시행']}&ancYnChk=0")
+    t = get(f"{BASE}admRulLsInfoR.do?admRulSeq={v['seq']}" if v.get("행정규칙") else
+            f"{BASE}lsInfoR.do?lsiSeq={v['seq']}&chrClsCd=010202&urlMode=lsInfoP&efYd={v['시행']}&ancYnChk=0")
     time.sleep(0.7)
     t = re.sub(r"\s+", " ", re.sub(r"<[^>]+>", " ", t))
     if fn:
@@ -106,7 +126,7 @@ def ymd(s):
 def build(a):
     b = _mod("statutory_catalog_build")
     with open(MINIMUM, encoding="utf-8-sig") as f:
-        mins = [r for r in csv.DictReader(f) if not r["법령"].endswith(")")]  # 고시 등 행정규칙은 뺌
+        mins = list(csv.DictReader(f))
     if a.law:
         mins = [r for r in mins if any(x in r["법령"] for x in a.law.split(","))]
     fams = {}
@@ -115,11 +135,15 @@ def build(a):
             fams.setdefault(n, []).append(r)
     rows, log, got = [], [], {}
     for name in fams:
-        seq, lsid = find_current(name)
-        if not seq:
+        if name.endswith(")"):  # '개인정보의 안전성 확보조치 기준(개인정보보호위원회고시)' — 행정규칙 연혁
+            seq = find_admin(re.sub(r"\([^)]*\)$", "", name).strip())
+            vs = admin_versions(seq) if seq else []
+        else:
+            seq, lsid = find_current(name)
+            vs = versions(seq, lsid) if seq else []
+        if not vs:
             log.append(f"못 찾음: {name}")
             continue
-        vs = versions(seq, lsid)
         with ThreadPoolExecutor(max_workers=max(1, min(a.workers, 4))) as ex:
             got[name] = list(ex.map(lambda v: (v, body(v)), vs))
         print(f"  {name}: 판본 {len(vs)}개 받음", flush=True)
@@ -147,10 +171,14 @@ def build(a):
             nxt = vs[i + 1]["시행"] if i + 1 < len(vs) else ""
             ext = b.extract(f"{name} [시행 {v['시행'][:4]}. {int(v['시행'][4:6])}. {int(v['시행'][6:])}.]", t)
             for rec in recs:
+                # 그 조문에 이 기록이 호로 따로 적혀 있으면(의료법 시행규칙 제15조 '2. 진료기록부 : 10년') 그 문구로만 맞추고,
+                # 아니면 조문 제목도 봄('접속기록의 보관 및 점검' 조의 '다만 … 2년 이상' 단서)
+                itemized = {e["조문"] for e in ext if re.search("(?:" + rec["낱말"] + r")[^:：.]{0,60}[:：]\s*(?:\d|영구|준영구)", e["문장"])}
                 for e in ext:
                     rec_txt = (e.get("기록(문구)") or "").strip()
-                    # 한 조문에 여러 기록·기간을 늘어놓은 경우(의료법 시행규칙 제15조 등) 기간 바로 앞 문구로만 맞춤
                     hay = rec_txt if len(rec_txt) >= 2 else e["문장"]
+                    if e["조문"] not in itemized:
+                        hay += " " + e["조문"]
                     direct = re.search(rec["낱말"], hay)
                     deleg = (not direct and re.search(r"(대통령령|부령|총리령)(으로|이)\s*정하는", e["문장"])
                              and sub_has(name, v["시행"], e["조문"].split("(")[0], rec["낱말"]))
@@ -194,7 +222,7 @@ def build(a):
 def find(a):
     with open(a.out, encoding="utf-8-sig") as f:
         R = list(csv.DictReader(f))
-    hit = [r for r in R if a.find in r["기록 종류"] or a.find in r["문장"] or a.find in r["법령"]]
+    hit = [r for r in R if a.find in r["기록 종류"]] or [r for r in R if a.find in r["문장"] or a.find in r["법령"]]
     if a.year:
         y = f"{a.year}-12-31"
         hit = [r for r in hit if r["판본 시행일"] <= y and (not r["다음 판본 시행일"] or r["다음 판본 시행일"] > f"{a.year}-01-01")]

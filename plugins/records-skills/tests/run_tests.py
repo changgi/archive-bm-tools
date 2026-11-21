@@ -530,6 +530,14 @@ def main():
     check("법정 보존기간 연혁: 옛 법령 '3연간(三年間)'을 3년으로 읽음, 생산연도로 그때 시행 중이던 법정 기간 찾기(2003년 → 2년, 2015년 → 3년)",
           [(r["조문"].split("(")[0], r["보존기간"]) for r in _ex5] == [("제41조", "3년")] and "2년" in oh1 and "3년" not in oh1.split("\n")[0]
           and "3년" in oh2 and "1줄" in oh1 and "1줄" in oh2, str(_ex5) + oh1 + oh2)
+    _sp2 = _ilu.spec_from_file_location("shm", S("retention-review", "scripts", "statutory_history.py"))
+    _shm = _ilu.module_from_spec(_sp2)
+    _sp2.loader.exec_module(_shm)
+    _shm.get = lambda u: ('<ul><li><a href="#AJAX" onclick="admRulViewHst(\'Y\',\'22\');return false;" class="on"> 1. 가상 고시<br /> <div class="subtit1_1"> [시행 2026. 7. 1.] [가상위원회고시 제2026-9호, 2026. 7. 1., 일부개정] </div></a></li>'
+                          '<li><a href="#AJAX" onclick="admRulViewHst(\'Y\',\'11\');return false;"> 2. (가상위원회) 가상 고시<br /> <div class="subtit1_1"> [시행 2020. 8. 11.] [가상위원회고시 제2020-2호, 2020. 8. 11., 제정] </div></a></li></ul>')
+    _av = _shm.admin_versions("22")
+    check("법정 보존기간 연혁: 행정규칙(고시) 연혁 목록을 시행일 순 판본으로 읽음",
+          [(v["seq"], v["시행"], v["공포"]) for v in _av] == [("11", "20200811", "20200811"), ("22", "20260701", "20260701")] and all(v["행정규칙"] for v in _av), str(_av))
     _pg = ('<tr class="dt"><td class="tNone">1</td><td class="tit" rowspan="2"><input type="hidden" id="list" value="jo" /><a onclick="ordinInfPop(\'111\',\'ELIS\');">'
            '가상군 위원회 조례<br /><span>[시행 2026. 1. 1.][조례 제1호, 2026. 1. 1., 제정]</span></a></td><td rowspan="2">가상군</td>'
            '<td><a onclick="ordinInfPop(\'111\',\'ELIS\',\'\',\'Y\',\'0009\');"> 제9조 회의록 </a></td><td><a onclick="ordinInfPop(\'111\');"> ... 회의록을 5년간 보존하여야 한다. </a></td></tr>'
