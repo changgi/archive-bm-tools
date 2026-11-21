@@ -488,6 +488,34 @@ def main():
           and os.path.exists(f"{pk}/bagit.txt") and cv1 == 0 and cv2 == 1 and "바뀜" in ov2 and nev == 6 and crb2 == 3 and crb3 == 2,
           orb1 + ov1 + ov2)
 
+    # 생산 시점 기록화 일괄·목록: 목록 한 행 = 파일 하나, 패키지 전체로 목록·공개데이터·연결 그래프·검색 페이지
+    os.makedirs(f"{t}/일괄", exist_ok=True)
+    open(f"{t}/일괄/계획.txt", "w", encoding="utf-8").write("가상 계획\n")
+    open(f"{t}/일괄/결과.txt", "w", encoding="utf-8").write("가상 결과\n")
+    open(f"{t}/일괄/비밀.txt", "w", encoding="utf-8").write("Ⅱ급 비밀\n")
+    open(f"{t}/일괄/목록.csv", "w", encoding="utf-8").write("파일,제목,생산일자,식별자,관계,요약,공개구분\n계획.txt,가상 계획,2026-01-10,B-1,,계획 요약,공개\n"
+                                                         "결과.txt,가상 결과,2026-03-02,B-2,근거:B-1,결과 요약,비공개\n비밀.txt,가상,2026-03-03,B-3,,,공개\n")
+    cbt, obt = run([RBD, "batch", f"{t}/일괄/목록.csv", "--task", "지역축제운영", "--agency", "가상시", "--dept", "기획과", "--period", "10년", "-o", f"{t}/산출/일괄"])
+    btr = list(csv.reader(open(f"{t}/산출/일괄/일괄_결과.csv", encoding="utf-8-sig")))[1:] if os.path.exists(f"{t}/산출/일괄/일괄_결과.csv") else []
+    cct, oct_ = run([RBD, "catalog", f"{t}/산출/일괄", "--verify", "-o", f"{t}/산출/기록목록"])
+    ctl = list(csv.reader(open(f"{t}/산출/기록목록/기록목록.csv", encoding="utf-8-sig")))[1:] if os.path.exists(f"{t}/산출/기록목록/기록목록.csv") else []
+    publ = open(f"{t}/산출/기록목록/공개데이터.jsonl", encoding="utf-8").read() if os.path.exists(f"{t}/산출/기록목록/공개데이터.jsonl") else ""
+    grh = json.load(open(f"{t}/산출/기록목록/연결그래프.jsonld", encoding="utf-8")) if os.path.exists(f"{t}/산출/기록목록/연결그래프.jsonld") else {}
+    cpg = open(f"{t}/산출/기록목록/목록.html", encoding="utf-8").read() if os.path.exists(f"{t}/산출/기록목록/목록.html") else ""
+    check("기록화 일괄·목록: 비공개는 사유 없으면 입력 오류·비밀 거부·결과표·목록 고정성 통과·공개데이터는 공개만·연결 그래프·관계 링크",
+          cbt == 1 and [r[3] for r in btr] == ["만듦(확인 있음)", "입력 오류", "거부"] and cct == 0 and len(ctl) == 1 and ctl[0][-1] == "통과"
+          and "B-1" in publ and "B-2" not in publ and len(grh.get("@graph", [])) == 1 and 'id="B-1"' in cpg, obt + oct_ + str(btr))
+
+    # 행정박물 관리대상 선별(행정박물 관리지침 2021 표 4)
+    _k = ["중요도", "인물", "상징", "예술", "희소", "활용", "보존"]
+    xlsx(f"{t}/박물후보.xlsx", [["행정박물명", "생산일자", "생산부서", "유형", "수량", "비고"] + [f"처리과_{k}" for k in _k] + [f"기록관_{k}" for k in _k],
+        ["가상 현판", "2020-01-02", "총무과", "상징류", "1", ""] + ["4"] * 14, ["가상 선물 도자기", "2024-05-01", "국제과", "그 밖의 유형", "1", "증정 선물"] + ["2"] * 14,
+        ["가상 직인", "2023-01-01", "총무과", "관인류", "1", ""] + ["3"] * 7])
+    cas, oas = run([S("admin-artifacts-check", "scripts", "artifact_select.py"), f"{t}/박물후보.xlsx", "-o", f"{t}/산출/박물선별.xlsx"])
+    asr = [r for r in openpyxl.load_workbook(f"{t}/산출/박물선별.xlsx")["선별 결과"].iter_rows(min_row=2, values_only=True)] if os.path.exists(f"{t}/산출/박물선별.xlsx") else []
+    check("행정박물 선별: 56점 관리대상·28점 비대상·기록관 점수 미완·공직자선물 신고·관인 폐기공고 안내·표 4 체크리스트",
+          cas == 0 and [r[9] for r in asr] == ["관리대상", "비대상", "점수 미완"] and asr[0][8] == 56 and "100달러" in str(asr[1][10]) and "폐기공고" in str(asr[2][10]), oas + str(asr))
+
     # 청사 이전 대비 기록물 이송·재배치(국가기록원 청사 이전 매뉴얼 2014)
     xlsx(f"{t}/보유현황.xlsx", [["부서", "기록물철 제목", "생산연도", "보존기간", "보관위치", "권수", "비밀구분"],
         ["가과", "가상 계획", "2015", "5년", "사무실", "2", ""], ["가과", "가상 대장", "2010", "영구", "문서고", "1", ""],

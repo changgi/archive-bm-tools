@@ -9,6 +9,8 @@
                     [--relation "참조:선행기록식별자"] [--id 기록식별자] [--title 제목] -o 산출/기록패키지
   python capture.py verify 산출/기록패키지/<식별자>          # 해시 다시 확인, 이력에 '고정성 점검' 추가
   python capture.py derive 산출/기록패키지/<식별자>          # 메타데이터에서 매개 파일 다시 만들기(원본은 건드리지 않음)
+  python capture.py batch 목록.xlsx [--task … --agency … --dept … --period …] -o 산출/기록패키지   # 목록 한 행 = 파일 하나
+  python capture.py catalog 산출/기록패키지 [--verify] -o 산출/기록목록   # 목록.csv·공개데이터.jsonl·연결그래프.jsonld·목록.html
 
 패키지 구조(BagIt 1.0, RFC 8493 꼴 — 다른 기관·시스템으로 옮겨도 스스로 설명되는 상자):
   bagit.txt · bag-info.txt · manifest-sha256.txt · tagmanifest-sha256.txt
@@ -280,6 +282,116 @@ def cmd_derive(a):
     return 0
 
 
+BATCH_COLS = {"file": ["파일", "원본파일", "파일명"], "task": ["단위과제", "단위과제명", "분류명"], "agency": ["기관", "기관명"], "dept": ["부서", "부서명", "처리과"],
+              "person": ["담당자", "개인명", "기안자"], "role": ["역할", "생산자유형"], "period": ["보존기간"], "access": ["공개구분", "공개여부"],
+              "reason": ["공개제한사유", "비공개사유", "사유"], "activity": ["업무활동", "업무"], "purpose": ["생산목적", "목적"], "summary": ["요약", "기술내용"],
+              "relation": ["관계", "관련기록"], "id": ["식별자", "기록식별자", "관리번호"], "title": ["제목"], "date": ["생산일자", "생산일시"], "kind": ["기록유형"]}
+
+
+def cmd_batch(a):
+    """목록(CSV·XLSX) 한 행 = 파일 하나. 파일 경로는 목록이 있는 폴더 기준."""
+    import argparse as _ap
+    if a.list.lower().endswith((".xlsx", ".xlsm")):
+        import openpyxl
+        rows = [["" if v is None else str(v).strip() for v in r] for r in openpyxl.load_workbook(a.list, read_only=True, data_only=True).active.iter_rows(values_only=True)]
+    else:
+        rows = list(csv.reader(open(a.list, encoding="utf-8-sig")))
+    rows = [r for r in rows if any(r)]
+    head = [h.replace(" ", "") for h in rows[0]]
+    idx = {k: next((head.index(n) for n in ns if n in head), None) for k, ns in BATCH_COLS.items()}
+    if idx["file"] is None:
+        print("입력 오류: '파일' 열이 필요합니다.", file=sys.stderr)
+        return 2
+    base = os.path.dirname(os.path.abspath(a.list))
+    results = []
+    for n, r in enumerate(rows[1:], 2):
+        g = lambda k, d="": (r[idx[k]].strip() if idx[k] is not None and idx[k] < len(r) and r[idx[k]].strip() else d)
+        ns = _ap.Namespace(file=os.path.join(base, g("file")), task=g("task", a.task or ""), agency=g("agency", a.agency or ""), dept=g("dept", a.dept or ""),
+                           person=g("person"), role=g("role", "기안자"), period=g("period", a.period or ""), access=g("access", "공개"), reason=g("reason"),
+                           kind=g("kind", "일반문서"), place="처리과", activity=g("activity"), purpose=g("purpose"), summary=g("summary"),
+                           relation=[x for x in re.split(r"[;\n]", g("relation")) if x.strip()] or None, id=g("id") or None, title=g("title") or None,
+                           date=g("date") or None, out=a.out)
+        if ns.role not in ROLES:
+            ns.role = "생산자"
+        if not (ns.task and ns.agency and ns.dept and ns.period):
+            results.append([n, g("file"), "", "건너뜀", "단위과제·기관·부서·보존기간 중 빈 칸(열 또는 --task 등 기본값)"])
+            continue
+        import io, contextlib
+        buf_o, buf_e = io.StringIO(), io.StringIO()
+        with contextlib.redirect_stdout(buf_o), contextlib.redirect_stderr(buf_e):
+            rc = cmd_capture(ns)
+        msg = (buf_o.getvalue() + buf_e.getvalue()).strip().replace("\n", " ")
+        state = {0: "만듦", 1: "만듦(확인 있음)", 2: "입력 오류", 3: "거부"}.get(rc, str(rc))
+        pid = re.search(r"패키지 (\S+)", msg)
+        results.append([n, g("file"), pid.group(1) if pid else "", state, msg[:300]])
+    os.makedirs(a.out, exist_ok=True)
+    with open(os.path.join(a.out, "일괄_결과.csv"), "w", encoding="utf-8-sig", newline="") as f:
+        w = csv.writer(f)
+        w.writerow(["목록 행", "파일", "패키지", "결과", "메시지"])
+        w.writerows(results)
+    made = sum(1 for x in results if x[3].startswith("만듦"))
+    print(f"{len(results)}행 · 패키지 {made} · 거부·오류·건너뜀 {len(results) - made} → {os.path.join(a.out, '일괄_결과.csv')}")
+    return 0 if made == len(results) else 1
+
+
+def cmd_catalog(a):
+    """패키지 폴더 전체에서 목록·공개데이터·연결 그래프·검색 페이지를 만든다(매개 확산). --verify면 고정성도 다시 본다."""
+    pkgs = sorted(d for d in (os.path.join(a.root, x) for x in os.listdir(a.root)) if os.path.isfile(os.path.join(d, "metadata.json")))
+    os.makedirs(a.out, exist_ok=True)
+    metas, graph, fixity = [], [], {}
+    for p in pkgs:
+        m = json.load(open(os.path.join(p, "metadata.json"), encoding="utf-8"))
+        metas.append(m)
+        ld = os.path.join(p, "context.jsonld")
+        if os.path.exists(ld):
+            g = json.load(open(ld, encoding="utf-8"))
+            g.pop("@context", None)
+            graph.append(g)
+        if a.verify:
+            import io, contextlib, argparse as _ap
+            with contextlib.redirect_stdout(io.StringIO()):
+                fixity[m["3.1 기본식별자"]] = "통과" if cmd_verify(_ap.Namespace(package=p)) == 0 else "실패"
+    cols = ["3.1 기본식별자", "4.1 제목", "1.2 기관명", "1.3 부서명", "13.1 생산일시", "12.2.2 분류명", "15.1 보존기간", "17.3.1 공개구분", "9.1 포맷명", "23.2 무결성체크값"]
+    with open(os.path.join(a.out, "기록목록.csv"), "w", encoding="utf-8-sig", newline="") as f:
+        w = csv.writer(f)
+        w.writerow(cols + ["관계", "고정성"])
+        for m in metas:
+            rel = "; ".join(f"{x['22.1 관계유형']}:{x['22.2 관계대상식별자']}" for x in m.get("22 관계", []))
+            w.writerow([m.get(c, "") for c in cols] + [rel, fixity.get(m["3.1 기본식별자"], "")])
+    pub = [m for m in metas if m.get("17.3.1 공개구분") == "공개" and not m.get("_개인정보후보")]
+    with open(os.path.join(a.out, "공개데이터.jsonl"), "w", encoding="utf-8") as f:
+        for m in pub:
+            f.write(json.dumps({k: m.get(k, "") for k in cols[:-1]} | {"설명": m.get("5.2 기술내용", ""), "SHA-256": m["23.2 무결성체크값"]}, ensure_ascii=False) + "\n")
+    json.dump({"@context": {"rico": "https://www.ica.org/standards/RiC/ontology#", "nak8": "urn:nak8:", "dcterms": "http://purl.org/dc/terms/"}, "@graph": graph},
+              open(os.path.join(a.out, "연결그래프.jsonld"), "w", encoding="utf-8"), ensure_ascii=False, indent=1)
+    ids = {m["3.1 기본식별자"] for m in metas}
+    e = html.escape
+    rows = []
+    for m in sorted(metas, key=lambda x: x.get("13.1 생산일시", "")):
+        rid = m["3.1 기본식별자"]
+        rel = " ".join(f'<a href="#{e(x["22.2 관계대상식별자"])}">{e(x["22.1 관계유형"])}: {e(x["22.2 관계대상식별자"])}</a>' if x["22.2 관계대상식별자"] in ids
+                       else f'{e(x["22.1 관계유형"])}: {e(x["22.2 관계대상식별자"])}' for x in m.get("22 관계", []))
+        open_ = m in pub
+        rows.append(f'<tr id="{e(rid)}" data-q="{e((m["4.1 제목"] + m["12.2.2 분류명"] + m.get("1.3 부서명", "")).lower())}"><td data-l="생산일">{e(m.get("13.1 생산일시", "")[:10])}</td>'
+                    f'<td data-l="제목"><b>{e(m["4.1 제목"])}</b><br><small>{e(rid)} · {e(m.get("1.3 부서명", ""))}</small>'
+                    + (f'<br><small>{e(m.get("5.2 기술내용", ""))}</small>' if open_ and m.get("5.2 기술내용") else "")
+                    + f'</td><td data-l="단위과제">{e(m["12.2.2 분류명"])}</td><td data-l="보존">{e(m["15.1 보존기간"])}</td><td data-l="공개">{e(m["17.3.1 공개구분"])}</td><td data-l="관계">{rel}</td>'
+                    f'<td data-l="SHA-256·고정성"><code title="{e(m["23.2 무결성체크값"])}">{e(m["23.2 무결성체크값"][:12])}…</code> {e(fixity.get(rid, ""))}</td></tr>')
+    page = f"""<!DOCTYPE html><html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>기록 패키지 목록</title>
+<style>body{{font:15px/1.55 system-ui,'Malgun Gothic',sans-serif;margin:24px auto;max-width:1100px;padding:0 16px;color:#1d1a16;background:#fffdf8}}
+table{{border-collapse:collapse;width:100%}}th,td{{border-bottom:1px solid #ddd;padding:8px;text-align:left;vertical-align:top}}th{{color:#5b5248;font-size:13px}}
+input{{font:inherit;font-size:16px;padding:8px 12px;width:min(100%,360px);margin:8px 0 16px}}small{{color:#5b5248}}tr:target{{background:#fff1c9}}
+@media(max-width:640px){{thead{{display:none}}tr{{display:block;border-bottom:1px solid #ddd;padding:10px 0}}td{{display:grid;grid-template-columns:6.5em 1fr;gap:8px;border:0;padding:3px 0}}td::before{{content:attr(data-l);color:#5b5248;font-size:12px}}td:empty{{display:none}}}}</style></head><body>
+<h1>기록 패키지 목록</h1><p><small>{len(metas)}건 · 공개 {len(pub)}건 · 각 행은 패키지의 metadata.json에서 만들었습니다. 관계 링크를 누르면 이어진 기록으로 갑니다.</small></p>
+<label>찾기 <input id="q" type="search" placeholder="제목·단위과제·부서"></label>
+<table><thead><tr><th>생산일</th><th>제목</th><th>단위과제</th><th>보존</th><th>공개</th><th>관계</th><th>SHA-256·고정성</th></tr></thead><tbody>{''.join(rows)}</tbody></table>
+<script>document.getElementById('q').addEventListener('input',e=>{{const v=e.target.value.toLowerCase();for(const r of document.querySelectorAll('tbody tr'))r.hidden=v&&!r.dataset.q.includes(v)}})</script></body></html>"""
+    open(os.path.join(a.out, "목록.html"), "w", encoding="utf-8").write(page)
+    bad = sum(1 for v in fixity.values() if v == "실패")
+    print(f"패키지 {len(metas)} · 공개데이터 {len(pub)} · 그래프 노드 {len(graph)}" + (f" · 고정성 실패 {bad}" if a.verify else "") + f" → {a.out}")
+    return 1 if bad else 0
+
+
 def main() -> int:
     ap = argparse.ArgumentParser(description="생산 시점 기록화 — 맥락·증거성을 갖춘 기록 패키지")
     sub = ap.add_subparsers(dest="cmd", required=True)
@@ -307,8 +419,17 @@ def main() -> int:
     v.add_argument("package")
     d = sub.add_parser("derive")
     d.add_argument("package")
+    b = sub.add_parser("batch", help="목록 한 행 = 파일 하나로 여러 패키지")
+    b.add_argument("list")
+    for k in ("task", "agency", "dept", "period"):
+        b.add_argument(f"--{k}", help="목록에 빈 칸일 때 쓸 기본값")
+    b.add_argument("-o", "--out", default="산출/기록패키지")
+    g = sub.add_parser("catalog", help="패키지 폴더 전체로 목록·공개데이터·연결 그래프·검색 페이지")
+    g.add_argument("root")
+    g.add_argument("--verify", action="store_true")
+    g.add_argument("-o", "--out", default="산출/기록목록")
     a = ap.parse_args()
-    return {"capture": cmd_capture, "verify": cmd_verify, "derive": cmd_derive}[a.cmd](a)
+    return {"capture": cmd_capture, "verify": cmd_verify, "derive": cmd_derive, "batch": cmd_batch, "catalog": cmd_catalog}[a.cmd](a)
 
 
 if __name__ == "__main__":

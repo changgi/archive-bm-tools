@@ -290,6 +290,12 @@ python skills/typed-records-check/scripts/av_check.py 시청각목록.xlsx --fil
 
 **직접 실행** `python skills/admin-artifacts-check/scripts/artifacts_check.py 행정박물.xlsx --asof 2025-12-31 -o 산출/행정박물_점검.xlsx`
 
+**관리대상 선별(행정박물 관리지침 2021 표 4)** 후보 목록에 `처리과_중요도`·`기록관_인물`처럼 7개 기준(중요도·인물·상징·예술·희소·활용·보존, 각 1~5점)을 처리과·기록관 두 번 매기면 합계 70점 중 36점 이상을 관리대상으로 가릅니다. 기록관 점수가 비면 '점수 미완'. 공직자 선물(100달러·공직자윤리법 시행령 제29조), 관인 폐기공고, 증서류·표지석·현수막, 훼손·복제 단서도 비고로 알려 줍니다.
+
+```bash
+python skills/admin-artifacts-check/scripts/artifact_select.py 박물후보.xlsx [--cut 36] -o 산출/박물선별.xlsx
+```
+
 ---
 
 # 📦 이관·인수
@@ -1143,6 +1149,10 @@ E 드라이브 DVD를 간이 검사해줘. 복사본은 산출/매체검사/DVD-
 python skills/record-by-design/scripts/capture.py capture 보고.hwpx --task 지역축제운영 --agency 가상시 --dept 기획과 --person 김가상 --period 10년 --access 공개 --activity "결과 보고" --relation "참조:2026-plan" -o 산출/기록패키지
 python skills/record-by-design/scripts/capture.py verify 산출/기록패키지/<식별자>
 python skills/record-by-design/scripts/capture.py derive 산출/기록패키지/<식별자>
+python skills/record-by-design/scripts/capture.py batch 목록.xlsx --task 지역축제운영 --agency 가상시 --dept 기획과 --period 10년 -o 산출/기록패키지
+python skills/record-by-design/scripts/capture.py catalog 산출/기록패키지 --verify -o 산출/기록목록
 ```
+
+**한꺼번에, 그리고 퍼뜨리기** `batch`는 목록 한 행이 파일 하나입니다(파일·제목·생산일자·식별자·관계·요약·공개구분·공개제한사유 열, 빈 칸은 옵션 값). 결과는 `일괄_결과.csv`에 행마다 만듦·입력 오류·거부로 남습니다. `catalog`는 패키지 폴더 전체를 모아 `기록목록.csv`(관계·고정성), `공개데이터.jsonl`(공개이면서 개인정보 후보가 없는 것만), `연결그래프.jsonld`(RiC-O), `목록.html`(검색, 관계 링크, 휴대폰에선 카드형)을 만듭니다. 매개는 모두 각 패키지의 metadata.json에서 다시 만들 수 있으니, 원본을 건드리지 않고 고쳐서 다시 퍼뜨리면 됩니다.
 
 **알아 둘 점** 비밀 표시가 보이면 만들지 않습니다. 개인정보 후보가 있거나 공개가 아니면 공개 매개에 본문 요약을 넣지 않습니다. 제목·생산일시를 자동으로 채우면 '후보'로 표시합니다. 원본이 바뀐 것을 `verify`가 찾으면 해시 목록을 고치지 않고 실패 사건으로 남깁니다. 기록관리시스템 등록을 대신하지 않습니다.

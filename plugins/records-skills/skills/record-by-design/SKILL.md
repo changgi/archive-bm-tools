@@ -32,6 +32,8 @@ python "${CLAUDE_PLUGIN_ROOT}"/skills/record-by-design/scripts/capture.py captur
 ## 3. 지속하기
 - `capture.py verify <패키지>`: 원본·태그 해시를 다시 계산해 '고정성 점검' 사건을 쌓는다. 원본이 바뀌었으면 실패로 남기고 해시 목록은 고치지 않는다.
 - `capture.py derive <패키지>`: 메타데이터를 고친 뒤 매개를 다시 만든다(원본은 그대로).
+- `capture.py batch 목록.xlsx|csv [--task --agency --dept --period]`: 목록 한 행 = 파일 하나(열: 파일·제목·생산일자·식별자·관계·요약·공개구분·공개제한사유 …, 파일 경로는 목록 폴더 기준). 빈 칸은 옵션 기본값으로 채우고, 비밀은 거부·비공개 사유 누락은 입력 오류로 `일괄_결과.csv`에 남긴다.
+- `capture.py catalog <패키지 폴더> [--verify]`: 패키지 전체에서 `기록목록.csv`(관계·고정성 포함), `공개데이터.jsonl`(공개·개인정보 후보 없음만), `연결그래프.jsonld`(RiC-O @graph), `목록.html`(검색·관계 링크, 모바일 카드형)을 만든다. 각 매개는 metadata.json 하나에서 다시 만들 수 있어 원본을 건드리지 않고 퍼뜨릴 수 있다.
 - 주기 점검은 fixity-check(폴더 전체 기준선), 보존 포맷 사본은 preservation-convert, 이관 전 점검은 records-qa-gate와 함께 쓴다.
 
 ## 하지 않는 것
