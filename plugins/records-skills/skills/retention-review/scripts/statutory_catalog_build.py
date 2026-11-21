@@ -8,7 +8,9 @@
   3. 추출: 'N년(간·동안·이상) … 보존·보관·비치·유지·저장·관리하여야/할 것', '보존기간은 … N년으로 한다',
      보존 의무 조문의 나열형 '1. 기록 : N년'을 뽑는다. 날짜(2015년·1월 1일), 기한(N일 이내), 벌칙·과태료·처분 문장,
      '최근 N년간', 'N년 이상이 지난', 주식·부동산 보유기간은 뺀다.
-  4. 행정규칙·자치법규(ordinSc.do 조문내용 탭, 현행 조례·규칙)와 별표·서식은 검색 결과 문구(일부)만 담는다
+  4. 행정규칙은 원문(admRulLsInfoR.do)을 받아 같은 방법으로 뽑고, 원문에서 못 찾은 조문만 검색 문구로 담는다.
+     자치법규(ordinSc.do 조문내용 탭, 현행 조례·규칙)도 기간 문구가 걸린 것은 원문(ordinInfoR.do)에서 뽑는다.
+     별표·서식은 검색 결과 문구(일부)만 담는다
      (원문 주소·지자체 함께). 주민등록번호 모양 문자열은 가린다.
 사용:  python statutory_catalog_build.py -o 산출/statutory_catalog.csv [--work 산출/법령원문] [--delay 0.7] [--limit N]
        (--work 폴더에 받은 원문을 두어 다시 돌릴 때 이어서 받는다. 법령 1,800여 개라 30분~1시간 걸린다.)
@@ -155,7 +157,7 @@ def extract(name, t):
     if st < 0:
         return []
     t = t[st:]
-    cut = re.search(r"부\s*칙\s*<[^>]{0,40}제\s*\d+호", t)
+    cut = re.search(r"부\s*칙\s*(?:\([^)]{0,80}\)\s*)?<[^>]{0,40}제\s*[\d-]+호", t)
     t = t[:cut.start()] if cut else t
     rows, seen = [], set()
     ms = list(ART.finditer(t))
@@ -269,9 +271,33 @@ def main() -> int:
         n = r["규칙"]
         if n and "target" not in n and '"' not in n and not n.startswith("제") and len(n) >= 4:
             rname.setdefault(r["admSeq"], n)
-    for r in rules.values():
+    got = set()
+    for n, (seq, full) in enumerate(sorted(rname.items())):  # 행정규칙 원문(admRulLsInfoR.do)에서 조문 추출
+        if a.limit and n >= a.limit:
+            break
+        fn = os.path.join(a.work, f"adm_{seq}.txt")
+        if not (os.path.exists(fn) and os.path.getsize(fn) > 800):
+            try:
+                b = get(f"{BASE}admRulLsInfoR.do?admRulSeq={seq}")
+            except Exception as e:
+                print(f"못 받음 행정규칙 {seq}: {e}", file=sys.stderr)
+                continue
+            if len(b) < 2000:
+                continue
+            open(fn, "w", encoding="utf-8").write(text(re.sub(r"<script.*?</script>|<style.*?</style>", " ", b, flags=re.S)))
+            time.sleep(DELAY)
+        rule = re.sub(r"\s*\[시행.*", "", full).strip()
+        kd = re.search(r"\]\s*\[([^\]]*?)\s*제[\d-]", full)
+        shi = re.search(r"\[시행 ([^\]]+)\]", full)
+        for r in extract(f"{rule} [시행 {shi.group(1) if shi else ''}]", open(fn, encoding="utf-8").read()):
+            jo = r["조문"].split("(")[0]
+            r.update({"출처": "행정규칙", "종류": kd.group(1) if kd else "", "원문": f"https://www.law.go.kr/행정규칙/{rule.replace(' ', '')}/{jo}"})
+            out.append(r)
+            got.add((seq, jo))
+    for r in rules.values():  # 원문에서 못 찾은 조문은 검색 문구로
         full = rname.get(r["admSeq"])
-        if not full:
+        jm = re.match(r"(제\d+조(?:의\d+)?)", r["조문"])
+        if not full or (jm and (r["admSeq"], jm.group(1)) in got):
             continue
         rule = re.sub(r"\s*\[시행.*", "", full).strip()
         shi = re.search(r"\[시행 ([^\]]+)\]", full)
@@ -282,10 +308,36 @@ def main() -> int:
             if NOISE.search(ctx) or k in seen:
                 continue
             seen.add(k)
-            out.append({"출처": "행정규칙", "법령": rule, "종류": kd.group(1) if kd else "", "시행": shi.group(1) if shi else "", "조문": r["조문"][:80], "의무자": "",
+            out.append({"출처": "행정규칙(검색 문구)", "법령": rule, "종류": kd.group(1) if kd else "", "시행": shi.group(1) if shi else "", "조문": r["조문"][:80], "의무자": "",
                         "기록(문구)": "", "보존기간": re.sub(r"\s|(간|동안)$", "", m.group(1)), "기산(문구)": "", "문장": ctx.strip(" ."),
                         "원문": "https://www.law.go.kr/행정규칙/" + rule.replace(" ", "")})
-    for r in ords.values():
+    oget = set()
+    seqs = sorted({r["seq"] for r in ords.values() if r["seq"] and SNIP.search(r["문구"])})
+    for n, seq in enumerate(seqs):  # 자치법규 원문(ordinInfoR.do) — 기간 문구가 걸린 것만
+        if a.limit and n >= a.limit:
+            break
+        v = next(r for r in ords.values() if r["seq"] == seq)
+        fn = os.path.join(a.work, f"ord_{seq}.txt")
+        if not (os.path.exists(fn) and os.path.getsize(fn) > 800):
+            try:
+                b = get(f"{BASE}ordinInfoR.do?ordinSeq={seq}")
+            except Exception as e:
+                print(f"못 받음 자치법규 {seq}: {e}", file=sys.stderr)
+                continue
+            if len(b) < 2000:
+                continue
+            open(fn, "w", encoding="utf-8").write(text(re.sub(r"<script.*?</script>|<style.*?</style>", " ", b, flags=re.S)))
+            time.sleep(DELAY)
+        name = re.sub(r"\s*\[시행.*", "", v["자치법규"]).strip()
+        kd = re.search(r"\]\[(조례|규칙|훈령|예규|규정)", v["자치법규"])
+        for r in extract(v["자치법규"].replace("][", "] ["), open(fn, encoding="utf-8").read()):
+            r.update({"출처": "자치법규", "법령": name, "종류": kd.group(1) if kd else "", "기관": v["기관"], "원문": "https://www.law.go.kr/자치법규/" + name.replace(" ", "")})
+            out.append(r)
+            oget.add((seq, r["조문"].split("(")[0]))
+    for r in ords.values():  # 원문에서 못 찾은 조문은 검색 문구로
+        jm = re.match(r"(제\d+조(?:의\d+)?)", r["조문"])
+        if jm and (r["seq"], jm.group(1)) in oget:
+            continue
         name = re.sub(r"\s*\[시행.*", "", r["자치법규"]).strip()
         shi = re.search(r"\[시행 ([^\]]+)\]", r["자치법규"])
         kd = re.search(r"\]\[(조례|규칙|훈령|예규|규정)", r["자치법규"])
@@ -297,7 +349,7 @@ def main() -> int:
             if NOISE.search(ctx) or k in seen:
                 continue
             seen.add(k)
-            out.append({"출처": "자치법규", "법령": name, "종류": kd.group(1) if kd else "", "시행": shi.group(1) if shi else "", "기관": r["기관"],
+            out.append({"출처": "자치법규(검색 문구)", "법령": name, "종류": kd.group(1) if kd else "", "시행": shi.group(1) if shi else "", "기관": r["기관"],
                         "조문": r["조문"][:80], "의무자": "", "기록(문구)": "", "보존기간": re.sub(r"\s|(간|동안)$", "", m.group(1)), "기산(문구)": "",
                         "문장": ctx.strip(" ."), "원문": "https://www.law.go.kr/자치법규/" + name.replace(" ", "")})
     cols = ["출처", "법령", "종류", "시행", "기관", "조문", "의무자", "기록(문구)", "보존기간", "기산(문구)", "문장", "원문"]
