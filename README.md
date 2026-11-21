@@ -9,7 +9,7 @@
 
 ![version](https://img.shields.io/badge/records--skills-v2.22.0-1f6feb)
 ![skills](https://img.shields.io/badge/스킬-44종-2da44e)
-![tests](https://img.shields.io/badge/시험-125%2F125%20통과-2da44e)
+![tests](https://img.shields.io/badge/시험-127%2F127%20통과-2da44e)
 ![python](https://img.shields.io/badge/Python-3.10%2B-3776ab?logo=python&logoColor=white)
 ![law](https://img.shields.io/badge/근거-시행령%202026.8.25.-8250df)
 ![license](https://img.shields.io/badge/코드-MIT-lightgrey)
@@ -45,6 +45,8 @@
 - 🔒 **비밀기록물 공개 지침 3종 반영**: 보존기간 말일 ≥ 보호기간 말일 계산 바로잡음, 유형별 이관 준비·재분류 검토서 시트
 - 📚 **KS 12종**: 원문은 유료라 공개 초록·목차로 범위를 확인해 [대응표](plugins/records-skills/skills/records-qa-gate/references/ks-standards-2026-11-21.md)로 정리
 - 🏫 **school-records**(44번째 스킬): 「2025년 학교기록물 관리 지침」 — 졸업대장·시험기록물·학교폭력·보건·급식·동의서, 이관 시기, 건명 개인정보, 문서고 대장, 폐교 인계. [사용법](docs/skills.md#44-school-records--학교기록물-점검)
+- 🌐 **해외표준 120건 전수 대조**: 첨부 64건 원문을 모두 읽고 [대조표](plugins/records-skills/skills/records-qa-gate/references/foreign-standards-2026-11-21.md)로 정리(반영 12·반영됨 15·참고 88·보류 5), 서고 '참고 해외 기준'(NISO·뉴질랜드·호주), 건조 방식·외부 위탁, 원본 열람 취급 안내
+- 🖼️ **전시 환경 점검**(별표 6·ANSI/NISO Z39.79: 조도·자외선·전시 기간·재전시 간격) · 🔥 **화재 예방 자체 점검표**(해외표준 문화기관용 양식 구성) · 🗺️ **기록 맥락 지도**(기관→부서→단위과제→기록, `--public-only`로 공개분만 게시)
 - 🗄️ **데이터세트 평가·폐기 준비**(실행매뉴얼 2020): 보존기간+처분제약이 지난 데이터 영역 → 평가심의서, 확인용 SQL(SELECT만), 폐기 결과 기록부
 - 📗 **간행물 2026 송부지침**(2026. 10.): 기관 기호표·발간주기 기호·생략대상 유형과 기관·비공개 사유 점검
 - 🏺 **행정박물 관리대상 선별**(행정박물 관리지침 2021 표 4): 7개 기준 처리과·기록관 점수 → 70점 중 36점 이상 관리대상, 공직자 선물·관인 폐기공고 안내
@@ -64,7 +66,7 @@
 | 📷 시청각 | 사진 등록대상 선정(연사 대표·노출·흑백·저해상도) | 시청각기록물 관리지침(2024) |
 | 📊 기관평가 | 2026 평가 지표별 전국 평균, 공공기관·대학 수행업무 점검표 | 2026 기관평가 결과, 2026 지침 3종 |
 
-**바로 따라 해 보기** — [업무 시나리오 예제 6가지](examples/시나리오)에 가상 입력과 실제 결과 파일이 있습니다.
+**바로 따라 해 보기** — [업무 시나리오 예제 8가지](examples/시나리오)에 가상 입력과 실제 결과 파일이 있습니다.
 
 ```text
 우리 대학 기록관리기준표를 대학 가이드랑 비교해서 짧게 잡힌 과제 찾아줘.
@@ -297,7 +299,7 @@ flowchart LR
 python plugins/records-skills/tests/run_tests.py
 ```
 
-125개(veraPDF·ffmpeg 유무에 따라 1~2개 달라짐) — 스킬 44종의 주요 계산과, 보호 훅이 Windows처럼 `python3`가 없거나 가짜일 때도 꺼지지 않는지까지 확인합니다. 필요 패키지: `openpyxl` `pypdf` `pikepdf` `pillow` `numpy` (선택: `python-docx` `python-hwpx` `holidays`, LibreOffice). Python 3.11·3.12·3.13에서 확인했고, [GitHub Actions](.github/workflows/test.yml)로 3.10~3.13을 돌립니다.
+127개(veraPDF·ffmpeg 유무에 따라 1~2개 달라짐) — 스킬 44종의 주요 계산과, 보호 훅이 Windows처럼 `python3`가 없거나 가짜일 때도 꺼지지 않는지까지 확인합니다. 필요 패키지: `openpyxl` `pypdf` `pikepdf` `pillow` `numpy` (선택: `python-docx` `python-hwpx` `holidays`, LibreOffice). Python 3.11·3.12·3.13에서 확인했고, [GitHub Actions](.github/workflows/test.yml)로 3.10~3.13을 돌립니다.
 
 ---
 

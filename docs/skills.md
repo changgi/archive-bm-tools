@@ -810,6 +810,15 @@ python skills/transfer-schedule/scripts/encrypted_scan.py 이관폴더 --list �
 
 
 🆕 **신축·리모델링(NAK 24)** `--newbuild --completed 2026-08-01` → 부지 6조건·지상 독립 서고·하중 750/1,000~1,200kgf/㎡·P.A.T. 자재 시험·급배수라인·완공 후 6개월 안정화 뒤 입고일. 시청각·작업실·열람실 면적은 `--audio --video --albums --film-cans --workers --seats`.
+
+**전시 환경 점검(전시·대여 전시)** 전시 목록의 조도·자외선·전시 기간·재전시 간격·습도·온도를 봅니다. 국내 법정 범위(시행령 별표 6 전시관 50~200럭스)와 국가기록포털 해외표준 ANSI/NISO Z39.79의 수치(빛에 매우 민감한 자료 50lux·중간 100lux 이하, 자외선 75 µW/lm 이하, 민감 자료 반복 전시 통상 12주·2년 간격, 습도 35~50%, 온도 21℃ 이하)를 함께 씁니다. 민감도를 모르면 '매우 민감'으로 봅니다. '전시 이력 기록부'로 다음 전시 때 누적 노출을 판단합니다.
+
+**해외 기준 참고 비교** 온습도 점검 결과에 '참고 해외 기준' 시트가 붙어 국가기록포털 해외표준의 값과 견줘 봅니다: 미국 NISO TR01-1995(종이: 서고 전용 18.3℃·열람 겸용 21.1℃ 이하, 30~50%, 하루 폭 2.2℃·6%, 월 변화 1.7℃·3%), 뉴질랜드 저장 표준 S2(습도 30~60%, 25℃ 이하, 하루 4℃·10%, 연간 10℃·20%), 호주 NAA 매체별 값(종이 20±2℃·50±5%, 자기 18±2℃·35±5%, 필름 5℃ 미만·35%). 판정은 별표 6이 기준이고 이 시트는 참고입니다. 해외표준 120건 전체 대조표는 [foreign-standards](../plugins/records-skills/skills/records-qa-gate/references/foreign-standards-2026-11-21.md)에 있습니다.
+
+```bash
+python skills/stack-environment/scripts/exhibit_check.py 전시목록.xlsx -o 산출/전시환경_점검.xlsx
+```
+
 ---
 
 ## 31. records-forms — 법정 서식 작성
@@ -952,6 +961,14 @@ python skills/records-forms/scripts/make_form.py hold --info 기관정보.json -
 **직접 실행** `python skills/security-disaster-plan/scripts/sd_plan.py --org 기록관 --risk 위험평가.xlsx --staff 임무카드.xlsx --supplies 비상용품.xlsx --last-review 2025-10-01 -o 산출/보안재난.xlsx`
 
 **알아 둘 점** 위험 점수 구간(15점 이상 높음, 8~14 보통)은 이 킷의 기본값입니다. 표준은 매우낮음~매우높음 5단계만 정합니다. RTO·RPO의 Tier는 표 7 예시를 따른 것으로, 기관의 재난복구계획이 우선합니다.
+
+
+**화재 예방 자체 점검표(월 1회 권장)** 전 층 공통 → 열람·전시 → 서고 → 보존처리실·작업실 → 강당·식당 → 외부 → 사람(교육·조직), 31항목을 '예/아니오'로 적고 '아니오'는 시정 담당·기한·완료를 추적합니다. 지난 점검과 비교해 계속 '아니오'인 항목을 표시합니다. 구성은 국가기록포털 해외표준 '화재예방 자가 점검 양식'을 따랐고 문장은 기록관 실정에 맞게 새로 썼습니다. 소방 전문 점검을 대신하지 않습니다.
+
+```bash
+python skills/security-disaster-plan/scripts/fire_selfcheck.py --blank --org 가상시 -o 산출/화재_자체점검표.xlsx
+python skills/security-disaster-plan/scripts/fire_selfcheck.py --results 채운점검표.xlsx --previous 지난결과.xlsx -o 산출/화재_자체점검_결과.xlsx
+```
 
 ---
 
@@ -1181,7 +1198,7 @@ python skills/record-by-design/scripts/capture.py catalog 산출/기록패키지
 python skills/record-by-design/scripts/capture.py sweep 업무폴더 -o 산출/기록패키지   # 새 파일·바뀐 파일만, 바뀐 파일은 '개정' 관계
 ```
 
-**한꺼번에, 그리고 퍼뜨리기** `batch`는 목록 한 행이 파일 하나입니다(파일·제목·생산일자·식별자·관계·요약·공개구분·공개제한사유 열, 빈 칸은 옵션 값). 결과는 `일괄_결과.csv`에 행마다 만듦·입력 오류·거부로 남습니다. `catalog`는 패키지 폴더 전체를 모아 `기록목록.csv`(관계·고정성), `공개데이터.jsonl`(공개이면서 개인정보 후보가 없는 것만), `연결그래프.jsonld`(RiC-O), `목록.html`(검색, 관계 링크, 휴대폰에선 카드형), `oai_dc.xml`(OAI-PMH Dublin Core — 다른 시스템이 거둬 감), `feed.atom`(구독 피드), `기록목록.csv-metadata.json`(데이터 포털용 W3C CSVW 열 설명)을 만들고, `목록.html`에는 검색엔진이 읽는 schema.org `ArchiveComponent` 구조화 데이터를 심습니다(`--base-url`을 주면 주소와 `sitemap.xml`까지). `sweep`은 업무 폴더와 `기록화설정.json`(하위 폴더 = 단위과제)만 있으면 아직 기록화하지 않은 파일만 패키지로 만들어, 작업 스케줄러로 매일 돌려도 중복이 생기지 않습니다. 매개는 모두 각 패키지의 metadata.json에서 다시 만들 수 있으니, 원본을 건드리지 않고 고쳐서 다시 퍼뜨리면 됩니다.
+**한꺼번에, 그리고 퍼뜨리기** `batch`는 목록 한 행이 파일 하나입니다(파일·제목·생산일자·식별자·관계·요약·공개구분·공개제한사유 열, 빈 칸은 옵션 값). 결과는 `일괄_결과.csv`에 행마다 만듦·입력 오류·거부로 남습니다. `catalog`는 패키지 폴더 전체를 모아 `기록목록.csv`(관계·고정성), `공개데이터.jsonl`(공개이면서 개인정보 후보가 없는 것만), `연결그래프.jsonld`(RiC-O), `목록.html`(검색, 관계 링크, 휴대폰에선 카드형), `oai_dc.xml`(OAI-PMH Dublin Core — 다른 시스템이 거둬 감), `feed.atom`(구독 피드), `기록목록.csv-metadata.json`(데이터 포털용 W3C CSVW 열 설명)을 만들고, `목록.html`에는 검색엔진이 읽는 schema.org `ArchiveComponent` 구조화 데이터를 심습니다(`--base-url`을 주면 주소와 `sitemap.xml`까지). `맥락지도.html`·`맥락지도.mmd`는 기관 → 부서 → 단위과제 → 기록으로 출처 맥락을 펼쳐 보여 줍니다. 목록·맥락지도는 기본이 내부용이므로 밖에 게시할 때는 `--public-only`를 씁니다. `sweep`은 업무 폴더와 `기록화설정.json`(하위 폴더 = 단위과제)만 있으면 아직 기록화하지 않은 파일만 패키지로 만들어, 작업 스케줄러로 매일 돌려도 중복이 생기지 않습니다. 매개는 모두 각 패키지의 metadata.json에서 다시 만들 수 있으니, 원본을 건드리지 않고 고쳐서 다시 퍼뜨리면 됩니다.
 
 **알아 둘 점** 비밀 표시가 보이면 만들지 않습니다. 개인정보 후보가 있거나 공개가 아니면 공개 매개에 본문 요약을 넣지 않습니다. 제목·생산일시를 자동으로 채우면 '후보'로 표시합니다. 원본이 바뀐 것을 `verify`가 찾으면 해시 목록을 고치지 않고 실패 사건으로 남깁니다. 기록관리시스템 등록을 대신하지 않습니다.
 

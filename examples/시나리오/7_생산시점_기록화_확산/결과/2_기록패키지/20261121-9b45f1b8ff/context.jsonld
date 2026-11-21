@@ -1,0 +1,37 @@
+{
+  "@context": {
+    "rico": "https://www.ica.org/standards/RiC/ontology#",
+    "nak8": "urn:nak8:",
+    "dcterms": "http://purl.org/dc/terms/"
+  },
+  "@id": "urn:records:20261121-9b45f1b8ff",
+  "@type": "rico:Record",
+  "rico:title": "가상 무대장비 임차 계약",
+  "rico:identifier": "20261121-9b45f1b8ff",
+  "rico:hasCreator": {
+    "@id": "urn:agent:가상시/재무과",
+    "@type": "rico:CorporateBody",
+    "rico:name": "가상시 재무과"
+  },
+  "rico:isOrWasIncludedIn": {
+    "@id": "urn:task:물품계약",
+    "@type": "rico:RecordSet",
+    "rico:name": "물품계약",
+    "rico:hasRecordSetType": "단위과제"
+  },
+  "rico:creationDate": "2026-11-21",
+  "rico:hasContentOfSomeType": "일반문서",
+  "rico:conditionsOfAccess": "부분공개",
+  "nak8:보존기간": "5년",
+  "rico:hasInstantiation": {
+    "@type": "rico:Instantiation",
+    "rico:hasExtent": "49 Byte",
+    "dcterms:format": "TXT",
+    "nak8:무결성체크값": "9b45f1b8ffa23833f2f82a7ecb0d9eb0a0240ece2abec9264a8b3cb8360a6d34"
+  },
+  "rico:isAssociatedWithActivity": {
+    "@type": "rico:Activity",
+    "rico:name": "물품 구매 계약",
+    "rico:history": ""
+  }
+}

@@ -1,0 +1,7 @@
+Source-Organization: 가상시
+Organization-Address: 문화과
+External-Identifier: 20261121-da55873e0c
+External-Description: 2026 가상 축제 운영 계획
+Bagging-Date: 2026-11-21
+Payload-Oxum: 59.1
+Bag-Software-Agent: records-skills record-by-design
