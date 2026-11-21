@@ -520,7 +520,9 @@ def main():
     cs2, os2 = run([RBD, "sweep", f"{t}/업무폴더", "-o", f"{t}/산출/수집"])
     open(f"{t}/업무폴더/지역축제운영/계획.txt", "w", encoding="utf-8").write("가상 축제 계획 수정\n")
     cs3, os3 = run([RBD, "sweep", f"{t}/업무폴더", "-o", f"{t}/산출/수집"])
-    run([RBD, "catalog", f"{t}/산출/수집", "-o", f"{t}/산출/수집목록"])
+    run([RBD, "catalog", f"{t}/산출/수집", "-o", f"{t}/산출/수집목록", "--base-url", "https://example.invalid/r"])
+    sjl = open(f"{t}/산출/수집목록/목록.html", encoding="utf-8").read() if os.path.exists(f"{t}/산출/수집목록/목록.html") else ""
+    sjok = '"@type": "ArchiveComponent"' in sjl and os.path.exists(f"{t}/산출/수집목록/기록목록.csv-metadata.json") and os.path.exists(f"{t}/산출/수집목록/sitemap.xml")
     oai = open(f"{t}/산출/수집목록/oai_dc.xml", encoding="utf-8").read() if os.path.exists(f"{t}/산출/수집목록/oai_dc.xml") else ""
     atom = open(f"{t}/산출/수집목록/feed.atom", encoding="utf-8").read() if os.path.exists(f"{t}/산출/수집목록/feed.atom") else ""
     import xml.dom.minidom as _md
@@ -528,10 +530,36 @@ def main():
         _md.parseString(oai.encode()); _md.parseString(atom.encode()); xok = True
     except Exception:
         xok = False
-    check("업무과정 분석 작업지·조례 10년 확인 단서·위험 수식 → 기록화설정 → sweep 중복 없음·개정 관계 → oai_dc·Atom 유효",
+    check("업무과정 분석 작업지·조례 10년 확인 단서·위험 수식 → 기록화설정 → sweep 중복 없음·개정 관계 → oai_dc·Atom 유효·schema.org·CSVW·sitemap",
           caw == 0 and "영구 이상인지 확인" in str(awr[0][6]) and str(aww["위험 평가"]["E2"].value).startswith("=IF(") and acfg["폴더"]["지역축제운영"]["dept"] == "문화과"
-          and "새로 기록화 0" in os2 and "새로 기록화 1" in os3 and oai.count("<record>") == 2 and "개정:urn:records:" in oai and xok and atom.count("<entry>") == 2,
+          and "새로 기록화 0" in os2 and "새로 기록화 1" in os3 and oai.count("<record>") == 2 and "개정:urn:records:" in oai and xok and atom.count("<entry>") == 2 and sjok,
           oaw + os2 + os3)
+
+    # 2026년도 간행물 발간등록 및 송부지침(2026. 10.): 기관 기호표·발간주기 기호·생략대상 유형·기관·비공개 사유
+    xlsx(f"{t}/간행물26.xlsx", [["제목", "발간등록번호", "발행일", "발간형태", "간행물유형", "송부일", "송부부수", "PDF송부", "발행기관", "공개구분", "비공개사유"],
+        ["가상 백서", "99-1234567-000001-16", "2026-03-01", "책자", "", "2026-03-05", "3", "Y", "가상부", "공개", ""],
+        ["가상 정책 카드뉴스", "", "2026-03-01", "전자", "카드뉴스", "", "", "", "가상부", "공개", ""],
+        ["가상 공사 연보", "", "2026-03-01", "책자", "", "", "", "", "가상도시공사", "공개", ""],
+        ["가상 내부 보고서", "59-1234567-000002-01", "2026-03-01", "책자", "", "2026-03-05", "3", "Y", "가상시", "비공개", "개인정보"]])
+    cpg, opg = run([S("publications-check", "scripts", "pubs_check.py"), f"{t}/간행물26.xlsx", "--year", "2026", "--today", "2026-03-10", "-o", f"{t}/산출/간행물26.xlsx"])
+    pg26 = {r[1]: (r[3], r[4], r[6]) for r in openpyxl.load_workbook(f"{t}/산출/간행물26.xlsx")["점검"].iter_rows(min_row=2, values_only=True)} if os.path.exists(f"{t}/산출/간행물26.xlsx") else {}
+    check("간행물 2026 송부지침: 기관 기호 99·주기 16 오류, 카드뉴스·공사 생략대상 후보, 59 전남광주 통과, 비공개 호 없음",
+          "기호 99" in pg26["가상 백서"][2] and "구분기호 16" in pg26["가상 백서"][2] and pg26["가상 정책 카드뉴스"][1] == "카드뉴스"
+          and "공사" in pg26["가상 공사 연보"][1] and "기호" not in pg26["가상 내부 보고서"][2] and "호와 사유" in pg26["가상 내부 보고서"][2], opg + str(pg26))
+
+    # 학교기록물(2025년 학교기록물 관리 지침): 졸업대장·학교폭력 편철·건명 개인정보·동의서 파기·이관 시기·폐교 인계
+    open(f"{t}/학교목록.csv", "w", encoding="utf-8").write("건명,생산일자,단위과제,전자구분,이관일자,처분\n2019학년도 제1회 졸업대장,2020-02-04,졸업관리,비전자,,\n"
+        "2021학년도 제3회 졸업대장,2021-02-05,졸업관리,비전자,,\n학교폭력 사안 조사 보고,2025-06-01,학생생활지도,전자,,\n학교폭력전담기구 회의록,2025-06-03,학교폭력전담기구구성운영,전자,,\n"
+        "진단평가 의뢰서 제출(1-6 손○○),2025-03-02,특수교육,전자,,\n방과후 신청서,2025-03-05,방과후학교,비전자,,개인정보 보유기간 경과 파기\n학교 관인,2024-03-01,관인관리,비전자,,\n")
+    csr, osr = run([S("school-records", "scripts", "school_check.py"), f"{t}/학교목록.csv", "--today", "2026-11-21", "--closing", "2027-02-28", "--successor", "가상초", "-o", f"{t}/산출/학교.xlsx"])
+    sw_ = openpyxl.load_workbook(f"{t}/산출/학교.xlsx") if os.path.exists(f"{t}/산출/학교.xlsx") else None
+    sj = {r[1]: r[4] for r in sw_["점검"].iter_rows(min_row=2, values_only=True)} if sw_ else {}
+    st_ = {r[1]: r[5] for r in sw_["이관 시기"].iter_rows(min_row=2, values_only=True)} if sw_ else {}
+    sc_ = {r[2]: r[4] for r in sw_["폐교 인계 계획"].iter_rows(min_row=2, values_only=True)} if sw_ else {}
+    check("학교기록물: 졸업대장 학년도≠졸업일·학교폭력 단위과제 흩어짐·건명 개인정보·동의서 개인정보 파기 금지·비전자 2년 이관 늦음·공인은 기록관",
+          csr == 1 and sj["2019학년도 제1회 졸업대장"] == "통과" and "학년도 2021" in sj["2021학년도 제3회 졸업대장"] and "흩어짐" in sj["(학교폭력 기록물 전체)"]
+          and "개인정보(가린 이름)" in sj["진단평가 의뢰서 제출(1-6 손○○)"] and "5.7" in sj["방과후 신청서"] and st_["2019학년도 제1회 졸업대장"] == "이관 늦음"
+          and sc_["학교 관인"] == "관할 교육(지원)청 기록관" and sc_["방과후 신청서"] == "가상초", osr + str(sj))
 
     # 근거 자료 변화 감시(오프라인): 기준선 → 새 첨부·게시물·법령 시행일 바뀜 감지
     SW = S("records-qa-gate", "scripts", "source_watch.py")

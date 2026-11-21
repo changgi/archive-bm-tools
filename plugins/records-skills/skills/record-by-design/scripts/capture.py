@@ -448,7 +448,23 @@ input{{font:inherit;font-size:16px;padding:8px 12px;width:min(100%,360px);margin
 <label>찾기 <input id="q" type="search" placeholder="제목·단위과제·부서"></label>
 <table><thead><tr><th>생산일</th><th>제목</th><th>단위과제</th><th>보존</th><th>공개</th><th>관계</th><th>SHA-256·고정성</th></tr></thead><tbody>{''.join(rows)}</tbody></table>
 <script>document.getElementById('q').addEventListener('input',e=>{{const v=e.target.value.toLowerCase();for(const r of document.querySelectorAll('tbody tr'))r.hidden=v&&!r.dataset.q.includes(v)}})</script></body></html>"""
+    # 검색엔진·데이터 포털이 읽는 구조화 데이터(공개 기록만): schema.org ArchiveComponent JSON-LD를 목록.html에 심고, CSV에 CSVW 설명 파일
+    base = (a.base_url or "").rstrip("/")
+    sj = {"@context": "https://schema.org", "@type": "Collection", "name": "기록 패키지 목록", "hasPart": [
+        {"@type": "ArchiveComponent", "identifier": m["3.1 기본식별자"], "name": m["4.1 제목"], "dateCreated": m.get("13.1 생산일시", "")[:10],
+         "creator": {"@type": "Organization", "name": f'{m.get("1.2 기관명", "")} {m.get("1.3 부서명", "")}'.strip()}, "about": m["12.2.2 분류명"],
+         "description": m.get("5.2 기술내용", ""), "encodingFormat": m.get("9.1 포맷명", ""), "conditionsOfAccess": m["17.3.1 공개구분"],
+         **({"url": f'{base}/목록.html#{m["3.1 기본식별자"]}'} if base else {}),
+         "isPartOf": {"@type": "ArchiveOrganization", "name": m.get("1.2 기관명", "")}} for m in pub]}
+    page = page.replace("</head>", '<script type="application/ld+json">' + json.dumps(sj, ensure_ascii=False).replace("</", "<\\/") + "</script></head>", 1)
     open(os.path.join(a.out, "목록.html"), "w", encoding="utf-8").write(page)
+    json.dump({"@context": "http://www.w3.org/ns/csvw", "url": "기록목록.csv", "dc:title": "기록 패키지 목록", "dc:language": "ko",
+               "tableSchema": {"columns": [{"name": f"c{i}", "titles": t, **({"datatype": "date"} if t.startswith("13.1") else {})} for i, t in enumerate(cols + ["관계", "고정성"])],
+                               "primaryKey": "c0"}}, open(os.path.join(a.out, "기록목록.csv-metadata.json"), "w", encoding="utf-8"), ensure_ascii=False, indent=1)
+    if base:
+        open(os.path.join(a.out, "sitemap.xml"), "w", encoding="utf-8").write(
+            '<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">'
+            + "".join(f"<url><loc>{html.escape(base)}/{f}</loc></url>" for f in ("목록.html", "공개데이터.jsonl", "feed.atom", "oai_dc.xml")) + "</urlset>\n")
     # 다른 시스템이 거둬 갈 수 있는 표준 형식(공개 기록만): OAI-PMH oai_dc 정적 파일, Atom 피드
     x = lambda v: html.escape(str(v or ""), quote=False)
     stamp = dt.datetime.now(KST).isoformat(timespec="seconds")
@@ -509,6 +525,7 @@ def main() -> int:
     g = sub.add_parser("catalog", help="패키지 폴더 전체로 목록·공개데이터·연결 그래프·검색 페이지")
     g.add_argument("root")
     g.add_argument("--verify", action="store_true")
+    g.add_argument("--base-url", help="게시할 주소(있으면 schema.org url·sitemap.xml을 씀)")
     g.add_argument("-o", "--out", default="산출/기록목록")
     w = sub.add_parser("sweep", help="업무 폴더에서 아직 기록화하지 않은 파일만 패키지로(반복 실행용)")
     w.add_argument("folder")
