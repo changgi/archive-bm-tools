@@ -60,11 +60,19 @@ def fingerprint(page, kind):
         name = html.unescape(urllib.request.unquote(fn.replace("+", " "))).strip()
         if name:
             items[f"첨부:{name}"] = name
+    for hx in re.findall(r"up_filepath=([0-9A-Fa-f]{16,})(?![0-9A-Fa-f])(?![^\"'<>]*up_filename=[^\"'&<>]+)", page):
+        try:  # 파일 이름이 경로(16진수, EUC-KR)에만 있는 첨부
+            name = bytes.fromhex(hx).decode("euc-kr", "replace").replace("\\", "/").rsplit("/", 1)[-1].strip()
+        except ValueError:
+            continue
+        if name:
+            items.setdefault(f"첨부:{name}", name)
     for m in re.finditer(r"<a\b([^>]*)>(.*?)</a>", page, re.S | re.I):
         attrs, text = m.group(1), clean(m.group(2))
         title = re.search(r'title="([^"]*)"', attrs)
-        label = (html.unescape(title.group(1)) if title and len(title.group(1)) > 3 else text)[:200]
-        for pat, tag in ((r"board_seq=(\d+)", "게시물"), (r"ogLmPp/(\d+)(?!/myOpn)", "입법예고"), (r"bg_no=(\d+)", "간행물"),
+        tt = html.unescape(title.group(1)).strip() if title else ""
+        label = (tt if len(tt) > 3 and not re.search(r"상세|이동|바로가기|다운로드|새창|열기", tt) else text or tt)[:200]
+        for pat, tag in ((r"board_seq=(\d+)", "게시물"), (r"ogLmPp/(\d+)(?!/myOpn)", "입법예고"), (r"bg_no=(\d+)", "간행물"), (r"[?&](?:amp;)?seq=(\d{3,})", "게시물"),
                          (r"fn_\w*[Dd]etail\w*\(\s*'?(\d{3,})", "게시물")):
             g = re.search(pat, attrs)
             if g and label and "myOpn" not in attrs:
