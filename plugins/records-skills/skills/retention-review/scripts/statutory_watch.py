@@ -1,0 +1,195 @@
+#!/usr/bin/env python3
+"""법정 보존기간 목록 갱신 감시: 국가법령정보센터 '최신법령'·'최신행정규칙' 목록에서 최근 공포·발령된 것 가운데
+전체 목록(assets/law/statutory_catalog.csv)에 있는 법령·행정규칙과 새로 제정된 것을 골라 원문을 다시 받고,
+보존·보관 기간 조문을 다시 뽑아 이전 목록과 비교한다(생김·바뀜·사라짐). --apply면 그 법령의 행을 새것으로 바꾼다.
+
+사용:  python statutory_watch.py [--days 30] [--report 산출/법정보존기간_변화.md] [--apply] [--max 60]
+       (--offline 목록.json: 시험용 — {"최신": [...], "본문": {lsiSeq: 텍스트}})
+원칙:  한 번에 하나씩, 요청 사이를 띄운다. 개정된 법령의 별표 원문은 다시 받지 않는다(조문만). 자치법규는 보지 않는다.
+       점검 표(statutory_minimum.csv)에 있는 법령이 바뀌면 '점검 표 확인'으로 따로 알린다 — 점검 표는 사람이 고친다.
+종료:  0 바뀐 것 없음 · 1 보존기간 조문이 생기거나 바뀜 · 2 입력 오류·받기 실패
+"""
+import argparse
+import csv
+import datetime as dt
+import html
+import importlib.util
+import json
+import os
+import re
+import sys
+import time
+import urllib.request
+
+HERE = os.path.dirname(os.path.abspath(__file__))
+CATALOG = os.path.join(HERE, "..", "assets", "law", "statutory_catalog.csv")
+MINIMUM = os.path.join(HERE, "..", "assets", "law", "statutory_minimum.csv")
+BASE = "https://www.law.go.kr/LSW/"
+LISTS = {"법령": "lsSc.do?menuId=1&subMenuId=23&tabMenuId=121", "행정규칙": "admRulSc.do?menuId=5&subMenuId=45&tabMenuId=203"}
+DELAY = 0.7
+
+
+def builder():
+    sp = importlib.util.spec_from_file_location("statutory_catalog_build", os.path.join(HERE, "statutory_catalog_build.py"))
+    m = importlib.util.module_from_spec(sp)
+    sp.loader.exec_module(m)
+    return m
+
+
+def get(url):
+    err = None
+    for i in range(5):
+        try:
+            return urllib.request.urlopen(urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0"}), timeout=120).read().decode("utf-8", "ignore")
+        except Exception as e:
+            err = e
+            time.sleep(4 + 3 * i)
+    raise err
+
+
+def text(h):
+    return re.sub(r"\s+", " ", html.unescape(re.sub(r"<[^>]+>", " ", h))).strip()
+
+
+def ymd(s):
+    m = re.search(r"(\d{4})\.\s*(\d{1,2})\.\s*(\d{1,2})\.", s or "")
+    return dt.date(int(m.group(1)), int(m.group(2)), int(m.group(3))) if m else None
+
+
+def recent(kind, since, pages=30):
+    """최신 목록을 앞에서부터 읽어 공포(발령)일이 since 이후인 것만."""
+    out = []
+    for pg in range(1, pages + 1):
+        t = get(f"{BASE}{LISTS[kind]}&outmax=150&pg={pg}")
+        trs = [tr for tr in re.findall(r"<tr[^>]*>(.*?)</tr>", t, re.S) if "lawInfoPop" in tr or "lawInfPop" in tr]
+        if not trs:
+            break
+        old = 0
+        for tr in trs:
+            row = text(tr)
+            a = re.search(r"(?:lawInfoPop|lawInfPop)\('(\d+)'", tr)
+            dates = re.findall(r"\d{4}\.\s*\d{1,2}\.\s*\d{1,2}\.", row)
+            link = re.search(r"<a[^>]*(?:lawInfoPop|lawInfPop)[^>]*>(.*?)</a>", tr, re.S)  # 이름은 링크 글자에서
+            name = text(link.group(1)) if link else ""
+            if kind == "법령":
+                ann, eff = ymd(dates[0] if dates else ""), ymd(dates[1] if len(dates) > 1 else "")
+            else:
+                ann = ymd(re.search(r"발령\s*(\d{4}\.\s*\d{1,2}\.\s*\d{1,2}\.)", row).group(1)) if "발령" in row else (ymd(dates[0]) if dates else None)
+                eff = ymd(re.search(r"시행\s*(\d{4}\.\s*\d{1,2}\.\s*\d{1,2}\.)", row).group(1)) if re.search(r"시행\s*\d{4}", row) else None
+            kindtxt = "제정" if "제정" in row else ("폐지" if "폐지" in row else "개정")
+            if ann and ann < since:
+                old += 1
+                continue
+            rk = re.search(r"(\S*(?:고시|훈령|예규|지침|규정|공고|규칙))\s*제\s*[\d-]+호", row) if kind == "행정규칙" else None
+            out.append({"종류": kind, "이름": name, "규칙종류": rk.group(1) if rk else "", "seq": a.group(1) if a else "", "공포": ann.isoformat() if ann else "",
+                        "시행": eff.isoformat() if eff else "", "구분": kindtxt})
+        if old == len(trs):
+            break
+        time.sleep(DELAY)
+    return out
+
+
+def body(item):
+    if item["종류"] == "법령":
+        ef = item["시행"].replace("-", "")
+        b = get(f"{BASE}lsInfoR.do?lsiSeq={item['seq']}&chrClsCd=010202&urlMode=lsInfoP&efYd={ef}&ancYnChk=0")
+    else:
+        b = get(f"{BASE}admRulLsInfoR.do?admRulSeq={item['seq']}")
+    if len(b) < 2000:
+        raise RuntimeError("원문이 비었습니다")
+    return text(re.sub(r"<script.*?</script>|<style.*?</style>", " ", b, flags=re.S))
+
+
+def key(r):
+    """비교 열쇠 — 화면마다 다른 띄어쓰기('제84조제5항'·'제84조 제5항')는 무시."""
+    return (r["조문"].split("(")[0], r["보존기간"], r.get("성격", "") or "최소 보존", re.sub(r"\s", "", r.get("기록(문구)") or "")[-30:])
+
+
+def main() -> int:
+    global DELAY
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--days", type=int, default=30, help="며칠 전 공포·발령분부터 볼지(기본 30일 — 3주 감시와 겹치게)")
+    ap.add_argument("--report", default="산출/법정보존기간_변화.md")
+    ap.add_argument("--apply", action="store_true", help="목록(statutory_catalog.csv)의 해당 법령 행을 새 추출로 바꿈")
+    ap.add_argument("--catalog", default=CATALOG)
+    ap.add_argument("--max", type=int, default=200, help="원문을 받을 최대 개수")
+    ap.add_argument("--delay", type=float, default=0.7)
+    ap.add_argument("--offline", help="(시험용) {'최신': [...], '본문': {seq: 텍스트}} JSON")
+    a = ap.parse_args()
+    DELAY = a.delay
+    b = builder()
+    with open(a.catalog, encoding="utf-8-sig") as f:
+        cat = list(csv.DictReader(f))
+    cols = list(cat[0].keys()) if cat else []
+    with open(MINIMUM, encoding="utf-8-sig") as f:
+        curated = {r["법령"].split("(")[0].strip() for r in csv.DictReader(f)}
+    names = {r["법령"] for r in cat if r["출처"] in ("법령", "행정규칙")}
+
+    def same(r, x, src):  # 같은 법령·규칙인가 — 행정규칙은 이름이 같은 다른 기관 규칙이 있어 종류(○○청예규 등)까지 봄
+        return r["법령"] == x["이름"] and r["출처"] == src and (src == "법령" or not x.get("규칙종류") or not r.get("종류") or r["종류"] == x["규칙종류"])
+    since = dt.date.today() - dt.timedelta(days=a.days)
+    off = json.load(open(a.offline, encoding="utf-8")) if a.offline else None
+    try:
+        items = off["최신"] if off else recent("법령", since) + recent("행정규칙", since)
+    except Exception as e:
+        print(f"받기 실패: {e}", file=sys.stderr)
+        return 2
+    allpick = [x for x in items if x["이름"] in names or (x["구분"] == "제정" and x["종류"] == "법령")]
+    pick = allpick[: a.max]
+    changes, newrows, fail = [], {}, []
+    for x in pick:
+        try:
+            t = off["본문"][x["seq"]] if off else body(x)
+        except Exception as e:
+            fail.append(f"{x['이름']}: {e}")
+            continue
+        if not off:
+            time.sleep(DELAY)
+        label = f"{x['이름']} [시행 {x['시행'].replace('-', '. ')}.]" if x["시행"] else x["이름"]
+        rows = b.extract(label, t)
+        for r in rows:
+            if x["종류"] == "행정규칙":
+                jo = r["조문"].split("(")[0]
+                r.update({"출처": "행정규칙", "종류": x.get("규칙종류", ""), "원문": f"https://www.law.go.kr/행정규칙/{x['이름'].replace(' ', '')}/{jo}"})
+        src = "법령" if x["종류"] == "법령" else "행정규칙"
+        before = {key(r): r for r in cat if same(r, x, src)}
+        after = {key(r): r for r in rows}
+        add = [after[k] for k in after if k not in before]
+        gone = [before[k] for k in before if k not in after]
+        future = bool(x["시행"]) and x["시행"] > dt.date.today().isoformat()
+        if add or gone:
+            changes.append((x, add, gone, future))
+        if not future:  # 시행 전인 개정은 알리기만 하고 목록은 바꾸지 않음(목록은 현행 기준)
+            newrows[(src, x["이름"], x.get("규칙종류", ""))] = (x, rows)
+    lines = [f"# 법정 보존기간 목록 변화 — {dt.date.today().isoformat()}", "",
+             f"최신법령·최신행정규칙 {len(items)}건(공포·발령 {since.isoformat()} 이후: 법령 {sum(x['종류'] == '법령' for x in items)}·행정규칙 {sum(x['종류'] == '행정규칙' for x in items)}) 중 "
+             f"목록에 있거나 새로 제정된 {len(allpick)}건" + (f"(앞 {len(pick)}건만)" if len(pick) < len(allpick) else "") + "의 원문을 다시 읽음. "
+             f"보존기간 조문이 바뀐 법령 {len(changes)}건" + (f", 못 받음 {len(fail)}건" if fail else "") + ".", ""]
+    for x, add, gone, future in changes:
+        mark = " ⚠️ 점검 표(statutory_minimum.csv)에 있는 법령 — 점검 표도 확인" if x["이름"] in curated else ""
+        lines.append(f"## {x['이름']} ({x['구분']}, 공포 {x['공포']} · 시행 {x['시행']}{' — 시행 예정: 목록은 시행일 뒤에 바꿈' if future else ''}){mark}")
+        for r in add:
+            lines.append(f"- 🆕 {r['조문']} {r['보존기간']}({r.get('성격', '')}) — {(r.get('기록(문구)') or r['문장'])[-80:]}")
+        for r in gone:
+            lines.append(f"- ➖ {r['조문']} {r['보존기간']} — {(r.get('기록(문구)') or r['문장'])[-80:]}")
+        lines.append("")
+    for f_ in fail:
+        lines.append(f"- 못 받음: {f_}")
+    os.makedirs(os.path.dirname(a.report) or ".", exist_ok=True)
+    open(a.report, "w", encoding="utf-8").write("\n".join(lines) + "\n")
+    now = [c for c in changes if not c[3]]
+    if a.apply and now:
+        hit = [(k, v) for k, v in newrows.items() if any(c[0] is v[0] for c in now)]
+        keep = [r for r in cat if not any(same(r, x, k[0]) for k, (x, _) in hit)]
+        for k, (x, rows) in hit:
+            keep += [{c: b.RRN.sub("******-*******", str(r.get(c, "") or "")) for c in cols} for r in rows]
+        with open(a.catalog, "w", encoding="utf-8-sig", newline="") as f:
+            w = csv.DictWriter(f, fieldnames=cols, extrasaction="ignore")
+            w.writeheader()
+            w.writerows(keep)
+    print(f"최신 {len(items)} · 다시 읽음 {len(pick)} · 바뀐 법령 {len(changes)}(시행 예정 {sum(c[3] for c in changes)})" + (" · 목록 고침" if a.apply and now else "") + f" → {a.report}")
+    return 2 if fail and not changes else (1 if changes else 0)
+
+
+if __name__ == "__main__":
+    sys.exit(main())
