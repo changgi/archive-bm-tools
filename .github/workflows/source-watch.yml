@@ -73,7 +73,7 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git switch -c "$b"
-          git add docs/source-watch plugins/records-skills/skills/records-qa-gate/references/source_baseline.json plugins/records-skills/skills/retention-review/assets/law/statutory_catalog.csv
+          git add docs/source-watch plugins/records-skills/skills/records-qa-gate/references/source_baseline.json plugins/records-skills/skills/retention-review/assets/law/statutory_catalog.csv plugins/records-skills/skills/retention-review/assets/law/statutory_seen.json
           git commit -m "근거 자료 변화 감지 ${{ steps.watch.outputs.day }}"
           git push -u origin "$b"
           {

@@ -24,6 +24,7 @@ import csv
 import html
 import json
 import os
+import importlib.util
 import re
 import sys
 import time
@@ -367,8 +368,12 @@ def main() -> int:
             out.append({"출처": "자치법규(검색 문구)", "법령": name, "종류": kd.group(1) if kd else "", "시행": shi.group(1) if shi else "", "기관": r["기관"],
                         "조문": r["조문"][:80], "의무자": "", "기록(문구)": "", "보존기간": re.sub(r"\s|(간|동안)$", "", m.group(1)), "기산(문구)": "",
                         "문장": ctx.strip(" ."), "원문": "https://www.law.go.kr/자치법규/" + name.replace(" ", "")})
-    cols = ["출처", "법령", "종류", "시행", "기관", "조문", "의무자", "기록(문구)", "보존기간", "성격", "기산(문구)", "문장", "원문"]
+    cols = ["출처", "법령", "종류", "시행", "기관", "조문", "의무자", "기록(문구)", "보존기간", "성격", "기산(문구)", "문장", "원문", "판정"]
+    sp = importlib.util.spec_from_file_location("retention_judge", os.path.join(os.path.dirname(os.path.abspath(__file__)), "retention_judge.py"))
+    jd = importlib.util.module_from_spec(sp)
+    sp.loader.exec_module(jd)
     for r in out:
+        r["판정"] = jd.judge(r.get("문장", ""), r.get("성격", ""))[1]  # 보존 의무 판정기(외부 API 없음)
         for c in cols:
             r[c] = RRN.sub("******-*******", (r.get(c) or "").strip())
     os.makedirs(os.path.dirname(a.out) or ".", exist_ok=True)

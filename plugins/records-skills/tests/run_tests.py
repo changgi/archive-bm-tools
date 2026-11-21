@@ -723,6 +723,21 @@ def main():
           csw == 1 and "🆕 제2조(기록의 보존) 5년" in rsw and "➖ 제2조(기록의 보존) 3년" in rsw and "시행 예정" in rsw and "관계없는법" not in rsw
           and {(r["법령"], r["보존기간"]) for r in _after} == {("가상법 시행규칙", "5년"), ("가상예정법", "1년")}, osw + rsw)
 
+    # 같은 판본은 다시 받지 않음(--seen) + 보존 의무 판정기(외부 API 없음)
+    _sv = f"{t}/읽은판본.json"
+    run([S("retention-review", "scripts", "statutory_watch.py"), "--catalog", f"{t}/가상목록.csv", "--offline", f"{t}/최신.json", "--report", f"{t}/산출/법정변화1.md", "--seen", _sv])
+    cs2, os2 = run([S("retention-review", "scripts", "statutory_watch.py"), "--catalog", f"{t}/가상목록.csv", "--offline", f"{t}/최신.json", "--report", f"{t}/산출/법정변화2.md", "--seen", _sv])
+    _seen = json.load(open(_sv, encoding="utf-8")) if os.path.exists(_sv) else {}
+    check("법정 보존기간 갱신 감시: 이미 읽은 판본(lsiSeq)은 건너뜀, 시행 예정 개정(바뀜 있음)만 다시 알림",
+          cs2 == 1 and "같은 판본 건너뜀 1 · 다시 읽음 1 · 바뀐 법령 1(시행 예정 1)" in os2 and _seen.get("법령|가상법 시행규칙|") == "1", os2 + str(_seen))
+    cj, oj = run([S("retention-review", "scripts", "retention_judge.py"), "--gold"])
+    import re as _re
+    _rec = [float(x) for x in _re.findall(r"처음 보는 문장\) \(\d+문장\) p≥0\.3: 정밀 [\d.]+ · 재현 ([\d.]+)", oj)]
+    _, oj1 = run([S("retention-review", "scripts", "retention_judge.py"), "② 112치안종합상황실은 24시간 운영체제를 유지해야 한다."])
+    _, oj2 = run([S("retention-review", "scripts", "retention_judge.py"), "④ 회의록은 실무협의회 주관위원이 관리하며, 10년간 보존한다."])
+    check("보존 의무 판정기: 처음 보는 시험 문장에서 의무 문장을 놓치지 않음(재현 ≥ 0.95), '24시간 운영체제 유지'는 의무 아님 가능성, '회의록 10년간 보존'은 의무",
+          cj == 0 and _rec and _rec[0] >= 0.95 and "의무 아님 가능성" in oj1 and oj2.strip().endswith("의무"), oj + oj1 + oj2)
+
     # 행정박물 관리대상 선별(행정박물 관리지침 2021 표 4)
     _k = ["중요도", "인물", "상징", "예술", "희소", "활용", "보존"]
     xlsx(f"{t}/박물후보.xlsx", [["행정박물명", "생산일자", "생산부서", "유형", "수량", "비고"] + [f"처리과_{k}" for k in _k] + [f"기록관_{k}" for k in _k],

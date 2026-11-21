@@ -5,7 +5,9 @@
 
 사용:  python statutory_watch.py [--days 30] [--report 산출/법정보존기간_변화.md] [--apply] [--max 60]
        (--offline 목록.json: 시험용 — {"최신": [...], "본문": {lsiSeq: 텍스트}})
-원칙:  한 번에 하나씩, 요청 사이를 띄운다. 개정된 법령의 별표 원문은 다시 받지 않는다(조문만). 자치법규는 보지 않는다.
+빠르게(외부 API·비용 없음): 이미 읽은 판본(lsiSeq·admRulSeq, assets/law/statutory_seen.json)은 다시 받지 않고(--refresh로 무시),
+       원문은 동시에 3개씩(--workers, 최대 4) 받으며 각 요청 뒤에 0.7초 쉰다. 새로 뽑은 행에는 보존 의무 판정기(retention_judge.py) 판정을 붙인다.
+원칙: 개정된 법령의 별표 원문은 다시 받지 않는다(조문만). 자치법규는 보지 않는다.
        점검 표(statutory_minimum.csv)에 있는 법령이 바뀌면 '점검 표 확인'으로 따로 알린다 — 점검 표는 사람이 고친다.
 종료:  0 바뀐 것 없음 · 1 보존기간 조문이 생기거나 바뀜 · 2 입력 오류·받기 실패
 """
@@ -24,9 +26,17 @@ import urllib.request
 HERE = os.path.dirname(os.path.abspath(__file__))
 CATALOG = os.path.join(HERE, "..", "assets", "law", "statutory_catalog.csv")
 MINIMUM = os.path.join(HERE, "..", "assets", "law", "statutory_minimum.csv")
+SEEN = os.path.join(HERE, "..", "assets", "law", "statutory_seen.json")  # 이미 읽은 판본(법령 lsiSeq·행정규칙 admRulSeq) — 같은 판본은 다시 받지 않음
 BASE = "https://www.law.go.kr/LSW/"
 LISTS = {"법령": "lsSc.do?menuId=1&subMenuId=23&tabMenuId=121", "행정규칙": "admRulSc.do?menuId=5&subMenuId=45&tabMenuId=203"}
 DELAY = 0.7
+
+
+def judge_mod():
+    sp = importlib.util.spec_from_file_location("retention_judge", os.path.join(HERE, "retention_judge.py"))
+    m = importlib.util.module_from_spec(sp)
+    sp.loader.exec_module(m)
+    return m
 
 
 def builder():
@@ -115,10 +125,18 @@ def main() -> int:
     ap.add_argument("--max", type=int, default=200, help="원문을 받을 최대 개수")
     ap.add_argument("--delay", type=float, default=0.7)
     ap.add_argument("--workers", type=int, default=3, help="원문을 동시에 받을 개수(기본 3 — 사이트에 부담을 주지 않게 4 이하 권장)")
+    ap.add_argument("--seen", default=SEEN, help="이미 읽은 판본 기록 파일")
+    ap.add_argument("--refresh", action="store_true", help="판본 기록을 무시하고 모두 다시 받음")
     ap.add_argument("--offline", help="(시험용) {'최신': [...], '본문': {seq: 텍스트}} JSON")
     a = ap.parse_args()
     DELAY = a.delay
     b = builder()
+    jd = judge_mod()
+    try:
+        seen = {} if a.offline and a.seen == SEEN else json.load(open(a.seen, encoding="utf-8"))
+    except (OSError, ValueError):
+        seen = {}
+    sk = lambda x: f"{x['종류']}|{x['이름']}|{x.get('규칙종류', '')}"
     with open(a.catalog, encoding="utf-8-sig") as f:
         cat = list(csv.DictReader(f))
     cols = list(cat[0].keys()) if cat else []
@@ -131,12 +149,28 @@ def main() -> int:
     since = dt.date.today() - dt.timedelta(days=a.days)
     off = json.load(open(a.offline, encoding="utf-8")) if a.offline else None
     try:
-        items = off["최신"] if off else recent("법령", since) + recent("행정규칙", since)
+        if off:
+            items = off["최신"]
+        else:  # 최신법령·최신행정규칙 목록을 동시에 받음
+            from concurrent.futures import ThreadPoolExecutor
+            with ThreadPoolExecutor(max_workers=2) as ex:
+                fl, fa = ex.submit(recent, "법령", since), ex.submit(recent, "행정규칙", since)
+                items = fl.result() + fa.result()
     except Exception as e:
         print(f"받기 실패: {e}", file=sys.stderr)
         return 2
     allpick = [x for x in items if x["이름"] in names or (x["구분"] == "제정" and x["종류"] == "법령")]
-    pick = allpick[: a.max]
+    latest = {}  # 같은 법령이 기간 안에 두 번 시행되면 마지막 시행 판본만 본다(시행 예정 판본은 따로 모두 알림)
+    today = dt.date.today().isoformat()
+    for x in allpick:
+        k = sk(x)
+        if x["시행"] and x["시행"] > today:
+            continue
+        if k not in latest or (x.get("seq", "").isdigit() and int(x["seq"]) > int(latest[k].get("seq") or 0)):
+            latest[k] = x
+    allpick = [x for x in allpick if (x["시행"] and x["시행"] > today) or latest[sk(x)] is x]
+    same_ver = [x for x in allpick if not a.refresh and x.get("seq") and seen.get(sk(x)) == x["seq"]]
+    pick = [x for x in allpick if x not in same_ver][: a.max]
     changes, newrows, fail = [], {}, []
     def fetch(x):  # 원문 받기만 동시에 하고(무료·추가 비용 없음), 추출·비교는 아래에서 차례로
         if off:
@@ -156,6 +190,7 @@ def main() -> int:
         label = f"{x['이름']} [시행 {x['시행'].replace('-', '. ')}.]" if x["시행"] else x["이름"]
         rows = b.extract(label, t)
         for r in rows:
+            r["판정"] = jd.judge(r.get("문장", ""), r.get("성격", ""))[1]
             if x["종류"] == "행정규칙":
                 jo = r["조문"].split("(")[0]
                 r.update({"출처": "행정규칙", "종류": x.get("규칙종류", ""), "원문": f"https://www.law.go.kr/행정규칙/{x['이름'].replace(' ', '')}/{jo}"})
@@ -167,17 +202,19 @@ def main() -> int:
         future = bool(x["시행"]) and x["시행"] > dt.date.today().isoformat()
         if add or gone:
             changes.append((x, add, gone, future))
+        else:
+            seen[sk(x)] = x["seq"]  # 바뀐 것 없음(시행 예정 판본 포함) → 이 판본은 다음부터 건너뜀
         if not future:  # 시행 전인 개정은 알리기만 하고 목록은 바꾸지 않음(목록은 현행 기준)
             newrows[(src, x["이름"], x.get("규칙종류", ""))] = (x, rows)
     lines = [f"# 법정 보존기간 목록 변화 — {dt.date.today().isoformat()}", "",
              f"최신법령·최신행정규칙 {len(items)}건(공포·발령 {since.isoformat()} 이후: 법령 {sum(x['종류'] == '법령' for x in items)}·행정규칙 {sum(x['종류'] == '행정규칙' for x in items)}) 중 "
-             f"목록에 있거나 새로 제정된 {len(allpick)}건" + (f"(앞 {len(pick)}건만)" if len(pick) < len(allpick) else "") + "의 원문을 다시 읽음. "
+             f"목록에 있거나 새로 제정된 {len(allpick)}건 가운데 이미 읽은 판본 {len(same_ver)}건은 건너뛰고 {len(pick)}건의 원문을 다시 읽음. "
              f"보존기간 조문이 바뀐 법령 {len(changes)}건" + (f", 못 받음 {len(fail)}건" if fail else "") + ".", ""]
     for x, add, gone, future in changes:
         mark = " ⚠️ 점검 표(statutory_minimum.csv)에 있는 법령 — 점검 표도 확인" if x["이름"] in curated else ""
         lines.append(f"## {x['이름']} ({x['구분']}, 공포 {x['공포']} · 시행 {x['시행']}{' — 시행 예정: 목록은 시행일 뒤에 바꿈' if future else ''}){mark}")
         for r in add:
-            lines.append(f"- 🆕 {r['조문']} {r['보존기간']}({r.get('성격', '')}) — {(r.get('기록(문구)') or r['문장'])[-80:]}")
+            lines.append(f"- 🆕 {r['조문']} {r['보존기간']}({r.get('성격', '')}) [판정: {r.get('판정', '')}] — {(r.get('기록(문구)') or r['문장'])[-80:]}")
         for r in gone:
             lines.append(f"- ➖ {r['조문']} {r['보존기간']} — {(r.get('기록(문구)') or r['문장'])[-80:]}")
         lines.append("")
@@ -195,7 +232,12 @@ def main() -> int:
             w = csv.DictWriter(f, fieldnames=cols, extrasaction="ignore")
             w.writeheader()
             w.writerows(keep)
-    print(f"최신 {len(items)} · 다시 읽음 {len(pick)} · 바뀐 법령 {len(changes)}(시행 예정 {sum(c[3] for c in changes)})" + (" · 목록 고침" if a.apply and now else "") + f" → {a.report}")
+        for k, (x, _) in hit:
+            seen[sk(x)] = x["seq"]
+    if not off or a.seen != SEEN:
+        with open(a.seen, "w", encoding="utf-8") as f:
+            json.dump(dict(sorted(seen.items())), f, ensure_ascii=False, indent=0)
+    print(f"최신 {len(items)} · 같은 판본 건너뜀 {len(same_ver)} · 다시 읽음 {len(pick)} · 바뀐 법령 {len(changes)}(시행 예정 {sum(c[3] for c in changes)})" + (" · 목록 고침" if a.apply and now else "") + f" → {a.report}")
     return 2 if fail and not changes else (1 if changes else 0)
 
 

@@ -77,7 +77,7 @@ def tokens(name):
     return [w for w in re.split(r"[\s·ㆍ,()/\-]+|및|등", name or "") if len(w) >= 3 and w not in STOP]
 
 
-def catalog_hits(cat, name, limit=3, org=None):
+def catalog_hits(cat, name, limit=3, org=None, all_rows=False):
     """단위과제명의 낱말(3글자 이상)이 조문 제목·기록 문구에 들어 있는 법정 기록. 많이 겹칠수록 앞.
     자치법규는 org(지자체 이름 일부)를 줄 때 그 기관 것만 넣는다."""
     tk = tokens(name)
@@ -85,6 +85,8 @@ def catalog_hits(cat, name, limit=3, org=None):
         return []
     scored = []
     for c in cat:
+        if not all_rows and c.get("판정") == "의무 아님 가능성":  # 보존 의무 판정기(retention_judge.py)가 걸러 낸 행
+            continue
         if c["출처"].startswith("자치법규") and not (org and (org in c.get("기관", "") or org in c["법령"])):
             continue
         hay = c["조문"] + " " + c["기록(문구)"] + " " + c["문장"][:160] + ("" if c["출처"] == "법령" else " " + c["법령"])
@@ -111,6 +113,7 @@ def main() -> int:
     ap.add_argument("--list", action="store_true")
     ap.add_argument("--find", help="전체 목록(statutory_catalog.csv)에서 낱말로 찾기 — 법령명·조문·기록·문장")
     ap.add_argument("--no-catalog", action="store_true", help="'전체 목록 후보' 시트를 만들지 않음")
+    ap.add_argument("--all-catalog", action="store_true", help="판정기가 '의무 아님 가능성'으로 본 행도 후보에 넣음")
     ap.add_argument("--org", help="자치법규 후보를 넣을 지자체 이름(예: 가평군·서울특별시 마포구)")
     ap.add_argument("-o", "--out", default="산출/법정보존기간_점검.xlsx")
     a = ap.parse_args()
@@ -185,7 +188,7 @@ def main() -> int:
             name, per = cell(r, ni), re.sub(r"\s", "", cell(r, pi))
             if not name:
                 continue
-            for c in catalog_hits(cat, name, org=a.org):
+            for c in catalog_hits(cat, name, org=a.org, all_rows=a.all_catalog):
                 ny, y = years(c["보존기간"]), years(per)
                 if c.get("성격", "").startswith("지나면"):
                     cmp = "파기 기한(상한)보다 김 — 원문 확인" if ny and y and y > ny else "상한 안"
