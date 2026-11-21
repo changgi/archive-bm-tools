@@ -24,6 +24,7 @@ import csv
 import html
 import json
 import os
+import importlib.util
 import re
 import sys
 import time
@@ -38,11 +39,13 @@ QUERIES = ["년간 보존", "년간 보관", "년 동안 보존", "년 동안 �
            "일간 보관", "일 이상 보관", "년간 보유", "보존ㆍ관리", "기록ㆍ유지"]
 RRN = re.compile(r"(?<!\d)\d{6}-?[1-4]\d{6}(?!\d)")
 NUM = r"(?:\d+)"
-PERIOD = re.compile(rf"(영구(?:히)?|준영구|{NUM}\s*(?:년|개월|일|시간)(?:\s*(?:간|동안|이상|이내|까지))?)")
+# '영구기록물관리기관'·'영구기록관리시스템'·'영구적' 같은 이름 속 '영구'는 보존기간이 아님
+NOTP = r"(?!\s*(?:기록|적|성|물관리|보존시설|보존기록물관리))"
+PERIOD = re.compile(rf"(영구(?:히)?{NOTP}|준영구{NOTP}|{NUM}\s*(?:년|개월|일|시간)(?:\s*(?:간|동안|이상|이내|까지))?)")
 VERB = re.compile(r"(보존|보관|비치|유지|저장|관리)(?:하여야|해야|하여야만|하고|한다|할 수|할 것|하도록|하여 두어야|해 두어야|하며|기간)")
 ART = re.compile(r"(?<![가-힣])(제\d+조(?:의\d+)?)\s*\(([^)]{1,60})\)")
 NOISE = re.compile(r"행정처분|처분기준|과태료|벌칙|영업정지|업무정지|아니한 경우|않은 경우|위반")
-SNIP = re.compile(r"((?:\d+)\s*(?:년|개월)\s*(?:간|동안|이상)?|영구(?:히)?|준영구)\s*(?:[^.│┃]{0,25}?)(보존|보관|비치)(?:하여야|해야|할 것|ㆍ관리하여야|하고|한다)")
+SNIP = re.compile(r"((?:\d+)\s*(?:년|개월)\s*(?:간|동안|이상)?|영구(?:히)?(?!\s*(?:기록|적|성))|준영구(?!\s*(?:기록|적)))\s*(?:[^.│┃]{0,25}?)(보존|보관|비치)(?:하여야|해야|할 것|ㆍ관리하여야|하고|한다)")
 DELAY = 0.7
 
 
@@ -365,8 +368,12 @@ def main() -> int:
             out.append({"출처": "자치법규(검색 문구)", "법령": name, "종류": kd.group(1) if kd else "", "시행": shi.group(1) if shi else "", "기관": r["기관"],
                         "조문": r["조문"][:80], "의무자": "", "기록(문구)": "", "보존기간": re.sub(r"\s|(간|동안)$", "", m.group(1)), "기산(문구)": "",
                         "문장": ctx.strip(" ."), "원문": "https://www.law.go.kr/자치법규/" + name.replace(" ", "")})
-    cols = ["출처", "법령", "종류", "시행", "기관", "조문", "의무자", "기록(문구)", "보존기간", "성격", "기산(문구)", "문장", "원문"]
+    cols = ["출처", "법령", "종류", "시행", "기관", "조문", "의무자", "기록(문구)", "보존기간", "성격", "기산(문구)", "문장", "원문", "판정"]
+    sp = importlib.util.spec_from_file_location("retention_judge", os.path.join(os.path.dirname(os.path.abspath(__file__)), "retention_judge.py"))
+    jd = importlib.util.module_from_spec(sp)
+    sp.loader.exec_module(jd)
     for r in out:
+        r["판정"] = jd.judge(r.get("문장", ""), r.get("성격", ""))[1]  # 보존 의무 판정기(외부 API 없음)
         for c in cols:
             r[c] = RRN.sub("******-*******", (r.get(c) or "").strip())
     os.makedirs(os.path.dirname(a.out) or ".", exist_ok=True)

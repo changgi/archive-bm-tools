@@ -508,11 +508,11 @@ def main():
           _ks == {("제2조", "3년"), ("제3조", "5년"), ("제3조", "10년")} and any("작성한 날부터" in r["기산(문구)"] for r in _ex)
           and all(r["원문"].startswith("https://www.law.go.kr/법령/가상법시행규칙/") for r in _ex), str(_ex))
     _ex2 = _scb.extract("가상법 [시행 2026. 1. 1.]", "가상법 제1조(목적) 목적이다. 제2조(정보의 파기) 가상정보는 수집한 날부터 5년이 지나면 파기하여야 한다. "
-                        "제3조(서식) 결의서 보존기간 10년 접수 제3조의2(안내) 단위과제 보존기간(1년, 3년, 5년, 10년, 30년, 준영구, 영구)을 적는다. 제4조(편철) 신청서는 편철하여 3년간 보존 2. 대장은 1년간 보존 제5조(보존) 기록부의 보존 기간은 마지막으로 적은 날부터 5년으로 하고, 방법은 따로 정한다.")
+                        "제3조(서식) 결의서 보존기간 10년 접수 제3조의3(협의) 관할 영구기록물관리기관의 장과 협의하여 관리하여야 한다. 제3조의2(안내) 단위과제 보존기간(1년, 3년, 5년, 10년, 30년, 준영구, 영구)을 적는다. 제4조(편철) 신청서는 편철하여 3년간 보존 2. 대장은 1년간 보존 제5조(보존) 기록부의 보존 기간은 마지막으로 적은 날부터 5년으로 하고, 방법은 따로 정한다.")
     _k2 = {(r["조문"].split("(")[0], r["보존기간"], r["성격"]) for r in _ex2}
-    check("법정 보존기간 추출 2차: 보존기간 구분 나열(1년, 3년, 5년 …)은 뺌, '5년이 지나면 파기'는 상한, 서식 칸 '보존기간 10년'·나열 '3년간 보존 2.'·'보존 기간은 … 5년으로 하고'는 최소 보존",
+    check("법정 보존기간 추출 2차: 보존기간 구분 나열(1년, 3년, 5년 …)·'영구기록물관리기관' 이름 속 '영구'는 뺌, '5년이 지나면 파기'는 상한, 서식 칸 '보존기간 10년'·나열 '3년간 보존 2.'·'보존 기간은 … 5년으로 하고'는 최소 보존",
           ("제2조", "5년", "지나면 파기(상한)") in _k2 and ("제3조", "10년", "최소 보존") in _k2 and ("제4조", "3년", "최소 보존") in _k2
-          and ("제4조", "1년", "최소 보존") in _k2 and ("제5조", "5년", "최소 보존") in _k2 and not any(k[0] == "제3조의2" for k in _k2), str(_k2))
+          and ("제4조", "1년", "최소 보존") in _k2 and ("제5조", "5년", "최소 보존") in _k2 and not any(k[0] in ("제3조의2", "제3조의3") for k in _k2), str(_k2))
     _pg = ('<tr class="dt"><td class="tNone">1</td><td class="tit" rowspan="2"><input type="hidden" id="list" value="jo" /><a onclick="ordinInfPop(\'111\',\'ELIS\');">'
            '가상군 위원회 조례<br /><span>[시행 2026. 1. 1.][조례 제1호, 2026. 1. 1., 제정]</span></a></td><td rowspan="2">가상군</td>'
            '<td><a onclick="ordinInfPop(\'111\',\'ELIS\',\'\',\'Y\',\'0009\');"> 제9조 회의록 </a></td><td><a onclick="ordinInfPop(\'111\');"> ... 회의록을 5년간 보존하여야 한다. </a></td></tr>'
@@ -701,6 +701,42 @@ def main():
           and "보존기간 법적근거 확인" in erx and "법정 최소(2년, 처방전)보다 짧음" in prx
           and "장애인복지법" in (awr.get("직장 내 장애인 인식개선 교육", ("",))[0] or "") and "늘려야 함" in (awr["직장 내 장애인 인식개선 교육"][1] or "")
           and not awr.get("회의 운영", ("x",))[0], orx + prx + oaw + str(awr))
+
+    # 법정 보존기간 목록 갱신 감시(오프라인): 최신법령 → 목록에 있는 법령 원문 다시 추출 → 생김·사라짐, --apply, 시행 예정은 알리기만
+    import csv as _csv
+    _cols = ["출처", "법령", "종류", "시행", "기관", "조문", "의무자", "기록(문구)", "보존기간", "성격", "기산(문구)", "문장", "원문"]
+    with open(f"{t}/가상목록.csv", "w", encoding="utf-8-sig", newline="") as _f:
+        _w = _csv.DictWriter(_f, fieldnames=_cols)
+        _w.writeheader()
+        _w.writerow({"출처": "법령", "법령": "가상법 시행규칙", "조문": "제2조(기록의 보존)", "기록(문구)": "점검기록을", "보존기간": "3년", "성격": "최소 보존", "문장": "점검기록을 3년간 보존하여야 한다."})
+        _w.writerow({"출처": "법령", "법령": "가상예정법", "조문": "제2조(보존)", "기록(문구)": "대장을", "보존기간": "1년", "성격": "최소 보존", "문장": "대장을 1년간 보존하여야 한다."})
+    json.dump({"최신": [{"종류": "법령", "이름": "가상법 시행규칙", "seq": "1", "공포": "2026-11-01", "시행": "2026-11-01", "구분": "개정"},
+                        {"종류": "법령", "이름": "가상예정법", "seq": "2", "공포": "2026-11-01", "시행": "2099-01-01", "구분": "개정"},
+                        {"종류": "법령", "이름": "관계없는법", "seq": "3", "공포": "2026-11-01", "시행": "2026-11-01", "구분": "개정"}],
+               "본문": {"1": "가상법 시행규칙 제1조(목적) 목적. 제2조(기록의 보존) ① 관리자는 점검기록을 5년간 보존하여야 한다.",
+                        "2": "가상예정법 제1조(목적) 목적. 제2조(보존) 대장을 3년간 보존하여야 한다."}}, open(f"{t}/최신.json", "w", encoding="utf-8"), ensure_ascii=False)
+    csw, osw = run([S("retention-review", "scripts", "statutory_watch.py"), "--catalog", f"{t}/가상목록.csv", "--offline", f"{t}/최신.json",
+                    "--report", f"{t}/산출/법정변화.md", "--apply"])
+    rsw = open(f"{t}/산출/법정변화.md", encoding="utf-8").read() if os.path.exists(f"{t}/산출/법정변화.md") else ""
+    _after = list(_csv.DictReader(open(f"{t}/가상목록.csv", encoding="utf-8-sig")))
+    check("법정 보존기간 갱신 감시: 개정 법령 3년→5년 생김·사라짐·--apply로 목록 고침, 시행 예정(2099) 개정은 알리기만, 목록에 없는 법령은 안 읽음",
+          csw == 1 and "🆕 제2조(기록의 보존) 5년" in rsw and "➖ 제2조(기록의 보존) 3년" in rsw and "시행 예정" in rsw and "관계없는법" not in rsw
+          and {(r["법령"], r["보존기간"]) for r in _after} == {("가상법 시행규칙", "5년"), ("가상예정법", "1년")}, osw + rsw)
+
+    # 같은 판본은 다시 받지 않음(--seen) + 보존 의무 판정기(외부 API 없음)
+    _sv = f"{t}/읽은판본.json"
+    run([S("retention-review", "scripts", "statutory_watch.py"), "--catalog", f"{t}/가상목록.csv", "--offline", f"{t}/최신.json", "--report", f"{t}/산출/법정변화1.md", "--seen", _sv])
+    cs2, os2 = run([S("retention-review", "scripts", "statutory_watch.py"), "--catalog", f"{t}/가상목록.csv", "--offline", f"{t}/최신.json", "--report", f"{t}/산출/법정변화2.md", "--seen", _sv])
+    _seen = json.load(open(_sv, encoding="utf-8")) if os.path.exists(_sv) else {}
+    check("법정 보존기간 갱신 감시: 이미 읽은 판본(lsiSeq)은 건너뜀, 시행 예정 개정(바뀜 있음)만 다시 알림",
+          cs2 == 1 and "같은 판본 건너뜀 1 · 다시 읽음 1 · 바뀐 법령 1(시행 예정 1)" in os2 and _seen.get("법령|가상법 시행규칙|") == "1", os2 + str(_seen))
+    cj, oj = run([S("retention-review", "scripts", "retention_judge.py"), "--gold"])
+    import re as _re
+    _rec = [float(x) for x in _re.findall(r"처음 보는 문장\) \(\d+문장\) p≥0\.3: 정밀 [\d.]+ · 재현 ([\d.]+)", oj)]
+    _, oj1 = run([S("retention-review", "scripts", "retention_judge.py"), "② 112치안종합상황실은 24시간 운영체제를 유지해야 한다."])
+    _, oj2 = run([S("retention-review", "scripts", "retention_judge.py"), "④ 회의록은 실무협의회 주관위원이 관리하며, 10년간 보존한다."])
+    check("보존 의무 판정기: 처음 보는 시험 문장에서 의무 문장을 놓치지 않음(재현 ≥ 0.95), '24시간 운영체제 유지'는 의무 아님 가능성, '회의록 10년간 보존'은 의무",
+          cj == 0 and _rec and _rec[0] >= 0.95 and "의무 아님 가능성" in oj1 and oj2.strip().endswith("의무"), oj + oj1 + oj2)
 
     # 행정박물 관리대상 선별(행정박물 관리지침 2021 표 4)
     _k = ["중요도", "인물", "상징", "예술", "희소", "활용", "보존"]

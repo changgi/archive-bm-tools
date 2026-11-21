@@ -14,7 +14,7 @@
     (재난상황 기록 5년), 「자연재해대책법 시행령」 제33조의3(재해대장 5년), 「공직자윤리법 시행령」 제36조의3(재산등록 자료
     퇴직 후 10년), 「공무원 제안 규정」 제23조(미채택 제안 2년), 「실내공기질 관리법」 제12조(측정결과 10년), 「영유아보육법」
     제15조의4(어린이집 CCTV 60일)·시행규칙 제9조의7(열람대장 3년), 「사학기관 재무·회계 규칙」 제53조의2(장부·증빙 5년), 「보조금 관리에 관한 법률」 시행령 제10조의2·「지방자치단체 보조금 관리에 관한 법률」 제16조③(보조사업 자료 5년)
-전체 목록 → assets/law/statutory_catalog.csv (10,333건: 법령 583개 1,440건·법령 별표·서식 314건·행정규칙 1,703개 3,756건·자치법규 246개 지자체 3,970개 4,823건)
+전체 목록 → assets/law/statutory_catalog.csv (10,113건: 법령 1384건·법령 별표·서식 314건·행정규칙 3689건·자치법규 246개 지자체 4726건)
   국가법령정보센터 '조문내용' 검색(현행 법령·행정규칙)으로 '년'·숫자 표현 28가지를 모으고, 법령 원문 2,761개, 별표·서식 PDF 9,730개·한글 파일 815개, 행정규칙 원문 2,228개, 자치법규 원문 4,378개에서
   조문을 뽑았다(검색 결과의 기간 문장 651건 중 637건 확보). 별표·서식과 '(검색 문구)' 행은 검색 결과 문구(일부)만 담았으니 원문을 연다.
   기준표와 이름이 닮은 법정 기록은 '전체 목록 후보' 시트로 따로 보여 준다(판정 아님). `--find 낱말`로 목록을 찾는다.
@@ -77,7 +77,7 @@ def tokens(name):
     return [w for w in re.split(r"[\s·ㆍ,()/\-]+|및|등", name or "") if len(w) >= 3 and w not in STOP]
 
 
-def catalog_hits(cat, name, limit=3, org=None):
+def catalog_hits(cat, name, limit=3, org=None, all_rows=False):
     """단위과제명의 낱말(3글자 이상)이 조문 제목·기록 문구에 들어 있는 법정 기록. 많이 겹칠수록 앞.
     자치법규는 org(지자체 이름 일부)를 줄 때 그 기관 것만 넣는다."""
     tk = tokens(name)
@@ -85,6 +85,8 @@ def catalog_hits(cat, name, limit=3, org=None):
         return []
     scored = []
     for c in cat:
+        if not all_rows and c.get("판정") == "의무 아님 가능성":  # 보존 의무 판정기(retention_judge.py)가 걸러 낸 행
+            continue
         if c["출처"].startswith("자치법규") and not (org and (org in c.get("기관", "") or org in c["법령"])):
             continue
         hay = c["조문"] + " " + c["기록(문구)"] + " " + c["문장"][:160] + ("" if c["출처"] == "법령" else " " + c["법령"])
@@ -111,6 +113,7 @@ def main() -> int:
     ap.add_argument("--list", action="store_true")
     ap.add_argument("--find", help="전체 목록(statutory_catalog.csv)에서 낱말로 찾기 — 법령명·조문·기록·문장")
     ap.add_argument("--no-catalog", action="store_true", help="'전체 목록 후보' 시트를 만들지 않음")
+    ap.add_argument("--all-catalog", action="store_true", help="판정기가 '의무 아님 가능성'으로 본 행도 후보에 넣음")
     ap.add_argument("--org", help="자치법규 후보를 넣을 지자체 이름(예: 가평군·서울특별시 마포구)")
     ap.add_argument("-o", "--out", default="산출/법정보존기간_점검.xlsx")
     a = ap.parse_args()
@@ -185,7 +188,7 @@ def main() -> int:
             name, per = cell(r, ni), re.sub(r"\s", "", cell(r, pi))
             if not name:
                 continue
-            for c in catalog_hits(cat, name, org=a.org):
+            for c in catalog_hits(cat, name, org=a.org, all_rows=a.all_catalog):
                 ny, y = years(c["보존기간"]), years(per)
                 if c.get("성격", "").startswith("지나면"):
                     cmp = "파기 기한(상한)보다 김 — 원문 확인" if ny and y and y > ny else "상한 안"
