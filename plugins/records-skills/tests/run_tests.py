@@ -473,6 +473,14 @@ def main():
           cml == 1 and "법정 최소 미달 3" in oml and mlr.get("의무기록 관리", ("",))[0] == "2호 진료기록부" and mlr["처방전 관리"][1] == "2년"
           and mlr["간호기록 관리"][2].startswith("법정 최소 미달") and mlr["수술기록 관리"][2] == "충족" and mlr["진단서 발급"][2] == "충족"
           and not mlr["외래진료계획 수립"][0] and "의료법 법정 보존기간" in wml.sheetnames, oml + str(mlr))
+    open(f"{t}/법정기준표.csv", "w", encoding="utf-8-sig").write("단위과제명,보존기간,단위과제 설명\n무기계약직 근로계약 관리,1년,\n기간제 근로자 급여 지급,3년,\n"
+        "산업안전보건위원회 운영,1년,\n작업환경측정,3년,\n소방시설 자체점검,1년,\n부가가치세 신고,3년,\n회의 운영 일반,1년,\n복무 관리,1년,휴가계획 취합\n")
+    cst, ost = run([S("retention-review", "scripts", "statutory_check.py"), f"{t}/법정기준표.csv", "-o", f"{t}/산출/법정점검.xlsx"])
+    sst = {r[2]: (r[7], r[10], r[11]) for r in openpyxl.load_workbook(f"{t}/산출/법정점검.xlsx")["점검"].iter_rows(min_row=2, values_only=True)} if os.path.exists(f"{t}/산출/법정점검.xlsx") else {}
+    check("법정 보존기간(근로기준법·산안법·국세기본법·소방): 미달 5·제안(2년→3년, 5년→5년)·충족·설명 낱말은 '확인 필요'·해당 없는 과제 제외",
+          cst == 1 and "법정 최소 미달 5" in ost and "확인 필요 1" in ost and sst.get("산업안전보건위원회 운영", ("",))[0] == "2년"
+          and sst["산업안전보건위원회 운영"][2] == "3년" and sst["작업환경측정"][2] == "5년" and sst["부가가치세 신고"][2] == "5년"
+          and sst["기간제 근로자 급여 지급"][1] == "충족" and sst["복무 관리"][1].startswith("확인 필요") and "회의 운영 일반" not in sst, ost + str(sst))
 
     # 생산 시점 기록화(record-by-design): BagIt 패키지·NAK 8 메타데이터·RiC-O·사건 이력·고정성
     RBD = S("record-by-design", "scripts", "capture.py")
@@ -613,7 +621,7 @@ def main():
     # 근거 자료 변화 감시(오프라인): 기준선 → 새 첨부·게시물·법령 시행일 바뀜 감지
     SW = S("records-qa-gate", "scripts", "source_watch.py")
     os.makedirs(f"{t}/감시", exist_ok=True)
-    pg1 = '<div id="contents"><a href="/d?up_filename=가상지침.pdf">가상지침</a><a href="/x?board_seq=101">가상 공지</a></div>'
+    pg1 = '<div id="contents"><a href="/d?up_filename=가상지침.pdf">가상지침</a><a href="/x?board_seq=101">가상 공지</a><a href="foreignStandardDetail.do?abroad_seq=7&amp;page=1" title="새창으로 열리는 사이트">가상 해외표준</a><a href="foreignStandardDetail.do?abroad_seq=9">900101-1234567</a></div>'
     lw1 = '<div id="contents">[시행 2026. 10. 2.] 제36728호, 2026. 9. 29., 타법개정</div>'
     open(f"{t}/감시/a.html", "w", encoding="utf-8").write(pg1)
     open(f"{t}/감시/l.html", "w", encoding="utf-8").write(lw1)
@@ -624,12 +632,13 @@ def main():
     swa = ["--sources", f"{t}/감시/src.json", "--baseline", f"{t}/감시/base.json", "--offline", f"{t}/감시/off.json"]
     csw1, _ = run([SW, *swa, "--update", "--report", f"{t}/감시/r1.md"])
     csw2, _ = run([SW, *swa, "--report", f"{t}/감시/r2.md"])
-    open(f"{t}/감시/a.html", "w", encoding="utf-8").write(pg1.replace("</div>", '<a href="/d?up_filename=새지침(2027).pdf">새지침</a></div>'))
+    open(f"{t}/감시/a.html", "w", encoding="utf-8").write(pg1.replace("</div>", '<a href="/d?up_filename=새지침(2027).pdf">새지침</a><a href="foreignStandardDetail.do?abroad_seq=208">가상 새 해외표준</a></div>'))
     open(f"{t}/감시/l.html", "w", encoding="utf-8").write(lw1.replace("2026. 10. 2.", "2027. 4. 14."))
     csw3, osw3 = run([SW, *swa, "--report", f"{t}/감시/r3.md"])
     rsw = open(f"{t}/감시/r3.md", encoding="utf-8").read() if os.path.exists(f"{t}/감시/r3.md") else ""
-    check("근거 변화 감시: 첫 기록·변화 없음 0·새 첨부와 법령 시행일 바뀜 감지(종료 1)·반영할 곳 표시",
-          csw1 == 0 and csw2 == 0 and csw3 == 1 and "새지침(2027).pdf" in rsw and "[시행 2027. 4. 14.]" in rsw and "가상 스킬" in rsw, osw3 + rsw[:400])
+    check("근거 변화 감시: 첫 기록·변화 없음 0·새 첨부·새 해외표준(abroad_seq)·주민등록번호 모양 가림·법령 시행일 바뀜 감지(종료 1)·반영할 곳 표시",
+          csw1 == 0 and csw2 == 0 and csw3 == 1 and "새지침(2027).pdf" in rsw and "가상 새 해외표준" in rsw
+          and "900101-1234567" not in open(f"{t}/감시/base.json", encoding="utf-8").read() and "[시행 2027. 4. 14.]" in rsw and "가상 스킬" in rsw, osw3 + rsw[:400])
 
     # 행정박물 관리대상 선별(행정박물 관리지침 2021 표 4)
     _k = ["중요도", "인물", "상징", "예술", "희소", "활용", "보존"]

@@ -24,6 +24,7 @@ description: 기록물 산출 목록·메타데이터·이관 패키지를 내�
 스킬이 기대는 출처(국가기록포털 표준·지침·매뉴얼·규격서식·KS·해외표준·기록물분류기준·업무안내 자료·공지, 법제처 입법예고, 국가법령정보센터 법령 15종)가 바뀌었는지 본다.
 - `python "${CLAUDE_PLUGIN_ROOT}"/skills/records-qa-gate/scripts/source_watch.py --report 산출/근거변화.md` — 지난번 기준선(`references/source_baseline.json`)과 비교해 새 게시물·새 첨부·사라진 것·법령 '[시행 …]'·'제N호' 바뀜을 표로 낸다. 종료 1이면 변화 있음.
 - 출처 목록과 '반영할 곳'은 `references/source_watch_sources.json`. 출처를 더하려면 이 파일에 한 줄을 넣는다.
-- 저장소에서는 GitHub Actions(`source-watch.yml`, 매주 월요일)가 돌려 변화가 있으면 보고서·기준선을 담은 PR을 연다. 반영(스크립트·references 수정)은 그 PR에서 사람이나 Claude가 한다 — 자동으로 고치지 않는다.
+- 저장소에서는 GitHub Actions(`source-watch.yml`)가 3주에 한 번(2026-12-14부터 3주마다 월요일, 잘 바뀌지 않는 자료라 매주는 과함) 돌려 변화가 있으면 보고서·기준선을 담은 PR(안 되면 이슈)을 연다. 반영(스크립트·references 수정)은 그 PR에서 사람이나 예약된 Claude 작업이 하고, 병합은 사람이 한다.
+- 해외표준은 목록 전체를 한 쪽으로 받아(`listSize=200`) 134건의 상세 링크(`abroad_seq`)를 모두 비교한다. 새 해외표준은 `references/foreign-standards-*.md` 대조표에 한 줄 더한다.
 - 첨부 파일은 받지 않는다. 비밀 관련 공개 게시물(지침·매뉴얼)은 읽어도 되지만 실제 비밀기록물은 열지 않는다.
 

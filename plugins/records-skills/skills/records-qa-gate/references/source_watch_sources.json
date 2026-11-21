@@ -38,9 +38,9 @@
     },
     {
       "이름": "국가기록포털 해외표준 목록",
-      "주소": "https://www.archives.go.kr/next/newdata/foreignStandardList.do",
+      "주소": "https://www.archives.go.kr/next/newdata/foreignStandardList.do?page=1&listSize=200",
       "종류": "목록",
-      "반영": "references/standards-menu",
+      "반영": "references/foreign-standards(134건 대조표)·해당 스킬 — 새 해외표준은 대조표에 한 줄 더하고 반영·참고·보류를 정함",
       "본문비교": true
     },
     {
