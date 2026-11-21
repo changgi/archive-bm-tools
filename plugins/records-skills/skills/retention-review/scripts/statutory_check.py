@@ -2,7 +2,7 @@
 """개별 법령 법정 보존기간 점검: 기관 기록관리기준표의 단위과제를 개별 법령이 최소 보존기간을 정한 기록 종류와
 낱말로 맞춰, 기준표 보존기간이 법정 기간보다 짧으면 '법정 최소 미달'로 표시하고 맞출 보존기간을 제안한다.
 
-근거(law.go.kr 2026-11-21 원문 확인) → assets/law/statutory_minimum.csv (38종, 기관 기준표 대조용으로 고른 것)
+근거(law.go.kr 2026-11-21 원문 확인) → assets/law/statutory_minimum.csv (40종, 기관 기준표 대조용으로 고른 것)
   - 「근로기준법」 제42조, 시행령 제22조: 근로자 명부·근로계약서·임금대장·고용·해고·퇴직·승급·휴가·서면 합의 3년(기산일 따로)
   - 「산업안전보건법」 제164조, 시행규칙 제241조: 선임 서류·산업재해 기록·유해성 조사 3년, 위원회 회의록 2년,
     작업환경측정·건강진단 5년(고시 물질 30년), 기관석면조사 3년
@@ -13,11 +13,12 @@
     확보조치 기준」 제8조(접속기록 1년, 대량·고유식별·민감정보 2년)·제5조(접근 권한 내역 3년), 「재난안전법 시행령」 제76조
     (재난상황 기록 5년), 「자연재해대책법 시행령」 제33조의3(재해대장 5년), 「공직자윤리법 시행령」 제36조의3(재산등록 자료
     퇴직 후 10년), 「공무원 제안 규정」 제23조(미채택 제안 2년), 「실내공기질 관리법」 제12조(측정결과 10년), 「영유아보육법」
-    제15조의4(어린이집 CCTV 60일)·시행규칙 제9조의7(열람대장 3년), 「사학기관 재무·회계 규칙」 제53조의2(장부·증빙 5년)
-전체 목록 → assets/law/statutory_catalog.csv (2,803건: 법령 547개 1,345건·행정규칙 997개 1,357건·별표·서식 101건)
+    제15조의4(어린이집 CCTV 60일)·시행규칙 제9조의7(열람대장 3년), 「사학기관 재무·회계 규칙」 제53조의2(장부·증빙 5년), 「보조금 관리에 관한 법률」 시행령 제10조의2·「지방자치단체 보조금 관리에 관한 법률」 제16조③(보조사업 자료 5년)
+전체 목록 → assets/law/statutory_catalog.csv (6,404건: 법령 547개 1,345건·행정규칙 997개 1,357건·별표·서식 101건·자치법규 246개 지자체 3,244개 3,601건)
   국가법령정보센터 '조문내용' 검색(현행 법령·행정규칙)으로 보존·보관 기간 문구 14가지를 모으고, 법령은 원문 1,838개에서
   조문을 뽑았다(검색 결과의 기간 문장 651건 중 637건 확보). 행정규칙·별표는 검색 결과 문구(일부)만 담았으니 원문을 연다.
-  기준표와 이름이 닮은 법정 기록은 '전체 목록 후보' 시트로 따로 보여 준다(판정 아님). `--find 낱말`로 목록을 찾는다.사용:  python statutory_check.py 기준표.xlsx [--law 근로기준법,산업안전보건법] -o 산출/법정보존기간_점검.xlsx
+  기준표와 이름이 닮은 법정 기록은 '전체 목록 후보' 시트로 따로 보여 준다(판정 아님). `--find 낱말`로 목록을 찾는다.
+  자치법규(조례·규칙)는 지자체마다 달라 `--org 가평군`처럼 기관을 주면 그 지자체 것만 후보로 넣는다(주지 않으면 뺀다).사용:  python statutory_check.py 기준표.xlsx [--law 근로기준법,산업안전보건법] [--org 가평군] -o 산출/법정보존기간_점검.xlsx
        python statutory_check.py --list   (법정 기간 표 보기)
 기준표 열(머리글 이름으로 찾음): 단위과제명(단위과제), 보존기간, (선택) 단위과제코드, 단위과제 설명(업무설명·설명)
 원칙:  법정 기간은 '최소'다. 기준표가 더 길면 그대로 둔다. 공공기록물 보존기간은 1·3·5·10·30년·준영구·영구라
@@ -74,14 +75,17 @@ def tokens(name):
     return [w for w in re.split(r"[\s·ㆍ,()/\-]+|및|등", name or "") if len(w) >= 3 and w not in STOP]
 
 
-def catalog_hits(cat, name, limit=3):
-    """단위과제명의 낱말(3글자 이상)이 조문 제목·기록 문구에 들어 있는 법정 기록. 많이 겹칠수록 앞."""
+def catalog_hits(cat, name, limit=3, org=None):
+    """단위과제명의 낱말(3글자 이상)이 조문 제목·기록 문구에 들어 있는 법정 기록. 많이 겹칠수록 앞.
+    자치법규는 org(지자체 이름 일부)를 줄 때 그 기관 것만 넣는다."""
     tk = tokens(name)
     if not tk:
         return []
     scored = []
     for c in cat:
-        hay = c["조문"] + " " + c["기록(문구)"] + " " + c["문장"][:160]
+        if c["출처"] == "자치법규" and not (org and (org in c.get("기관", "") or org in c["법령"])):
+            continue
+        hay = c["조문"] + " " + c["기록(문구)"] + " " + c["문장"][:160] + ("" if c["출처"] == "법령" else " " + c["법령"])
         sc = sum(len(w) for w in tk if w in hay)
         if sc:
             scored.append((sc, c))
@@ -105,15 +109,16 @@ def main() -> int:
     ap.add_argument("--list", action="store_true")
     ap.add_argument("--find", help="전체 목록(statutory_catalog.csv)에서 낱말로 찾기 — 법령명·조문·기록·문장")
     ap.add_argument("--no-catalog", action="store_true", help="'전체 목록 후보' 시트를 만들지 않음")
+    ap.add_argument("--org", help="자치법규 후보를 넣을 지자체 이름(예: 가평군·서울특별시 마포구)")
     ap.add_argument("-o", "--out", default="산출/법정보존기간_점검.xlsx")
     a = ap.parse_args()
     rows = load(a.law.split(",") if a.law else None)
     if a.find:
         cat = load_catalog()
         kw = [k for k in re.split(r"\s+", a.find) if k]
-        hits = [c for c in cat if all(k in " ".join(c.values()) for k in kw)]
+        hits = [c for c in cat if all(k in " ".join(c.values()) for k in kw) and (not a.org or c["출처"] != "자치법규" or a.org in c.get("기관", "") + c["법령"])]
         for c in hits[:200]:
-            print(f"[{c['출처']}] {c['법령']} {c['조문'][:40]} | {c['보존기간']} | {(c['기록(문구)'] or c['문장'])[-70:]} | {c['원문']}")
+            print(f"[{c['출처']}{'·' + c['기관'] if c.get('기관') else ''}] {c['법령']} {c['조문'][:40]} | {c['보존기간']} | {(c['기록(문구)'] or c['문장'])[-70:]} | {c['원문']}")
         print(f"전체 목록 {len(cat)}건 중 {len(hits)}건" + (" (앞 200건만 보임)" if len(hits) > 200 else ""))
         return 0
     if a.list or not a.table:
@@ -170,16 +175,16 @@ def main() -> int:
     if not a.no_catalog:
         cat = load_catalog()
         cs = wb.create_sheet("전체 목록 후보")
-        cs.append(["원본 행", "단위과제명", "기준표 보존기간", "출처", "법령·행정규칙", "조문", "법정 보존기간", "기록(문구)", "문장(일부)", "원문", "비교"])
+        cs.append(["원본 행", "단위과제명", "기준표 보존기간", "출처", "법령·행정규칙·자치법규", "기관", "조문", "법정 보존기간", "기록(문구)", "문장(일부)", "원문", "비교"])
         for n, r in enumerate(data[hi + 1:], hi + 2):
             name, per = cell(r, ni), re.sub(r"\s", "", cell(r, pi))
             if not name:
                 continue
-            for c in catalog_hits(cat, name):
+            for c in catalog_hits(cat, name, org=a.org):
                 ny, y = years(c["보존기간"]), years(per)
                 cmp = "법정 기간이 더 김 — 같은 기록인지 원문 확인" if ny and y and ny > y else "기준표가 같거나 김"
                 cand += cmp.startswith("법정")
-                cs.append([n, name, per, c["출처"], c["법령"], c["조문"], c["보존기간"], c["기록(문구)"], c["문장"][:200], c["원문"], cmp])
+                cs.append([n, name, per, c["출처"], c["법령"], c.get("기관", ""), c["조문"], c["보존기간"], c["기록(문구)"], c["문장"][:200], c["원문"], cmp])
     tb = wb.create_sheet("법정 보존기간")
     tb.append(["법령", "조항", "시행", "기록 종류", "최소 보존기간", "기산", "적용 대상", "찾는 낱말", "제외 낱말", "비고"])
     for r in rows:

@@ -9,7 +9,7 @@
 
 ![version](https://img.shields.io/badge/records--skills-v2.22.0-1f6feb)
 ![skills](https://img.shields.io/badge/스킬-44종-2da44e)
-![tests](https://img.shields.io/badge/시험-131%2F131%20통과-2da44e)
+![tests](https://img.shields.io/badge/시험-133%2F133%20통과-2da44e)
 ![python](https://img.shields.io/badge/Python-3.10%2B-3776ab?logo=python&logoColor=white)
 ![law](https://img.shields.io/badge/근거-시행령%202026.8.25.-8250df)
 ![license](https://img.shields.io/badge/코드-MIT-lightgrey)
@@ -50,7 +50,7 @@
 - 🗄️ **데이터세트 평가·폐기 준비**(실행매뉴얼 2020): 보존기간+처분제약이 지난 데이터 영역 → 평가심의서, 확인용 SQL(SELECT만), 폐기 결과 기록부
 - 📗 **간행물 2026 송부지침**(2026. 10.): 기관 기호표·발간주기 기호·생략대상 유형과 기관·비공개 사유 점검
 - 🏺 **행정박물 관리대상 선별**(행정박물 관리지침 2021 표 4): 7개 기준 처리과·기록관 점수 → 70점 중 36점 이상 관리대상, 공직자 선물·관인 폐기공고 안내
-- ⚖️ **개별 법령 법정 보존기간 전수 조사·점검**(`statutory_check.py`): 국가법령정보센터 조문 검색으로 현행 법령 547개·행정규칙 997개에서 보존·보관 기간 2,803건을 모아 [전체 목록](plugins/records-skills/skills/retention-review/assets/law/statutory_catalog.csv)으로 만들고(`--find`로 검색, `statutory_catalog_build.py`로 다시 만들기), 그중 기관 기준표와 맞출 38종(근로기준법·산업안전보건법·국세기본법·소방·의료법·장애인 인식개선교육·개인정보 접속기록·재난상황 기록·재산등록 자료 등)으로 '법정 최소 미달'과 맞출 보존기간을 표시
+- ⚖️ **개별 법령 법정 보존기간 전수 조사·점검**(`statutory_check.py`): 국가법령정보센터 조문 검색으로 현행 법령 547개·행정규칙 997개·자치법규 3,244개(246개 지자체)에서 보존·보관 기간 6,404건을 모아 [전체 목록](plugins/records-skills/skills/retention-review/assets/law/statutory_catalog.csv)으로 만들고(`--find`로 검색, 지자체는 `--org`로 자기 조례까지, `statutory_catalog_build.py`로 다시 만들기), 그중 기관 기준표와 맞출 40종(근로기준법·산업안전보건법·국세기본법·소방·의료법·장애인 인식개선교육·개인정보 접속기록·재난상황 기록·재산등록 자료·보조사업 자료 등)으로 '법정 최소 미달'과 맞출 보존기간을 표시
 - 🏥 **의료법 법정 보존기간 점검**: 의료기관 기준표 대조에 「의료법 시행규칙」 제15조① 9종(진료기록부·수술기록 10년, 환자 명부·검사소견·방사선 사진·간호·조산 5년, 진단서 부본 3년, 처방전 2년)을 넣어 더 짧은 과제를 '법정 최소 미달'로 표시. 스킬이 근거로 쓰는 법령 4개(의료법 시행규칙·정보공개법 시행규칙·재난안전법·개인정보 보호법)를 감시 목록에 추가
 - python-hwpx 7.0 호환, GitHub Actions에서 LibreOffice까지 설치해 시험
 
@@ -301,7 +301,7 @@ flowchart LR
 python plugins/records-skills/tests/run_tests.py
 ```
 
-131개(veraPDF·ffmpeg 유무에 따라 1~2개 달라짐) — 스킬 44종의 주요 계산과, 보호 훅이 Windows처럼 `python3`가 없거나 가짜일 때도 꺼지지 않는지까지 확인합니다. 필요 패키지: `openpyxl` `pypdf` `pikepdf` `pillow` `numpy` (선택: `python-docx` `python-hwpx` `holidays`, LibreOffice). Python 3.11·3.12·3.13에서 확인했고, [GitHub Actions](.github/workflows/test.yml)로 3.10~3.13을 돌립니다.
+133개(veraPDF·ffmpeg 유무에 따라 1~2개 달라짐) — 스킬 44종의 주요 계산과, 보호 훅이 Windows처럼 `python3`가 없거나 가짜일 때도 꺼지지 않는지까지 확인합니다. 필요 패키지: `openpyxl` `pypdf` `pikepdf` `pillow` `numpy` (선택: `python-docx` `python-hwpx` `holidays`, LibreOffice). Python 3.11·3.12·3.13에서 확인했고, [GitHub Actions](.github/workflows/test.yml)로 3.10~3.13을 돌립니다.
 
 ---
 

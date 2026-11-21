@@ -507,6 +507,19 @@ def main():
     check("법정 보존기간 목록 다시 만들기(추출기): 'N년간 보존'·나열형 'N년'·기산 문구, 날짜·과태료·N일 이내 신고·부칙 경과조치 제외",
           _ks == {("제2조", "3년"), ("제3조", "5년"), ("제3조", "10년")} and any("작성한 날부터" in r["기산(문구)"] for r in _ex)
           and all(r["원문"].startswith("https://www.law.go.kr/법령/가상법시행규칙/") for r in _ex), str(_ex))
+    _pg = ('<tr class="dt"><td class="tNone">1</td><td class="tit" rowspan="2"><input type="hidden" id="list" value="jo" /><a onclick="ordinInfPop(\'111\',\'ELIS\');">'
+           '가상군 위원회 조례<br /><span>[시행 2026. 1. 1.][조례 제1호, 2026. 1. 1., 제정]</span></a></td><td rowspan="2">가상군</td>'
+           '<td><a onclick="ordinInfPop(\'111\',\'ELIS\',\'\',\'Y\',\'0009\');"> 제9조 회의록 </a></td><td><a onclick="ordinInfPop(\'111\');"> ... 회의록을 5년간 보존하여야 한다. </a></td></tr>'
+           '<tr class="dt"><td class="tNone">2</td><td><a onclick="ordinInfPop(\'111\');"> 제10조 수당 </a></td><td><a onclick="ordinInfPop(\'111\');"> ... 최근 3년간 보존하여야 할 ... </a></td></tr>')
+    _calls = []
+    _scb.get = lambda u: (_calls.append(u), _pg if len(_calls) == 1 else "")[1]
+    _scb.DELAY = 0
+    _or = _scb.search_ordin("년간 보존")
+    check("자치법규 조문 검색 해석: 법규명·시행일·지자체·조문을 쪽 넘어가며 이어 붙임(rowspan), 빈 쪽에서 멈춤",
+          len(_or) == 2 and _or[0]["기관"] == "가상군" and _or[1]["조문"] == "제10조 수당" and "가상군 위원회 조례" in _or[1]["자치법규"] and len(_calls) == 2, str(_or))
+    cog, oog = run([S("retention-review", "scripts", "statutory_check.py"), "--find", "직장협의회 회의록", "--org", "칠곡군"])
+    check("법정 보존기간 전체 목록의 자치법규: --org로 그 지자체 조례만(칠곡군 공무원직장협의회 회의록 3년)",
+          cog == 0 and "[자치법규·칠곡군]" in oog and "양양군" not in oog, oog[-400:])
 
     # 생산 시점 기록화(record-by-design): BagIt 패키지·NAK 8 메타데이터·RiC-O·사건 이력·고정성
     RBD = S("record-by-design", "scripts", "capture.py")

@@ -8,7 +8,8 @@
   3. 추출: 'N년(간·동안·이상) … 보존·보관·비치·유지·저장·관리하여야/할 것', '보존기간은 … N년으로 한다',
      보존 의무 조문의 나열형 '1. 기록 : N년'을 뽑는다. 날짜(2015년·1월 1일), 기한(N일 이내), 벌칙·과태료·처분 문장,
      '최근 N년간', 'N년 이상이 지난', 주식·부동산 보유기간은 뺀다.
-  4. 행정규칙과 별표·서식은 검색 결과 문구(일부)만 담는다(원문 주소 함께). 주민등록번호 모양 문자열은 가린다.
+  4. 행정규칙·자치법규(ordinSc.do 조문내용 탭, 현행 조례·규칙)와 별표·서식은 검색 결과 문구(일부)만 담는다
+     (원문 주소·지자체 함께). 주민등록번호 모양 문자열은 가린다.
 사용:  python statutory_catalog_build.py -o 산출/statutory_catalog.csv [--work 산출/법령원문] [--delay 0.7] [--limit N]
        (--work 폴더에 받은 원문을 두어 다시 돌릴 때 이어서 받는다. 법령 1,800여 개라 30분~1시간 걸린다.)
 주의:  국가법령정보센터에 부담을 주지 않게 한 번에 하나씩, 요청 사이를 띄운다. 오픈API(DRF)는 등록한 서버 주소만 받으므로
@@ -34,7 +35,7 @@ PERIOD = re.compile(rf"(영구(?:히)?|준영구|{NUM}\s*(?:년|개월|일|시�
 VERB = re.compile(r"(보존|보관|비치|유지|저장|관리)(?:하여야|해야|하여야만|하고|한다|할 수|할 것|하도록|하여 두어야|해 두어야|하며|기간)")
 ART = re.compile(r"(?<![가-힣])(제\d+조(?:의\d+)?)\s*\(([^)]{1,60})\)")
 NOISE = re.compile(r"행정처분|처분기준|과태료|벌칙|영업정지|업무정지|아니한 경우|않은 경우|위반")
-SNIP = re.compile(r"((?:\d+)\s*(?:년|개월)\s*(?:간|동안|이상)?|영구(?:히)?|준영구)\s*(?:[^.│┃]{0,25}?)(보존|보관|비치)(?:하여야|해야|할 것|ㆍ관리하여야|하고)")
+SNIP = re.compile(r"((?:\d+)\s*(?:년|개월)\s*(?:간|동안|이상)?|영구(?:히)?|준영구)\s*(?:[^.│┃]{0,25}?)(보존|보관|비치)(?:하여야|해야|할 것|ㆍ관리하여야|하고|한다)")
 DELAY = 0.7
 
 
@@ -94,6 +95,33 @@ def search_rules(q):
             jo, _, snip = rest.partition("...")
             out.append({"규칙": parts[1].strip() if len(parts) > 1 else "", "조문": jo.strip(), "문구": snip.strip(), "admSeq": a[0]})
             got += 1
+        if not got:
+            break
+        pg += 1
+        time.sleep(DELAY)
+    return out
+
+
+ORD_QUERIES = ["년간 보존", "년간 보관", "년 동안 보존", "년 동안 보관", "년 이상 보존", "년 이상 보관", "영구 보존", "보존기간", "보관기간"]
+
+
+def search_ordin(q):
+    out, pg, cur, org = [], 1, None, ""
+    while pg <= 250:
+        t = get(f"{BASE}ordinSc.do?menuId=3&subMenuId=27&tabMenuId=143&tabMenuIdx=3&outmax=150&pg={pg}&query=" + urllib.parse.quote(q))
+        got = 0
+        for tr in re.findall(r'<tr class="dt">(.*?)</tr>', t, re.S):
+            tds = re.findall(r"<td[^>]*>(.*?)</td>", tr, re.S)
+            tit = [x for x in tds if 'id="list"' in x]
+            if tit:
+                m = re.search(r"ordinInfPop\('(\d+)'", tit[0])
+                cur, i = (m.group(1) if m else "", text(tit[0])), tds.index(tit[0])
+                org, rest = (text(tds[i + 1]) if i + 1 < len(tds) else ""), tds[i + 2:]
+            else:
+                rest = [x for x in tds if "ordinInfPop" in x]
+            if len(rest) >= 2 and cur:
+                out.append({"자치법규": cur[1], "seq": cur[0], "기관": org, "조문": text(rest[-2]), "문구": text(rest[-1])})
+                got += 1
         if not got:
             break
         pg += 1
@@ -196,6 +224,11 @@ def main() -> int:
         for r in search_rules(q):
             rules.setdefault((r["admSeq"], r["조문"]), r)
         print(f"검색 '{q}': 법령 조문 {len(hits)} · 행정규칙 조문 {len(rules)}", file=sys.stderr)
+    ords = {}
+    for q in ORD_QUERIES:
+        for r in search_ordin(q):
+            ords.setdefault((r["seq"], r["조문"]), r)
+        print(f"자치법규 검색 '{q}': 조문 {len(ords)}", file=sys.stderr)
     names = {}
     for r in hits.values():
         names.setdefault(r["lsiSeq"], r["법령"] or "")
@@ -252,7 +285,22 @@ def main() -> int:
             out.append({"출처": "행정규칙", "법령": rule, "종류": kd.group(1) if kd else "", "시행": shi.group(1) if shi else "", "조문": r["조문"][:80], "의무자": "",
                         "기록(문구)": "", "보존기간": re.sub(r"\s|(간|동안)$", "", m.group(1)), "기산(문구)": "", "문장": ctx.strip(" ."),
                         "원문": "https://www.law.go.kr/행정규칙/" + rule.replace(" ", "")})
-    cols = ["출처", "법령", "종류", "시행", "조문", "의무자", "기록(문구)", "보존기간", "기산(문구)", "문장", "원문"]
+    for r in ords.values():
+        name = re.sub(r"\s*\[시행.*", "", r["자치법규"]).strip()
+        shi = re.search(r"\[시행 ([^\]]+)\]", r["자치법규"])
+        kd = re.search(r"\]\[(조례|규칙|훈령|예규|규정)", r["자치법규"])
+        for m in SNIP.finditer(r["문구"]):
+            if re.search(r"최근\s*$", r["문구"][max(0, m.start() - 8): m.start()]):
+                continue
+            ctx = r["문구"][max(0, m.start() - 90): m.end() + 10]
+            k = (r["seq"], r["조문"], m.group(1), ctx[:40])
+            if NOISE.search(ctx) or k in seen:
+                continue
+            seen.add(k)
+            out.append({"출처": "자치법규", "법령": name, "종류": kd.group(1) if kd else "", "시행": shi.group(1) if shi else "", "기관": r["기관"],
+                        "조문": r["조문"][:80], "의무자": "", "기록(문구)": "", "보존기간": re.sub(r"\s|(간|동안)$", "", m.group(1)), "기산(문구)": "",
+                        "문장": ctx.strip(" ."), "원문": "https://www.law.go.kr/자치법규/" + name.replace(" ", "")})
+    cols = ["출처", "법령", "종류", "시행", "기관", "조문", "의무자", "기록(문구)", "보존기간", "기산(문구)", "문장", "원문"]
     for r in out:
         for c in cols:
             r[c] = RRN.sub("******-*******", (r.get(c) or "").strip())
