@@ -810,6 +810,13 @@ python skills/transfer-schedule/scripts/encrypted_scan.py 이관폴더 --list �
 
 
 🆕 **신축·리모델링(NAK 24)** `--newbuild --completed 2026-08-01` → 부지 6조건·지상 독립 서고·하중 750/1,000~1,200kgf/㎡·P.A.T. 자재 시험·급배수라인·완공 후 6개월 안정화 뒤 입고일. 시청각·작업실·열람실 면적은 `--audio --video --albums --film-cans --workers --seats`.
+
+**전시 환경 점검(전시·대여 전시)** 전시 목록의 조도·자외선·전시 기간·재전시 간격·습도·온도를 봅니다. 국내 법정 범위(시행령 별표 6 전시관 50~200럭스)와 국가기록포털 해외표준 ANSI/NISO Z39.79의 수치(빛에 매우 민감한 자료 50lux·중간 100lux 이하, 자외선 75 µW/lm 이하, 민감 자료 반복 전시 통상 12주·2년 간격, 습도 35~50%, 온도 21℃ 이하)를 함께 씁니다. 민감도를 모르면 '매우 민감'으로 봅니다. '전시 이력 기록부'로 다음 전시 때 누적 노출을 판단합니다.
+
+```bash
+python skills/stack-environment/scripts/exhibit_check.py 전시목록.xlsx -o 산출/전시환경_점검.xlsx
+```
+
 ---
 
 ## 31. records-forms — 법정 서식 작성

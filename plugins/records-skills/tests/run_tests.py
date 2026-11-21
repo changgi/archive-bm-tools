@@ -592,6 +592,16 @@ def main():
     check("화재 자체 점검: 구역 선택 15항목·아니오 2·시정 미완 2·연속 아니오 2",
           fws.max_row >= 16 and fsm[:4] == (15, 2, 2, 2), ofs + str(fsm))
 
+    # 전시 환경(시행령 별표 6, ANSI/NISO Z39.79): 민감 자료 조도·기간·재전시 간격·자외선·직사광선·펼친 쪽
+    open(f"{t}/전시.csv", "w", encoding="utf-8").write("기록물,재질,조도,자외선,시작일,종료일,지난전시종료일,쪽,직사광선,습도설정,온도설정\n"
+        "가상 채색 지도,채색 한지,80,60,2026-01-01,2026-06-30,2025-06-01,,,45,20\n가상 인쇄 공보,인쇄,90,50,2026-01-01,2026-03-01,,,,45,20\n"
+        "가상 일기철,필사 잉크,40,90,2026-01-01,2026-02-15,,,Y,60,23\n")
+    cex, oex = run([S("stack-environment", "scripts", "exhibit_check.py"), f"{t}/전시.csv", "-o", f"{t}/산출/전시.xlsx"])
+    exr = {r[0]: r[5] for r in openpyxl.load_workbook(f"{t}/산출/전시.xlsx")["점검"].iter_rows(min_row=2, values_only=True)} if os.path.exists(f"{t}/산출/전시.xlsx") else {}
+    check("전시 환경: 채색(매우) 80lux>50·25.9주>12주·재전시 2년 미만, 인쇄(중간) 90lux 통과, 일기철 자외선·직사광선·습도·온도·펼친 쪽",
+          cex == 1 and "> 50lux" in exr["가상 채색 지도"] and "> 12주" in exr["가상 채색 지도"] and "재전시" in exr["가상 채색 지도"] and exr["가상 인쇄 공보"] == "통과"
+          and all(k in exr["가상 일기철"] for k in ("자외선", "직사광선", "습도", "온도", "펼친 쪽")), oex + str(exr))
+
     # 근거 자료 변화 감시(오프라인): 기준선 → 새 첨부·게시물·법령 시행일 바뀜 감지
     SW = S("records-qa-gate", "scripts", "source_watch.py")
     os.makedirs(f"{t}/감시", exist_ok=True)
