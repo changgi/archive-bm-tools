@@ -11,7 +11,8 @@
      '성격' 칸에 '지나면 파기(상한)'으로 적는다(나머지는 '최소 보존').
   4. 행정규칙은 원문(admRulLsInfoR.do)을 받아 같은 방법으로 뽑고, 원문에서 못 찾은 조문만 검색 문구로 담는다.
      자치법규(ordinSc.do 조문내용 탭, 현행 조례·규칙)도 기간 문구가 걸린 것은 원문(ordinInfoR.do)에서 뽑는다.
-     별표·서식은 검색 결과 문구(일부)만 담는다
+     별표·서식은 검색 결과 문구(일부)만 담는다(별표 PDF 원문 추출은 2026-11-21 목록에서 lsBylContentsInfoR.do→flDownload.do,
+     별표·서식내용 검색 lsBylSc.do·admRulBylSc.do로 손으로 더 했다 — references/law-check-2026-11-20.md)
      (원문 주소·지자체 함께). 주민등록번호 모양 문자열은 가린다.
 사용:  python statutory_catalog_build.py -o 산출/statutory_catalog.csv [--work 산출/법령원문] [--delay 0.7] [--limit N]
        (--work 폴더에 받은 원문을 두어 다시 돌릴 때 이어서 받는다. 법령 1,800여 개라 30분~1시간 걸린다.)
