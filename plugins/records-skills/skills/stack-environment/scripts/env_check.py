@@ -188,6 +188,7 @@ def main() -> int:
     mo = wb.create_sheet("월별")
     mo.append(["서고", "월", "측정 수", "온도 평균", "습도 평균", "범위 밖 %"])
     worst = []
+    niso = []
     for stack in sorted(data):
         pts = sorted(data[stack])
         media = mmap.get(stack) or next((m for *_, m in pts if m), "") or "종이"
@@ -243,6 +244,21 @@ def main() -> int:
         if verdict == "조치 필요":
             sm.cell(sm.max_row, 14).fill = red
         worst.append((p_any, stack))
+        mavg = [(sum(p[1] for p, _ in lst) / len(lst), sum(p[2] for p, _ in lst) / len(lst)) for _, lst in sorted(bymon.items())]
+        mdt = max((abs(b[0] - a_[0]) for a_, b in zip(mavg, mavg[1:])), default=0)
+        mdh = max((abs(b[1] - a_[1]) for a_, b in zip(mavg, mavg[1:])), default=0)
+        if media == "종이":
+            niso.append((stack, max(p[1] for p in pts), min(p[2] for p in pts), max(p[2] for p in pts), dt_max, dh_max, mdt, mdh))
+    if niso:  # 참고: NISO TR01-1995 「종이기록물 저장 환경 가이드라인」(국가기록포털 해외표준) — 법정 기준(별표 6)이 우선, 비교용
+        nz = wb.create_sheet("참고 NISO TR01(종이)")
+        nz.append(["서고", "최고 온도(℃)", "서고 전용 18.3℃(65°F) 이하", "열람 겸용 21.1℃(70°F) 이하", "습도 범위(%)", "30~50% 안",
+                   "하루 온도 폭(℃)", "≤2.2℃(±2°F)", "하루 습도 폭(%)", "≤6%(±3%)", "월 평균 온도 변화(℃)", "≤1.7℃(3°F)", "월 평균 습도 변화(%)", "≤3%"])
+        ok = lambda f: "예" if f else "아니오"
+        for st, tmax, hmin, hmax, dtm, dhm, mdt, mdh in niso:
+            nz.append([st, round(tmax, 1), ok(tmax <= 18.3), ok(tmax <= 21.1), f"{hmin:.0f}~{hmax:.0f}", ok(hmin >= 30 and hmax <= 50),
+                       round(dtm, 1), ok(dtm <= 2.2), round(dhm, 1), ok(dhm <= 6), round(mdt, 1), ok(mdt <= 1.7), round(mdh, 1), ok(mdh <= 3)])
+        nz.append([])
+        nz.append(["안내", "NISO TR01-1995 제안값(비규범, 비교용): 온도 서고 전용 65°F·열람 겸용 70°F 이하, 습도 30~50%, 하루 ±2°F·±3%, 월 변화 3°F·3%, 창·형광등 빛은 415nm 이하 차단, SO2·NO2·O3 5~10ppb, 공기 여과 서고 90~95%. 국내 법정 기준은 시행령 별표 6(종이 20±2℃·50±5%)이다."])
     ar = wb.create_sheet("서고 면적")
     ar.append(["항목", "값", "근거"])
     if not a.books and a.pages:

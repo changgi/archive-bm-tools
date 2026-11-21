@@ -63,6 +63,7 @@
   - '화재예방 자가 점검 양식'(문화기관용, NFPA 계열, 5쪽) → security-disaster-plan `fire_selfcheck.py`(구역 구성만 따르고 문장은 새로 씀, 31항목·시정 추적).
   - 영국 PRO RMS 2.2 '기록업무의 기록화'(조직 지도화·시리즈 기술·평가 기록) → record-by-design `catalog`의 `맥락지도.html`·`.mmd`, 평가 기록은 disposal-dossier·events.jsonl이 이미 맡음.
   - 미국 ANSI/NISO Z39.79-2001 '자료 전시 환경조건'(10쪽) → stack-environment `exhibit_check.py`(조도·자외선·기간·재전시·습도·온도·펼친 쪽, 수치 인용).
+  - 미국 NISO TR01-1995 '종이기록물 저장 환경 가이드라인'(27쪽, 이미지 PDF → 글자 인식) → stack-environment `env_check.py` '참고 NISO TR01(종이)' 시트(온도·습도·하루 폭·월 변화, 비규범 비교).
   - 영국 RMS 1.1 '파일 생산'·2.1 '기록물 추적' → 국내는 시행규칙 반출·반입(records-forms)·school-records 문서고 대장으로 대응, 새 스크립트 없음.
 
 받은 파일은 작업 폴더에만 두고 킷에는 서식(RAMP 일괄등록 서식 xlsx)만 넣었다. 첨부 원문은 저작권·갱신 문제로 옮겨 싣지 않는다.
