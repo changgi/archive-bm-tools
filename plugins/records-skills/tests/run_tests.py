@@ -482,7 +482,7 @@ def main():
           and sst["산업안전보건위원회 운영"][2] == "3년" and sst["작업환경측정"][2] == "5년" and sst["부가가치세 신고"][2] == "5년"
           and sst["기간제 근로자 급여 지급"][1] == "충족" and sst["복무 관리"][1].startswith("확인 필요") and "회의 운영 일반" not in sst, ost + str(sst))
     open(f"{t}/법정기준표2.csv", "w", encoding="utf-8-sig").write("단위과제명,보존기간\n장애인 인식개선 교육,1년\n개인정보처리시스템 접속기록 관리,1년\n"
-        "교사내 공기질 측정,5년\n어린이집 CCTV 운영,1년\n재난상황 관리,3년\n공무원 제안 관리,1년\n")
+        "교사내 공기질 측정,5년\n어린이집 CCTV 운영,1년\n재난상황 관리,3년\n공무원 제안 관리,1년\n사회보장급여 신청 및 조사,10년\n")
     cs2, os2 = run([S("retention-review", "scripts", "statutory_check.py"), f"{t}/법정기준표2.csv", "-o", f"{t}/산출/법정점검2.xlsx"])
     w2 = openpyxl.load_workbook(f"{t}/산출/법정점검2.xlsx") if os.path.exists(f"{t}/산출/법정점검2.xlsx") else None
     s2 = {}
@@ -490,7 +490,7 @@ def main():
         s2.setdefault(r[2], []).append((r[4], r[7], r[10]))
     cf, ofd = run([S("retention-review", "scripts", "statutory_check.py"), "--find", "인식개선 교육"])
     check("법정 보존기간(공공기관 공통): 장애인 인식개선 3년(두 법)·재난상황 5년·제안 2년 미달, 접속기록 1년·CCTV 60일 충족, 학교 교사 공기질 제외, 전체 목록 후보 시트·--find",
-          cs2 == 1 and "법정 최소 미달 4" in os2 and any(x[0] == "장애인복지법" and x[2].startswith("법정") for x in s2.get("장애인 인식개선 교육", []))
+          cs2 == 1 and "법정 최소 미달 4" in os2 and "파기 상한 초과 1" in os2 and any(x[0] == "장애인복지법" and x[2].startswith("법정") for x in s2.get("장애인 인식개선 교육", []))
           and any(x[1] == "5년" and x[2].startswith("법정") for x in s2.get("재난상황 관리", [])) and any(x[1] == "60일" and x[2] == "충족" for x in s2.get("어린이집 CCTV 운영", []))
           and any(x[1] == "1년" and x[2] == "충족" for x in s2.get("개인정보처리시스템 접속기록 관리", [])) and "교사내 공기질 측정" not in s2
           and "전체 목록 후보" in w2.sheetnames and "장애인복지법 제25조의2" in ofd and "전체 목록" in ofd, os2 + str(s2) + ofd[-300:])
@@ -507,6 +507,12 @@ def main():
     check("법정 보존기간 목록 다시 만들기(추출기): 'N년간 보존'·나열형 'N년'·기산 문구, 날짜·과태료·N일 이내 신고·부칙 경과조치 제외",
           _ks == {("제2조", "3년"), ("제3조", "5년"), ("제3조", "10년")} and any("작성한 날부터" in r["기산(문구)"] for r in _ex)
           and all(r["원문"].startswith("https://www.law.go.kr/법령/가상법시행규칙/") for r in _ex), str(_ex))
+    _ex2 = _scb.extract("가상법 [시행 2026. 1. 1.]", "가상법 제1조(목적) 목적이다. 제2조(정보의 파기) 가상정보는 수집한 날부터 5년이 지나면 파기하여야 한다. "
+                        "제3조(서식) 결의서 보존기간 10년 접수 제4조(편철) 신청서는 편철하여 3년간 보존 2. 대장은 1년간 보존 제5조(보존) 기록부의 보존 기간은 마지막으로 적은 날부터 5년으로 하고, 방법은 따로 정한다.")
+    _k2 = {(r["조문"].split("(")[0], r["보존기간"], r["성격"]) for r in _ex2}
+    check("법정 보존기간 추출 2차: '5년이 지나면 파기'는 상한, 서식 칸 '보존기간 10년'·나열 '3년간 보존 2.'·'보존 기간은 … 5년으로 하고'는 최소 보존",
+          ("제2조", "5년", "지나면 파기(상한)") in _k2 and ("제3조", "10년", "최소 보존") in _k2 and ("제4조", "3년", "최소 보존") in _k2
+          and ("제4조", "1년", "최소 보존") in _k2 and ("제5조", "5년", "최소 보존") in _k2, str(_k2))
     _pg = ('<tr class="dt"><td class="tNone">1</td><td class="tit" rowspan="2"><input type="hidden" id="list" value="jo" /><a onclick="ordinInfPop(\'111\',\'ELIS\');">'
            '가상군 위원회 조례<br /><span>[시행 2026. 1. 1.][조례 제1호, 2026. 1. 1., 제정]</span></a></td><td rowspan="2">가상군</td>'
            '<td><a onclick="ordinInfPop(\'111\',\'ELIS\',\'\',\'Y\',\'0009\');"> 제9조 회의록 </a></td><td><a onclick="ordinInfPop(\'111\');"> ... 회의록을 5년간 보존하여야 한다. </a></td></tr>'

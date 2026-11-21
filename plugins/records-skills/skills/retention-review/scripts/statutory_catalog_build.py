@@ -7,7 +7,8 @@
   2. 법령 원문: 검색에 걸린 법령마다 본문(lsInfoR.do, 시행일 efYd)을 받아 조문 단위로 나누고, 부칙을 잘라 낸다.
   3. 추출: 'N년(간·동안·이상) … 보존·보관·비치·유지·저장·관리하여야/할 것', '보존기간은 … N년으로 한다',
      보존 의무 조문의 나열형 '1. 기록 : N년'을 뽑는다. 날짜(2015년·1월 1일), 기한(N일 이내), 벌칙·과태료·처분 문장,
-     '최근 N년간', 'N년 이상이 지난', 주식·부동산 보유기간은 뺀다.
+     '최근 N년간', 'N년 이상이 지난', 주식·부동산 보유기간은 뺀다. 'N년이 지나면 파기한다'는 최소 보존이 아니라 보유 상한이라
+     '성격' 칸에 '지나면 파기(상한)'으로 적는다(나머지는 '최소 보존').
   4. 행정규칙은 원문(admRulLsInfoR.do)을 받아 같은 방법으로 뽑고, 원문에서 못 찾은 조문만 검색 문구로 담는다.
      자치법규(ordinSc.do 조문내용 탭, 현행 조례·규칙)도 기간 문구가 걸린 것은 원문(ordinInfoR.do)에서 뽑는다.
      별표·서식은 검색 결과 문구(일부)만 담는다
@@ -30,7 +31,10 @@ import urllib.request
 
 BASE = "https://www.law.go.kr/LSW/"
 QUERIES = ["년간 보존", "년간 보관", "년 동안 보존", "년 동안 보관", "년 이상 보존", "년 이상 보관", "개월간 보존", "개월간 보관",
-           "보존기간", "보관기간", "보유기간", "년간 비치", "영구 보존", "년간 기록"]
+           "보존기간", "보관기간", "보유기간", "년간 비치", "영구 보존", "년간 기록",
+           # 2차: '년'·숫자 표현을 넓힘(띄어쓰기·다른 동사·기간이 지난 뒤 폐기)
+           "년 보존", "년 보관", "년간 유지", "년간 저장", "년간 관리", "년 동안 유지", "년이 지난", "년 경과", "개월 동안 보관",
+           "일간 보관", "일 이상 보관", "년간 보유", "보존ㆍ관리", "기록ㆍ유지"]
 RRN = re.compile(r"(?<!\d)\d{6}-?[1-4]\d{6}(?!\d)")
 NUM = r"(?:\d+)"
 PERIOD = re.compile(rf"(영구(?:히)?|준영구|{NUM}\s*(?:년|개월|일|시간)(?:\s*(?:간|동안|이상|이내|까지))?)")
@@ -162,8 +166,8 @@ def extract(name, t):
     rows, seen = [], set()
     ms = list(ART.finditer(t))
 
-    def add(jo, title, rec, per, base, subj, sent):
-        rows.append({"출처": "법령", "법령": law, "종류": kind(name), "시행": shi.group(1) if shi else "", "조문": f"{jo}({title})", "의무자": subj,
+    def add(jo, title, rec, per, base, subj, sent, kind_="최소 보존"):
+        rows.append({"출처": "법령", "성격": kind_, "법령": law, "종류": kind(name), "시행": shi.group(1) if shi else "", "조문": f"{jo}({title})", "의무자": subj,
                      "기록(문구)": rec[-120:], "보존기간": re.sub(r"\s+|(간|동안)$", "", per), "기산(문구)": base, "문장": sent[:400],
                      "원문": f"https://www.law.go.kr/법령/{law.replace(' ', '')}/{jo}"})
 
@@ -187,8 +191,13 @@ def extract(name, t):
                 head = s[max(0, pm.start() - 50): pm.start()]
                 if re.search(r"최근\s*$", s[max(0, pm.start() - 6): pm.start()]) or re.match(r"\s*이상이?\s*(지난|경과|된|근무|재직|거주)", s[pm.end() - 2: pm.end() + 12]):
                     continue
-                form = bool(re.search(r"(보존|보관|보유)\s*기간[은는이가]?\s*[^.]{0,80}$", head) and re.match(r"\s*(?:으로|로)\s*(?:한다|하되|하며|정한다)", tail))
-                if not (VERB.search(tail) or form) or re.match(r"\s*(?:이내에|안에|까지\s*(?:신고|제출|통보))", tail):
+                form = bool(re.search(r"(보존|보관|보유)\s*기간[은는이가]?\s*[^.]{0,80}$", head) and re.match(r"\s*(?:으로|로)\s*(?:한다|하되|하며|하고|정한다)", tail))
+                label = bool(re.search(r"(보존|보관)\s*기간\s*[:：]?\s*$", s[max(0, pm.start() - 10): pm.start()]))  # 서식 칸 '보존기간 5년'
+                listed = bool(re.match(r"\s*(?:간|동안)?\s*(?:보존|보관)\s*(?:\d+\.|[가-하]\.|$)", s[pm.end(): pm.end() + 14]))
+                # 'N년이 지난(경과한) 후 파기·폐기·삭제' — 보유 상한(그 기간이 지나면 없앰). '성격' 칸에 '지나면 파기(상한)'으로 구분
+                lapse = bool(re.match(r"\s*(?:이|가)?\s*(?:지난|경과한|경과된|지나면|경과하면|지났을|경과하였을)[^.]{0,45}?(파기|폐기|삭제|소각)", s[pm.end(): pm.end() + 70])
+                             and re.search(r"(기록|자료|서류|정보|대장|영상|장부|문서|신청서|원부)", s[max(0, pm.start() - 120): pm.start()]))
+                if not (VERB.search(tail) or form or lapse or listed or label) or re.match(r"\s*(?:이내에|안에|까지\s*(?:신고|제출|통보))", tail):
                     continue
                 if re.search(r"(징역|벌금|과태료|자격정지|금고|정지|이내의 기간)", s[max(0, pm.start() - 30): pm.end() + 10]):
                     continue
@@ -196,7 +205,7 @@ def extract(name, t):
                                                          and not re.search(r"(서류|기록|장부|자료|대장|증빙)", s[max(0, pm.start() - 80): pm.end() + 20])):
                     continue
                 y = years(p)
-                if y is None or re.match(r"\d{4}\s*년", p) or (re.search(r"\d\s*(일|시간)$", p.strip()) and not re.search(r"(간|동안|이상)$", p)):
+                if y is None or re.match(r"\d{4}\s*년", p) or (re.search(r"\d\s*(일|시간)$", p.strip()) and not re.search(r"(간|동안|이상)$", p) and not lapse):
                     continue
                 pre = s[max(0, pm.start() - 140): pm.start()]
                 rec = re.split(r"(?:한다|된다|하고|하며)[.,]?\s|[①-⑳]|\d+\.\s", pre)[-1].strip(" ,")
@@ -205,7 +214,8 @@ def extract(name, t):
                 seen.add((jo, p, rec[-60:]))
                 base = re.search(r"([^,.]{0,40}(?:부터|한 날|종료|끝난|완료|후))\s*$", pre)
                 subj = re.match(r"([^,]{1,60}?(?:는|은))\s", s)
-                add(jo, title, rec, p, base.group(1).strip() if base else "", subj.group(1) if subj else "", s)
+                add(jo, title, rec, p, base.group(1).strip() if base else "", subj.group(1) if subj else "", s,
+                    "지나면 파기(상한)" if lapse and not (VERB.search(tail) or form or listed or label) else "최소 보존")
     return rows
 
 
@@ -352,7 +362,7 @@ def main() -> int:
             out.append({"출처": "자치법규(검색 문구)", "법령": name, "종류": kd.group(1) if kd else "", "시행": shi.group(1) if shi else "", "기관": r["기관"],
                         "조문": r["조문"][:80], "의무자": "", "기록(문구)": "", "보존기간": re.sub(r"\s|(간|동안)$", "", m.group(1)), "기산(문구)": "",
                         "문장": ctx.strip(" ."), "원문": "https://www.law.go.kr/자치법규/" + name.replace(" ", "")})
-    cols = ["출처", "법령", "종류", "시행", "기관", "조문", "의무자", "기록(문구)", "보존기간", "기산(문구)", "문장", "원문"]
+    cols = ["출처", "법령", "종류", "시행", "기관", "조문", "의무자", "기록(문구)", "보존기간", "성격", "기산(문구)", "문장", "원문"]
     for r in out:
         for c in cols:
             r[c] = RRN.sub("******-*******", (r.get(c) or "").strip())
