@@ -22,6 +22,7 @@
 | 지침 | 2025 | 영구기록물관리기관 비밀기록물 관리지침 | 61쪽 읽음 — 유형1~3 서고·이관 방법·이관 전 정리·정수점검 2년·재분류 대상 → classified-records-check '이관 준비'·'재분류 검토서'. 기록관→영구 '기산일부터 10년'은 개정 시행령(5년) 전 문구 |
 | 지침 | 2024 | 재난 피해 행정박물 응급조치 실무 지침 | disaster-recovery artifact_triage.py(재질 군·직물 48시간·수해/화재 요령, 참고 2~5) |
 | 지침 | 2024 | 보존 취약 종이기록물 예방조치 지침 | preservation-inspection preventive_care.py(취약 4유형·처리방향·용품 수량, 표 1·3·5·7·9) |
+| 지침 | 2025 | 2025년 학교기록물 관리 지침 | 2026-11-21 읽음(HWPX) — 새 스킬 school-records(사안별·이관 시기·문서고·폐교 인계) |
 | 지침 | 2024 | 시청각기록물 관리지침 | typed-records-check photo_select.py(3.2 등록대상 선정), 동영상 HD·MPEG-2/4 안내 |
 | 지침 | 2022 | 국가기록원 기록물 대여 지침 | 국가기록원 내부 — 스킬 대상 아님 |
 | 지침 | 2021 | 2021년 기록관리 중점 추진사항 | 옛 판 — 2026 지침이 대신 |
@@ -34,6 +35,7 @@
 | 지침 | 2011 | 지방이전 정부기관 기록물 관리지침 | office-relocation 박스 라벨(00001·권수·생산부서)·신청사 서고 산정(140%·이동식 50%·하중)·이전비용 견적 수식(참고 1) |
 | 지침 | 2006 | 마이크로필름 지침 | records-forms microfilm(별지 제5호) — 신규 촬영 드묾 |
 | 매뉴얼 | 2025 | 재난 피해 종이기록물 응급복구 매뉴얼 | disaster-recovery |
+| 매뉴얼 | 2020 | 행정정보데이터세트 기록관리 실행매뉴얼(지침종합) | 2026-11-21 읽음(HWP) — 유형 구분·관리기준표는 2026 지침이 대신(dataset_screen·dataset_schedule), 3.3 평가·3.4 삭제 기록화 → dataset-schedule dataset_disposal.py, 4.2 SIARD_KR → siard_check.py |
 | 매뉴얼 | 2024 | 종이기록물 복원처리 매뉴얼 | 국가기록원 복원 — preservation-inspection restoration_plan 참고 |
 | 매뉴얼 | 2024 | 재난 피해 기록물 응급복구 가이드 라인(영문) | 이미지 PDF(본문 텍스트 없음) — disaster-recovery 참고 |
 | 매뉴얼 | 2023 | 중앙행정기관 단위과제정비 매뉴얼(2차 개정판) | records-schedule-check 정비 문제유형(8유형 15개선안), agency-closure merge_schedule |
