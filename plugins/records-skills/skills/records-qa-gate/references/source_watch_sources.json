@@ -1,0 +1,208 @@
+{
+ "설명": "source_watch.py가 보는 출처. '반영'은 변화가 생기면 고칠 곳. 본문비교 false면 게시물·첨부·법령 표기만 비교(날짜 등으로 매번 바뀌는 쪽).",
+ "출처": [
+  {
+   "이름": "국가기록포털 표준·지침·매뉴얼 — 지침",
+   "주소": "https://www.archives.go.kr/next/newdata/standardCondition.do?glSeCd=01",
+   "종류": "목록",
+   "반영": "해당 스킬 SKILL.md 근거·references/standards-menu",
+   "본문비교": true
+  },
+  {
+   "이름": "국가기록포털 표준·지침·매뉴얼 — 매뉴얼",
+   "주소": "https://www.archives.go.kr/next/newdata/standardCondition.do?glSeCd=02",
+   "종류": "목록",
+   "반영": "해당 스킬·references/standards-menu",
+   "본문비교": true
+  },
+  {
+   "이름": "국가기록포털 표준·지침·매뉴얼 — 규격·서식",
+   "주소": "https://www.archives.go.kr/next/newdata/standardCondition.do?glSeCd=03",
+   "종류": "목록",
+   "반영": "records-forms·production-status-report·dbproject",
+   "본문비교": true
+  },
+  {
+   "이름": "국가기록포털 표준·지침·매뉴얼 — 기록물관리 표준(NAK, 이전 판 포함)",
+   "주소": "https://www.archives.go.kr/next/newdata/standardCondition.do?glSeCd=05",
+   "종류": "목록",
+   "반영": "records-qa-gate nak8_check·각 스킬 references",
+   "본문비교": true
+  },
+  {
+   "이름": "국가기록포털 표준·지침·매뉴얼 — 한국산업표준(KS)",
+   "주소": "https://www.archives.go.kr/next/newdata/standardList.do",
+   "종류": "KS",
+   "반영": "references/ks-standards",
+   "본문비교": true
+  },
+  {
+   "이름": "국가기록포털 해외표준 목록",
+   "주소": "https://www.archives.go.kr/next/newdata/foreignStandardList.do",
+   "종류": "목록",
+   "반영": "references/standards-menu",
+   "본문비교": true
+  },
+  {
+   "이름": "국가기록포털 기록물분류기준(보존기간 책정기준·분류기준표·공문서분류표)",
+   "주소": "https://www.archives.go.kr/next/newmanager/standardDiagramList.do",
+   "종류": "목록",
+   "반영": "retention-review·records-schedule-check 자산 csv",
+   "본문비교": true
+  },
+  {
+   "이름": "업무안내 — 처리과(생산현황 통보서식 등)",
+   "주소": "https://www.archives.go.kr/next/newmanager/recodeRegister.do",
+   "종류": "목록",
+   "반영": "production-status-report",
+   "본문비교": true
+  },
+  {
+   "이름": "업무안내 — 기록관리 평가",
+   "주소": "https://www.archives.go.kr/next/newmanager/estimation.do",
+   "종류": "목록",
+   "반영": "evaluation-readiness",
+   "본문비교": true
+  },
+  {
+   "이름": "업무안내 — 기록물 보존·복원",
+   "주소": "https://www.archives.go.kr/next/newmanager/archivesRestore.do",
+   "종류": "목록",
+   "반영": "preservation-inspection·stack-environment·disaster-recovery",
+   "본문비교": true
+  },
+  {
+   "이름": "업무안내 — 보존·복원 자료",
+   "주소": "https://www.archives.go.kr/next/newmanager/archivesRestoreData.do",
+   "종류": "목록",
+   "반영": "preservation-inspection",
+   "본문비교": true
+  },
+  {
+   "이름": "업무안내 — 간행물 발간등록",
+   "주소": "https://www.archives.go.kr/next/newmanager/publishmentGuide.do",
+   "종류": "목록",
+   "반영": "publications-check",
+   "본문비교": true
+  },
+  {
+   "이름": "업무안내 — 연구보고서(R&D)",
+   "주소": "https://www.archives.go.kr/next/newdata/researchReportList.do",
+   "종류": "목록",
+   "반영": "references/archives-go-kr-inventory",
+   "본문비교": true
+  },
+  {
+   "이름": "업무안내 — 정책간행물",
+   "주소": "https://www.archives.go.kr/next/newdata/referenceList.do",
+   "종류": "목록",
+   "반영": "references/archives-go-kr-inventory",
+   "본문비교": true
+  },
+  {
+   "이름": "국가기록원 공지사항",
+   "주소": "https://www.archives.go.kr/next/newnews/announcementList.do",
+   "종류": "목록",
+   "반영": "지침 개정·평가 안내 확인",
+   "본문비교": false
+  },
+  {
+   "이름": "법제처 입법예고 — '기록물'",
+   "주소": "https://opinion.lawmaking.go.kr/gcom/ogLmPp?stYd=20240101&edYd=20991231&finishIncludeYn=Y&chkFinishIncludeYn=on&pageIndex=1&lsNm=%EA%B8%B0%EB%A1%9D%EB%AC%BC",
+   "종류": "목록",
+   "반영": "law-check 참고 문서·해당 스킬",
+   "본문비교": false
+  },
+  {
+   "이름": "법제처 입법예고 — '정보공개'",
+   "주소": "https://opinion.lawmaking.go.kr/gcom/ogLmPp?stYd=20240101&edYd=20991231&finishIncludeYn=Y&chkFinishIncludeYn=on&pageIndex=1&lsNm=%EC%A0%95%EB%B3%B4%EA%B3%B5%EA%B0%9C",
+   "종류": "목록",
+   "반영": "law-check 참고 문서·해당 스킬",
+   "본문비교": false
+  },
+  {
+   "이름": "법제처 입법예고 — '보안업무'",
+   "주소": "https://opinion.lawmaking.go.kr/gcom/ogLmPp?stYd=20240101&edYd=20991231&finishIncludeYn=Y&chkFinishIncludeYn=on&pageIndex=1&lsNm=%EB%B3%B4%EC%95%88%EC%97%85%EB%AC%B4",
+   "종류": "목록",
+   "반영": "law-check 참고 문서·해당 스킬",
+   "본문비교": false
+  },
+  {
+   "이름": "국가법령정보센터 — 공공기록물 관리에 관한 법률",
+   "주소": "https://www.law.go.kr/%EB%B2%95%EB%A0%B9/%EA%B3%B5%EA%B3%B5%EA%B8%B0%EB%A1%9D%EB%AC%BC%EA%B4%80%EB%A6%AC%EC%97%90%EA%B4%80%ED%95%9C%EB%B2%95%EB%A5%A0",
+   "종류": "법령",
+   "반영": "references/law-check·해당 스킬(시행일·별표 확인)",
+   "본문비교": false
+  },
+  {
+   "이름": "국가법령정보센터 — 공공기록물 관리에 관한 법률 시행령",
+   "주소": "https://www.law.go.kr/%EB%B2%95%EB%A0%B9/%EA%B3%B5%EA%B3%B5%EA%B8%B0%EB%A1%9D%EB%AC%BC%EA%B4%80%EB%A6%AC%EC%97%90%EA%B4%80%ED%95%9C%EB%B2%95%EB%A5%A0%EC%8B%9C%ED%96%89%EB%A0%B9",
+   "종류": "법령",
+   "반영": "references/law-check·해당 스킬(시행일·별표 확인)",
+   "본문비교": false
+  },
+  {
+   "이름": "국가법령정보센터 — 공공기록물 관리에 관한 법률 시행규칙",
+   "주소": "https://www.law.go.kr/%EB%B2%95%EB%A0%B9/%EA%B3%B5%EA%B3%B5%EA%B8%B0%EB%A1%9D%EB%AC%BC%EA%B4%80%EB%A6%AC%EC%97%90%EA%B4%80%ED%95%9C%EB%B2%95%EB%A5%A0%EC%8B%9C%ED%96%89%EA%B7%9C%EC%B9%99",
+   "종류": "법령",
+   "반영": "references/law-check·해당 스킬(시행일·별표 확인)",
+   "본문비교": false
+  },
+  {
+   "이름": "국가법령정보센터 — 대통령기록물 관리에 관한 법률",
+   "주소": "https://www.law.go.kr/%EB%B2%95%EB%A0%B9/%EB%8C%80%ED%86%B5%EB%A0%B9%EA%B8%B0%EB%A1%9D%EB%AC%BC%EA%B4%80%EB%A6%AC%EC%97%90%EA%B4%80%ED%95%9C%EB%B2%95%EB%A5%A0",
+   "종류": "법령",
+   "반영": "references/law-check·해당 스킬(시행일·별표 확인)",
+   "본문비교": false
+  },
+  {
+   "이름": "국가법령정보센터 — 대통령기록물 관리에 관한 법률 시행령",
+   "주소": "https://www.law.go.kr/%EB%B2%95%EB%A0%B9/%EB%8C%80%ED%86%B5%EB%A0%B9%EA%B8%B0%EB%A1%9D%EB%AC%BC%EA%B4%80%EB%A6%AC%EC%97%90%EA%B4%80%ED%95%9C%EB%B2%95%EB%A5%A0%EC%8B%9C%ED%96%89%EB%A0%B9",
+   "종류": "법령",
+   "반영": "references/law-check·해당 스킬(시행일·별표 확인)",
+   "본문비교": false
+  },
+  {
+   "이름": "국가법령정보센터 — 공공기관의 정보공개에 관한 법률",
+   "주소": "https://www.law.go.kr/%EB%B2%95%EB%A0%B9/%EA%B3%B5%EA%B3%B5%EA%B8%B0%EA%B4%80%EC%9D%98%EC%A0%95%EB%B3%B4%EA%B3%B5%EA%B0%9C%EC%97%90%EA%B4%80%ED%95%9C%EB%B2%95%EB%A5%A0",
+   "종류": "법령",
+   "반영": "references/law-check·해당 스킬(시행일·별표 확인)",
+   "본문비교": false
+  },
+  {
+   "이름": "국가법령정보센터 — 공공기관의 정보공개에 관한 법률 시행령",
+   "주소": "https://www.law.go.kr/%EB%B2%95%EB%A0%B9/%EA%B3%B5%EA%B3%B5%EA%B8%B0%EA%B4%80%EC%9D%98%EC%A0%95%EB%B3%B4%EA%B3%B5%EA%B0%9C%EC%97%90%EA%B4%80%ED%95%9C%EB%B2%95%EB%A5%A0%EC%8B%9C%ED%96%89%EB%A0%B9",
+   "종류": "법령",
+   "반영": "references/law-check·해당 스킬(시행일·별표 확인)",
+   "본문비교": false
+  },
+  {
+   "이름": "국가법령정보센터 — 보안업무규정",
+   "주소": "https://www.law.go.kr/%EB%B2%95%EB%A0%B9/%EB%B3%B4%EC%95%88%EC%97%85%EB%AC%B4%EA%B7%9C%EC%A0%95",
+   "종류": "법령",
+   "반영": "references/law-check·해당 스킬(시행일·별표 확인)",
+   "본문비교": false
+  },
+  {
+   "이름": "국가법령정보센터 — 보안업무규정 시행규칙",
+   "주소": "https://www.law.go.kr/%ED%96%89%EC%A0%95%EA%B7%9C%EC%B9%99/%EB%B3%B4%EC%95%88%EC%97%85%EB%AC%B4%EA%B7%9C%EC%A0%95%EC%8B%9C%ED%96%89%EA%B7%9C%EC%B9%99",
+   "종류": "법령",
+   "반영": "references/law-check·해당 스킬(시행일·별표 확인)",
+   "본문비교": false
+  },
+  {
+   "이름": "국가법령정보센터 — 행정업무의 운영 및 혁신에 관한 규정",
+   "주소": "https://www.law.go.kr/%EB%B2%95%EB%A0%B9/%ED%96%89%EC%A0%95%EC%97%85%EB%AC%B4%EC%9D%98%EC%9A%B4%EC%98%81%EB%B0%8F%ED%98%81%EC%8B%A0%EC%97%90%EA%B4%80%ED%95%9C%EA%B7%9C%EC%A0%95",
+   "종류": "법령",
+   "반영": "references/law-check·해당 스킬(시행일·별표 확인)",
+   "본문비교": false
+  },
+  {
+   "이름": "국가법령정보센터 — 전자정부법",
+   "주소": "https://www.law.go.kr/%EB%B2%95%EB%A0%B9/%EC%A0%84%EC%9E%90%EC%A0%95%EB%B6%80%EB%B2%95",
+   "종류": "법령",
+   "반영": "references/law-check·해당 스킬(시행일·별표 확인)",
+   "본문비교": false
+  }
+ ]
+}

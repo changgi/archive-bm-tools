@@ -141,6 +141,13 @@ python skills/records-qa-gate/scripts/header_check.py 입력/등록정보.xlsx
 python skills/records-qa-gate/scripts/header_check.py 입력/등록정보.xlsx --map "부서=생산부서" --fix -o 산출/등록정보_열맞춤.xlsx
 ```
 
+**근거 자료 변화 감시(지속 보완)** 국가기록포털(표준·지침·매뉴얼·규격서식·KS·해외표준·기록물분류기준·업무안내 자료·공지), 법제처 입법예고('기록물'·'정보공개'·'보안업무'), 국가법령정보센터 법령 11종, 모두 29곳을 열어 지난번 기준선과 비교합니다. 새 게시물·새 첨부·사라진 것·법령 '[시행 …]'·'제N호' 바뀜을 표로 내고, 칸마다 '반영할 곳'(고칠 스킬)을 적습니다. 저장소에서는 [GitHub Actions](../.github/workflows/source-watch.yml)가 매주 월요일 돌려, 변화가 있으면 보고서와 새 기준선을 담은 PR을 엽니다. 반영은 그 PR에서 사람이나 Claude가 합니다(자동으로 고치지 않음).
+
+```bash
+python skills/records-qa-gate/scripts/source_watch.py --report 산출/근거변화.md            # 비교만
+python skills/records-qa-gate/scripts/source_watch.py --update --report 산출/근거변화.md   # 비교 뒤 기준선 갱신
+```
+
 ---
 
 ## 4. metadata-autofill — 메타데이터 빈칸 채우기
@@ -222,6 +229,12 @@ python skills/records-qa-gate/scripts/header_check.py 입력/등록정보.xlsx -
 **받는 결과** `요약` · `점검 결과` · `고시 대상`(신설·보존기간 변경) 시트
 
 **직접 실행** `python skills/records-schedule-check/scripts/schedule_check.py 기준표_2026.xlsx --previous 기준표_2025.xlsx -o 산출/기준표점검.xlsx`
+
+**새로 만들거나 정비할 때: 업무과정 분석·평가 작업지** KS X ISO TR 26122(업무과정 분석)·TR 21946(평가)의 절 구성을 칸으로 옮겼습니다. 단위과제마다 맥락 검토 → 기능 분석 → 순차 분석(시작 계기·행위·행위자·남는 기록·시스템·변형·규칙·다음 과정) → 기록 요구(업무·법규·사회적 기대) → 위험 평가(가능성×영향 수식)를 채웁니다. '남는 기록' 칸이 비면 그 행위의 증거가 생기지 않는다는 뜻입니다. 별표 1·준칙 확인 단서(예: 조례 제정인데 10년)를 붙이고, 판단은 비워 둡니다. 함께 나오는 `_기록화설정.json`은 [record-by-design](#43-record-by-design--생산-시점-기록화) `sweep`에 그대로 씁니다.
+
+```bash
+python skills/records-schedule-check/scripts/appraisal_worksheet.py 단위과제.xlsx --agency 가상시 -o 산출/업무분석.xlsx
+```
 
 ---
 
@@ -675,6 +688,11 @@ python fill_official_form.py 등록정보.xlsx --form 통보서식.xlsx --year 2
 
 - **NAK 17 6.2**: 사본 예고문에 '이관'이 있으면 표시(사본은 파기·일반문서로 재분류).
 - **NAK 17 8.2.3·8.3.2**: '합철' 열(Y)이면 일반문서철 이관시기를 따르고, '이관시기연장' 열(Y, 특수기록관 비공개 30년 연장)이면 생산 후 30년 지난 다음 연도에 영구 이관.
+- **실무지침 2020·영구기관 지침 2025·재분류 매뉴얼 2010**(공개 게시물, 2026-11-21 읽음):
+  - 보존기간 말일(생산 다음 해 1. 1. 기산 → 생산연도+기간 12. 31.)이 보호기간 말일보다 같거나 나중인지 — 앞서면 최소 기간(예: 2020. 4. 5. 생산·보호 2022. 6. 30. → 3년).
+  - '이관 준비' 시트: 유형1(일반문서로 재분류)·유형2(보호기간 만료)·유형3(생산 후 30년)마다 서고(일반·별도·전용), 이관 방법, 이관 전 정리(등급 표시 대각선 삭제, 재분류 근거·기명날인, 첫 페이지 공개여부·호, 비밀관리기록부 적색 2선, 유형3 비밀열람기록전).
+  - '재분류 검토서' 시트: 보호기간 만료·기산일부터 30년 지난 원본(보호기간이 남았으면 생산기관 동의 표시).
+  - 선택 열 `최근정수점검일`(2년 주기)·`최근재분류검토일`(6개월).
 
 ## 27. evaluation-readiness — 기록관리 기관평가 준비
 
@@ -1151,8 +1169,9 @@ python skills/record-by-design/scripts/capture.py verify 산출/기록패키지/
 python skills/record-by-design/scripts/capture.py derive 산출/기록패키지/<식별자>
 python skills/record-by-design/scripts/capture.py batch 목록.xlsx --task 지역축제운영 --agency 가상시 --dept 기획과 --period 10년 -o 산출/기록패키지
 python skills/record-by-design/scripts/capture.py catalog 산출/기록패키지 --verify -o 산출/기록목록
+python skills/record-by-design/scripts/capture.py sweep 업무폴더 -o 산출/기록패키지   # 새 파일·바뀐 파일만, 바뀐 파일은 '개정' 관계
 ```
 
-**한꺼번에, 그리고 퍼뜨리기** `batch`는 목록 한 행이 파일 하나입니다(파일·제목·생산일자·식별자·관계·요약·공개구분·공개제한사유 열, 빈 칸은 옵션 값). 결과는 `일괄_결과.csv`에 행마다 만듦·입력 오류·거부로 남습니다. `catalog`는 패키지 폴더 전체를 모아 `기록목록.csv`(관계·고정성), `공개데이터.jsonl`(공개이면서 개인정보 후보가 없는 것만), `연결그래프.jsonld`(RiC-O), `목록.html`(검색, 관계 링크, 휴대폰에선 카드형)을 만듭니다. 매개는 모두 각 패키지의 metadata.json에서 다시 만들 수 있으니, 원본을 건드리지 않고 고쳐서 다시 퍼뜨리면 됩니다.
+**한꺼번에, 그리고 퍼뜨리기** `batch`는 목록 한 행이 파일 하나입니다(파일·제목·생산일자·식별자·관계·요약·공개구분·공개제한사유 열, 빈 칸은 옵션 값). 결과는 `일괄_결과.csv`에 행마다 만듦·입력 오류·거부로 남습니다. `catalog`는 패키지 폴더 전체를 모아 `기록목록.csv`(관계·고정성), `공개데이터.jsonl`(공개이면서 개인정보 후보가 없는 것만), `연결그래프.jsonld`(RiC-O), `목록.html`(검색, 관계 링크, 휴대폰에선 카드형), `oai_dc.xml`(OAI-PMH Dublin Core — 다른 시스템이 거둬 감), `feed.atom`(구독 피드)을 만듭니다. `sweep`은 업무 폴더와 `기록화설정.json`(하위 폴더 = 단위과제)만 있으면 아직 기록화하지 않은 파일만 패키지로 만들어, 작업 스케줄러로 매일 돌려도 중복이 생기지 않습니다. 매개는 모두 각 패키지의 metadata.json에서 다시 만들 수 있으니, 원본을 건드리지 않고 고쳐서 다시 퍼뜨리면 됩니다.
 
 **알아 둘 점** 비밀 표시가 보이면 만들지 않습니다. 개인정보 후보가 있거나 공개가 아니면 공개 매개에 본문 요약을 넣지 않습니다. 제목·생산일시를 자동으로 채우면 '후보'로 표시합니다. 원본이 바뀐 것을 `verify`가 찾으면 해시 목록을 고치지 않고 실패 사건으로 남깁니다. 기록관리시스템 등록을 대신하지 않습니다.

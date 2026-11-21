@@ -10,7 +10,8 @@
   python capture.py verify 산출/기록패키지/<식별자>          # 해시 다시 확인, 이력에 '고정성 점검' 추가
   python capture.py derive 산출/기록패키지/<식별자>          # 메타데이터에서 매개 파일 다시 만들기(원본은 건드리지 않음)
   python capture.py batch 목록.xlsx [--task … --agency … --dept … --period …] -o 산출/기록패키지   # 목록 한 행 = 파일 하나
-  python capture.py catalog 산출/기록패키지 [--verify] -o 산출/기록목록   # 목록.csv·공개데이터.jsonl·연결그래프.jsonld·목록.html
+  python capture.py catalog 산출/기록패키지 [--verify] -o 산출/기록목록   # 목록.csv·공개데이터.jsonl·연결그래프.jsonld·목록.html·oai_dc.xml·feed.atom
+  python capture.py sweep 업무폴더 [--config 기록화설정.json] -o 산출/기록패키지   # 새 파일·바뀐 파일만(바뀐 파일은 '개정' 관계)
 
 패키지 구조(BagIt 1.0, RFC 8493 꼴 — 다른 기관·시스템으로 옮겨도 스스로 설명되는 상자):
   bagit.txt · bag-info.txt · manifest-sha256.txt · tagmanifest-sha256.txt
@@ -334,6 +335,67 @@ def cmd_batch(a):
     return 0 if made == len(results) else 1
 
 
+def cmd_sweep(a):
+    """업무 폴더를 훑어 아직 기록화하지 않은 파일만 패키지로 만든다(작업 스케줄러로 매일 돌려도 같은 파일을 두 번 만들지 않음).
+    같은 경로의 파일 내용이 바뀌면 새 패키지를 만들고 이전 패키지와 '개정' 관계로 잇는다."""
+    import argparse as _ap, fnmatch, io, contextlib
+    cfgp = a.config or os.path.join(a.folder, "기록화설정.json")
+    if not os.path.exists(cfgp):
+        print(f"입력 오류: 설정 파일이 없습니다 — {cfgp}\n예: {{\"기본\": {{\"task\": \"지역축제운영\", \"agency\": \"가상시\", \"dept\": \"기획과\", \"period\": \"10년\"}}, "
+              "\"폴더\": {{\"계약\": {{\"task\": \"계약관리\", \"access\": \"부분공개\", \"reason\": \"제7호 법인 경영상 비밀\"}}}}, \"제외\": [\"*.tmp\"]}}", file=sys.stderr)
+        return 2
+    cfg = json.load(open(cfgp, encoding="utf-8"))
+    base, sub = cfg.get("기본", {}), cfg.get("폴더", {})
+    skip = ["~$*", ".*", "*.tmp", "Thumbs.db", "desktop.ini", "기록화설정.json"] + cfg.get("제외", [])
+    os.makedirs(a.out, exist_ok=True)
+    idxp = os.path.join(a.out, "_수집색인.json")
+    idx = json.load(open(idxp, encoding="utf-8")) if os.path.exists(idxp) else {"해시": {}, "경로": {}}
+    outabs = os.path.abspath(a.out)
+    rows, today = [], dt.datetime.now(KST)
+    for root, dirs, files in os.walk(a.folder):
+        dirs[:] = sorted(d for d in dirs if not d.startswith(".") and os.path.abspath(os.path.join(root, d)) != outabs)
+        for fn in sorted(files):
+            if any(fnmatch.fnmatch(fn, pat) for pat in skip):
+                continue
+            fp = os.path.join(root, fn)
+            rel = os.path.relpath(fp, a.folder).replace(os.sep, "/")
+            h = sha256(fp)
+            if h in idx["해시"]:
+                continue
+            top = rel.split("/")[0] if "/" in rel else ""
+            o = {**base, **sub.get(top, {})}
+            rels = list(o.get("relation", []))
+            prev = idx["경로"].get(rel)
+            if prev:
+                rels.append(f"개정:{prev}")
+            rid = f"{today:%Y%m%d}-{h[:10]}"
+            ns = _ap.Namespace(file=fp, task=o.get("task", ""), agency=o.get("agency", ""), dept=o.get("dept", ""), person=o.get("person", ""),
+                               role=o.get("role", "생산자") if o.get("role", "생산자") in ROLES else "생산자", period=o.get("period", ""),
+                               access=o.get("access", "공개"), reason=o.get("reason", ""), kind=o.get("kind", "일반문서"), place="처리과",
+                               activity=o.get("activity", ""), purpose=o.get("purpose", ""), summary="", relation=rels or None, id=rid, title=None, date=None, out=a.out)
+            if not (ns.task and ns.agency and ns.dept and ns.period):
+                rows.append([rel, "", "건너뜀", "설정에 task·agency·dept·period 중 빈 값"])
+                continue
+            buf = io.StringIO()
+            with contextlib.redirect_stdout(buf), contextlib.redirect_stderr(buf):
+                rc = cmd_capture(ns)
+            msg = buf.getvalue().strip().replace("\n", " ")[:300]
+            if rc in (0, 1):
+                idx["해시"][h] = rid
+                idx["경로"][rel] = rid
+                rows.append([rel, rid, "개정본 만듦" if prev else "만듦", msg])
+            else:
+                rows.append([rel, "", {2: "입력 오류", 3: "거부"}.get(rc, str(rc)), msg])
+    json.dump(idx, open(idxp, "w", encoding="utf-8"), ensure_ascii=False, indent=1)
+    with open(os.path.join(a.out, f"수집_결과_{today:%Y%m%d_%H%M%S}.csv"), "w", encoding="utf-8-sig", newline="") as f:
+        w = csv.writer(f)
+        w.writerow(["파일", "패키지", "결과", "메시지"])
+        w.writerows(rows)
+    made = sum(1 for r in rows if "만듦" in r[2])
+    print(f"새로 기록화 {made} · 건너뜀·오류·거부 {len(rows) - made} · 이미 기록화된 파일은 그대로 → {a.out}")
+    return 0 if made == len(rows) else 1
+
+
 def cmd_catalog(a):
     """패키지 폴더 전체에서 목록·공개데이터·연결 그래프·검색 페이지를 만든다(매개 확산). --verify면 고정성도 다시 본다."""
     pkgs = sorted(d for d in (os.path.join(a.root, x) for x in os.listdir(a.root)) if os.path.isfile(os.path.join(d, "metadata.json")))
@@ -387,6 +449,26 @@ input{{font:inherit;font-size:16px;padding:8px 12px;width:min(100%,360px);margin
 <table><thead><tr><th>생산일</th><th>제목</th><th>단위과제</th><th>보존</th><th>공개</th><th>관계</th><th>SHA-256·고정성</th></tr></thead><tbody>{''.join(rows)}</tbody></table>
 <script>document.getElementById('q').addEventListener('input',e=>{{const v=e.target.value.toLowerCase();for(const r of document.querySelectorAll('tbody tr'))r.hidden=v&&!r.dataset.q.includes(v)}})</script></body></html>"""
     open(os.path.join(a.out, "목록.html"), "w", encoding="utf-8").write(page)
+    # 다른 시스템이 거둬 갈 수 있는 표준 형식(공개 기록만): OAI-PMH oai_dc 정적 파일, Atom 피드
+    x = lambda v: html.escape(str(v or ""), quote=False)
+    stamp = dt.datetime.now(KST).isoformat(timespec="seconds")
+    recs = []
+    for m in pub:
+        recs.append(f"""<record><header><identifier>urn:records:{x(m['3.1 기본식별자'])}</identifier><datestamp>{x(m.get('13.1 생산일시', '')[:10])}</datestamp></header><metadata>
+<oai_dc:dc xmlns:oai_dc="http://www.openarchives.org/OAI/2.0/oai_dc/" xmlns:dc="http://purl.org/dc/elements/1.1/">
+<dc:identifier>urn:records:{x(m['3.1 기본식별자'])}</dc:identifier><dc:title>{x(m['4.1 제목'])}</dc:title><dc:creator>{x(m.get('1.2 기관명'))} {x(m.get('1.3 부서명'))}</dc:creator>
+<dc:date>{x(m.get('13.1 생산일시', '')[:10])}</dc:date><dc:subject>{x(m['12.2.2 분류명'])}</dc:subject><dc:description>{x(m.get('5.2 기술내용'))}</dc:description>
+<dc:format>{x(m.get('9.1 포맷명'))}</dc:format><dc:rights>{x(m['17.3.1 공개구분'])}</dc:rights>"""
+                    + "".join(f"<dc:relation>{x(r['22.1 관계유형'])}:urn:records:{x(r['22.2 관계대상식별자'])}</dc:relation>" for r in m.get("22 관계", []))
+                    + "</oai_dc:dc></metadata></record>")
+    open(os.path.join(a.out, "oai_dc.xml"), "w", encoding="utf-8").write(
+        f'<?xml version="1.0" encoding="UTF-8"?>\n<OAI-PMH xmlns="http://www.openarchives.org/OAI/2.0/"><responseDate>{stamp}</responseDate>'
+        f'<request verb="ListRecords" metadataPrefix="oai_dc"/><ListRecords>\n' + "\n".join(recs) + "\n</ListRecords></OAI-PMH>\n")
+    ents = "".join(f"<entry><id>urn:records:{x(m['3.1 기본식별자'])}</id><title>{x(m['4.1 제목'])}</title><updated>{x(m.get('13.1 생산일시', '')[:10] or stamp[:10])}T00:00:00+09:00</updated>"
+                   f"<author><name>{x(m.get('1.2 기관명'))} {x(m.get('1.3 부서명'))}</name></author><category term=\"{x(m['12.2.2 분류명'])}\"/><summary>{x(m.get('5.2 기술내용'))}</summary>"
+                   f"<link href=\"목록.html#{x(m['3.1 기본식별자'])}\"/></entry>\n" for m in sorted(pub, key=lambda m: m.get("13.1 생산일시", ""), reverse=True))
+    open(os.path.join(a.out, "feed.atom"), "w", encoding="utf-8").write(
+        f'<?xml version="1.0" encoding="UTF-8"?>\n<feed xmlns="http://www.w3.org/2005/Atom"><id>urn:records:catalog</id><title>기록 패키지 목록</title><updated>{stamp}</updated>\n{ents}</feed>\n')
     bad = sum(1 for v in fixity.values() if v == "실패")
     print(f"패키지 {len(metas)} · 공개데이터 {len(pub)} · 그래프 노드 {len(graph)}" + (f" · 고정성 실패 {bad}" if a.verify else "") + f" → {a.out}")
     return 1 if bad else 0
@@ -428,8 +510,12 @@ def main() -> int:
     g.add_argument("root")
     g.add_argument("--verify", action="store_true")
     g.add_argument("-o", "--out", default="산출/기록목록")
+    w = sub.add_parser("sweep", help="업무 폴더에서 아직 기록화하지 않은 파일만 패키지로(반복 실행용)")
+    w.add_argument("folder")
+    w.add_argument("--config", help="기본값: <폴더>/기록화설정.json")
+    w.add_argument("-o", "--out", default="산출/기록패키지")
     a = ap.parse_args()
-    return {"capture": cmd_capture, "verify": cmd_verify, "derive": cmd_derive, "batch": cmd_batch, "catalog": cmd_catalog}[a.cmd](a)
+    return {"capture": cmd_capture, "verify": cmd_verify, "derive": cmd_derive, "batch": cmd_batch, "catalog": cmd_catalog, "sweep": cmd_sweep}[a.cmd](a)
 
 
 if __name__ == "__main__":
