@@ -26,10 +26,18 @@ import urllib.request
 HERE = os.path.dirname(os.path.abspath(__file__))
 CATALOG = os.path.join(HERE, "..", "assets", "law", "statutory_catalog.csv")
 MINIMUM = os.path.join(HERE, "..", "assets", "law", "statutory_minimum.csv")
+ITEMS = os.path.join(HERE, "..", "assets", "law", "statutory_items.csv")  # 위임 추적기(retention_tree.py) 결과 — 바뀐 법령은 그 법령에서 시작하는 행을 다시 추적
 SEEN = os.path.join(HERE, "..", "assets", "law", "statutory_seen.json")  # 이미 읽은 판본(법령 lsiSeq·행정규칙 admRulSeq) — 같은 판본은 다시 받지 않음
 BASE = "https://www.law.go.kr/LSW/"
 LISTS = {"법령": "lsSc.do?menuId=1&subMenuId=23&tabMenuId=121", "행정규칙": "admRulSc.do?menuId=5&subMenuId=45&tabMenuId=203"}
 DELAY = 0.7
+
+
+def _mod(name):
+    sp = importlib.util.spec_from_file_location(name, os.path.join(HERE, name + ".py"))
+    m = importlib.util.module_from_spec(sp)
+    sp.loader.exec_module(m)
+    return m
 
 
 def judge_mod():
@@ -122,6 +130,7 @@ def main() -> int:
     ap.add_argument("--report", default="산출/법정보존기간_변화.md")
     ap.add_argument("--apply", action="store_true", help="목록(statutory_catalog.csv)의 해당 법령 행을 새 추출로 바꿈")
     ap.add_argument("--catalog", default=CATALOG)
+    ap.add_argument("--items", default=ITEMS, help="위임 추적 목록(없으면 건너뜀)")
     ap.add_argument("--max", type=int, default=200, help="원문을 받을 최대 개수")
     ap.add_argument("--delay", type=float, default=0.7)
     ap.add_argument("--workers", type=int, default=3, help="원문을 동시에 받을 개수(기본 3 — 사이트에 부담을 주지 않게 4 이하 권장)")
@@ -143,6 +152,15 @@ def main() -> int:
     with open(MINIMUM, encoding="utf-8-sig") as f:
         curated = {r["법령"].split("(")[0].strip() for r in csv.DictReader(f)}
     names = {r["법령"] for r in cat if r["출처"] in ("법령", "행정규칙")}
+    try:  # 시험(--offline)에서는 --items를 따로 줄 때만 씀 — 실제 목록을 건드리지 않음
+        with open(a.items, encoding="utf-8-sig") as f:
+            items_rows = [] if a.offline and a.items == ITEMS else list(csv.DictReader(f))
+    except OSError:
+        items_rows = []
+    root = lambda r: r["근거 경로"].split(" → ")[0].rsplit(" ", 1)[0]
+    for r in items_rows:  # 위임으로 이어진 시행령·시행규칙·고시가 바뀌어도 다시 읽음
+        if r.get("출처") in ("법령", "행정규칙"):
+            names.add(r["법령"])
 
     def same(r, x, src):  # 같은 법령·규칙인가 — 행정규칙은 이름이 같은 다른 기관 규칙이 있어 종류(○○청예규 등)까지 봄
         return r["법령"] == x["이름"] and r["출처"] == src and (src == "법령" or not x.get("규칙종류") or not r.get("종류") or r["종류"] == x["규칙종류"])
@@ -223,6 +241,62 @@ def main() -> int:
     os.makedirs(os.path.dirname(a.report) or ".", exist_ok=True)
     open(a.report, "w", encoding="utf-8").write("\n".join(lines) + "\n")
     now = [c for c in changes if not c[3]]
+    # 위임 추적 목록: 다시 읽은(시행 중) 법령과, 그 법령을 거쳐 가는 행의 출발 법령을 다시 추적
+    item_changes = []
+    if items_rows and newrows:
+        rt = _mod("retention_tree")
+        fresh = {x["이름"]: t for x, fu in futs if not (x["시행"] and x["시행"] > today) for t in [fu.result()] if not fu.exception()} if not off else \
+                {x["이름"]: off["본문"][x["seq"]] for x in pick if not (x["시행"] and x["시행"] > today)}
+        corpus = rt.Corpus(dict(fresh), {}, live=not off, live_laws=not off)
+        roots = set(fresh) | {root(r) for r in items_rows if any(n in r["근거 경로"] for n in fresh)}
+        old_by_root = {}
+        for r in items_rows:
+            old_by_root.setdefault(root(r), []).append(r)
+        new_items = []
+        ik = lambda r: (r["법령"], r["조문"].split("(")[0], r["항"], r["호"], re.sub(r"\s", "", r["보존기간"]), re.sub(r"\s", "", r["기록(항목)"])[:30])  # 띄어쓰기 차이(원문 받는 곳마다 다름)는 같은 것으로
+        all_old = {ik(r) for r in items_rows}
+        regen = set()
+        for law in sorted(roots):
+            if not corpus.arts(law):  # 원문을 못 받으면 그 출발 법령의 행은 그대로 둠
+                continue
+            rows_ = []
+            for jo, title, abody in corpus.arts(law):
+                if rt.KEEPV.search(abody) or rt.EVENT.search(abody):
+                    rows_ += rt.analyze(corpus, law, jo, title, abody)
+            rows_ = rt.add_judgement([r for r in rows_ if len(re.sub(r"[\s\d.\[\]]", "", r["기록(항목)"])) >= 2])
+            src = next((o.get("출처") for o in old_by_root.get(law, [])), "법령")
+            for r in rows_:
+                r.setdefault("출처", src if r["법령"] == law else ("행정규칙" if r.get("위임") == "고시" else "법령"))
+                r.setdefault("기관", "")
+            ob, nb = {ik(r) for r in old_by_root.get(law, [])}, {ik(r) for r in rows_}
+            regen |= nb
+            new_items.append((law, rows_, ob, nb))
+        for law, rows_, ob, nb in new_items:  # 다른 출발 법령에서 이미 있던 행(같은 위임 사슬)은 새것으로 치지 않음
+            add_, gone_ = sorted(nb - all_old), sorted(ob - regen)
+            if add_ or gone_:
+                item_changes.append((law, add_, gone_))
+        if item_changes:
+            lines.append("## 위임 추적(호·항·단서, 시행령·시행규칙·고시) 변화")
+            for law, add_, gone_ in item_changes:
+                lines.append(f"- {law}: 🆕 {len(add_)} · ➖ {len(gone_)}" + "".join(f"\n  - 🆕 {k[1]}{k[2]}{k[3]} {k[4]} — {k[5]}" for k in add_[:8])
+                             + "".join(f"\n  - ➖ {k[1]}{k[2]}{k[3]} {k[4]} — {k[5]}" for k in gone_[:8]))
+            lines.append("")
+            open(a.report, "w", encoding="utf-8").write("\n".join(lines) + "\n")
+        if a.apply and item_changes:
+            changed = {law for law, _, _ in item_changes}
+            keep_i = [r for r in items_rows if root(r) not in changed]
+            have = {ik(r) for r in keep_i}
+            for law, rows_, _, _ in new_items:
+                if law in changed:
+                    for r in rows_:
+                        if ik(r) not in have:
+                            have.add(ik(r))
+                            keep_i.append(r)
+            icols = list(items_rows[0].keys())
+            with open(a.items, "w", encoding="utf-8-sig", newline="") as f:
+                w = csv.DictWriter(f, fieldnames=icols, extrasaction="ignore")
+                w.writeheader()
+                w.writerows(keep_i)
     if a.apply and now:
         hit = [(k, v) for k, v in newrows.items() if any(c[0] is v[0] for c in now)]
         keep = [r for r in cat if not any(same(r, x, k[0]) for k, (x, _) in hit)]
@@ -237,8 +311,9 @@ def main() -> int:
     if not off or a.seen != SEEN:
         with open(a.seen, "w", encoding="utf-8") as f:
             json.dump(dict(sorted(seen.items())), f, ensure_ascii=False, indent=0)
-    print(f"최신 {len(items)} · 같은 판본 건너뜀 {len(same_ver)} · 다시 읽음 {len(pick)} · 바뀐 법령 {len(changes)}(시행 예정 {sum(c[3] for c in changes)})" + (" · 목록 고침" if a.apply and now else "") + f" → {a.report}")
-    return 2 if fail and not changes else (1 if changes else 0)
+    print(f"최신 {len(items)} · 같은 판본 건너뜀 {len(same_ver)} · 다시 읽음 {len(pick)} · 바뀐 법령 {len(changes)}(시행 예정 {sum(c[3] for c in changes)})"
+          + f" · 위임 추적 바뀐 법령 {len(item_changes)}" + (" · 목록 고침" if a.apply and (now or item_changes) else "") + f" → {a.report}")
+    return 2 if fail and not changes else (1 if changes or item_changes else 0)
 
 
 if __name__ == "__main__":
