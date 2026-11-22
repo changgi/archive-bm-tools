@@ -107,7 +107,7 @@ def load_items():
         return list(csv.DictReader(f))
 
 
-def items_hits(items, name, limit=4):
+def items_hits(items, name, limit=4, org=None):
     """위임 추적기(retention_tree.py)가 호·항·단서 단위로 나누고 시행령·시행규칙·고시까지 따라간 행 가운데
     단위과제명 낱말이 기록·참조 조문·조문 제목에 든 것."""
     tk = tokens(name)
@@ -116,6 +116,8 @@ def items_hits(items, name, limit=4):
     scored = []
     for c in items:
         if not c.get("보존기간") or c.get("판정") == "의무 아님 가능성":
+            continue
+        if c.get("출처") == "자치법규" and not (org and (org in c.get("기관", "") or org in c["법령"])):
             continue
         hay = c["기록(항목)"] + " " + c.get("참조 조문", "") + " " + c["조문"]
         sc = sum(len(w) for w in tk if w in hay)
@@ -229,20 +231,20 @@ def main() -> int:
         items = load_items()
         if items:
             isht = wb.create_sheet("호별·위임 추적 후보")
-            isht.append(["원본 행", "단위과제명", "기준표 보존기간", "법령", "조문", "항·호", "기록(항목)", "참조 조문", "법정 기간", "조건(단서)", "의무자",
+            isht.append(["원본 행", "단위과제명", "기준표 보존기간", "출처", "법령", "조문", "항·호", "기록(항목)", "참조 조문", "법정 기간", "조건(단서)", "의무자",
                          "근거 경로(법률→시행령·시행규칙→고시)", "상태", "비교"])
             for n, r in enumerate(data[hi + 1:], hi + 2):
                 name, per = cell(r, ni), re.sub(r"\s", "", cell(r, pi))
                 if not name:
                     continue
-                for c in items_hits(items, name):
+                for c in items_hits(items, name, org=a.org):
                     ny, y = years(re.sub(r"\(.*\)|예외.*", "", c["보존기간"])), years(per)
                     if "지나면 파기" in c["보존기간"]:
                         cmp = "파기 기한(상한)보다 김 — 원문 확인" if ny and y and y > ny else "상한 안"
                     else:
                         cmp = "법정 기간이 더 김 — 같은 기록인지 원문 확인" if ny and y and ny > y else "기준표가 같거나 김"
                     icand += cmp.startswith("법정")
-                    isht.append([n, name, per, c["법령"], c["조문"], c["항"] + (c["호"] + ("호" if c["호"].isdigit() else "목") if c["호"] else ""),
+                    isht.append([n, name, per, c.get("출처", "법령"), c["법령"], c["조문"], c["항"] + (c["호"] + ("호" if c["호"].isdigit() else "목") if c["호"] else ""),
                                  c["기록(항목)"], c.get("참조 조문", ""), c["보존기간"], c.get("조건", ""), c.get("의무자", ""), c["근거 경로"], c["상태"], cmp])
     tb = wb.create_sheet("법정 보존기간")
     tb.append(["법령", "조항", "시행", "기록 종류", "법정 기간", "성격", "기산", "적용 대상", "찾는 낱말", "제외 낱말", "비고"])

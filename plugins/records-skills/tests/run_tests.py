@@ -562,6 +562,13 @@ def main():
            ("시행규칙", "제241조", "②1", "5년"), ("가상안전법", "제164조", "③", "3년")} <= _got
           and any(r["항"] == "③" and "종료될 때까지" in r["보존기간"] for r in _tr)
           and any(r["의무자"] == "지도사" for r in _tr), str(sorted(_got)))
+    _cp2 = _rt.Corpus({"가상시 기록 조례": "가상시 기록 조례 제1조(목적) 목적이다. 제5조(보존) 시장은 규칙으로 정하는 서류를 5년간 보존하여야 한다.",
+                       "가상시 기록 조례 시행규칙": "가상시 기록 조례 시행규칙 제1조(목적) 목적이다. 제3조(서류) 조례 제5조에서 “규칙으로 정하는 서류”란 다음 각 호를 말한다. 1. 접수대장 2. 처리대장"})
+    _tr2 = []
+    for _jo, _ti, _bd in _cp2.arts("가상시 기록 조례"):
+        _tr2 += _rt.analyze(_cp2, "가상시 기록 조례", _jo, _ti, _bd)
+    check("보존 조문 위임 추적: 자치법규 '규칙으로 정하는 서류' → 같은 조례 시행규칙의 각 호",
+          {(r["법령"].split()[-1], r["호"], r["보존기간"]) for r in _tr2} >= {("시행규칙", "1", "5년"), ("시행규칙", "2", "5년")}, str(_tr2))
     _pg = ('<tr class="dt"><td class="tNone">1</td><td class="tit" rowspan="2"><input type="hidden" id="list" value="jo" /><a onclick="ordinInfPop(\'111\',\'ELIS\');">'
            '가상군 위원회 조례<br /><span>[시행 2026. 1. 1.][조례 제1호, 2026. 1. 1., 제정]</span></a></td><td rowspan="2">가상군</td>'
            '<td><a onclick="ordinInfPop(\'111\',\'ELIS\',\'\',\'Y\',\'0009\');"> 제9조 회의록 </a></td><td><a onclick="ordinInfPop(\'111\');"> ... 회의록을 5년간 보존하여야 한다. </a></td></tr>'

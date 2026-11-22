@@ -252,6 +252,8 @@ class Corpus:
     def subs(self, name, kind):
         """'산업안전보건법' + '고용노동부령' → '산업안전보건법 시행규칙' 등 위임받는 법령 이름 후보."""
         b = self.base(name)
+        if kind in ("조례", "규칙") or name.endswith("조례"):  # 'OO시 △△ 조례' → 'OO시 △△ 조례 시행규칙'
+            return [c for c in (f"{name} 시행규칙", re.sub(r"\s*조례$", " 조례 시행규칙", name)) if c in self.laws]
         if kind == "대통령령":
             cand = [f"{b} 시행령"]
         elif kind.endswith("부령") or kind == "총리령":
@@ -263,7 +265,7 @@ class Corpus:
     def find_refs(self, sub, jo, hang="", ho="", proviso=False):
         """sub 법령에서 '법 제164조제1항제3호'·'법 제164조제1항 단서'를 가리키는 조문·항."""
         j = jo.replace("제", "제\\s*").replace("조", "\\s*조")
-        pat = r"법\s*" + j + r"(?!의)"
+        pat = r"(?:법|조례)\s*" + j + r"(?!의)"  # 시행령·시행규칙은 '법 제N조', 조례 시행규칙은 '조례 제N조'로 가리킴
         if hang:
             pat += r"\s*제\s*" + str(CIRC.index(hang) + 1) + r"\s*항"
         if ho:
@@ -558,8 +560,11 @@ def strip_name(n):
 
 def main() -> int:
     ap = argparse.ArgumentParser()
-    ap.add_argument("--bodies")
-    ap.add_argument("--names")
+    ap.add_argument("--bodies", action="append", help="법령 원문 폴더(여러 번 줄 수 있음)")
+    ap.add_argument("--names", action="append", help="--bodies와 짝인 이름표(json: 일련번호 → 이름)")
+    ap.add_argument("--ord", help="자치법규 원문 폴더")
+    ap.add_argument("--ord-names")
+    ap.add_argument("--ord-orgs", help="자치법규 일련번호 → 지자체(json)")
     ap.add_argument("--adm")
     ap.add_argument("--adm-names")
     ap.add_argument("--law")
@@ -568,22 +573,34 @@ def main() -> int:
     ap.add_argument("--live", action="store_true", help="없는 법령·고시를 국가법령정보센터에서 받아 옴(--law만 주면 자동)")
     ap.add_argument("--cache", default="산출/위임추적원문", help="받은 원문을 두는 폴더")
     a = ap.parse_args()
-    laws, admins = {}, {}
-    if a.bodies and a.names:
-        names = json.load(open(a.names, encoding="utf-8"))
+    laws, admins, origin, orgs = {}, {}, {}, {}
+    for bd, nmf in zip(a.bodies or [], a.names or []):
+        names = json.load(open(nmf, encoding="utf-8"))
         for seq, nm in names.items():
-            fn = os.path.join(a.bodies, f"{seq}.txt")
+            nm = nm["이름"] if isinstance(nm, dict) else nm
+            fn = os.path.join(bd, f"{seq}.txt")
+            if os.path.exists(fn) and strip_name(nm) not in laws:
+                laws[strip_name(nm)] = open(fn, encoding="utf-8", errors="ignore").read()
+                origin[strip_name(nm)] = "법령"
+    if a.ord and a.ord_names:
+        names = json.load(open(a.ord_names, encoding="utf-8"))
+        og = json.load(open(a.ord_orgs, encoding="utf-8")) if a.ord_orgs else {}
+        for seq, nm in names.items():
+            fn = os.path.join(a.ord, f"{seq}.txt")
             if os.path.exists(fn):
                 laws[strip_name(nm)] = open(fn, encoding="utf-8", errors="ignore").read()
+                origin[strip_name(nm)] = "자치법규"
+                orgs[strip_name(nm)] = og.get(seq, "")
     if a.adm and a.adm_names:
         names = json.load(open(a.adm_names, encoding="utf-8"))
         for seq, nm in names.items():
             fn = os.path.join(a.adm, f"{seq}.txt")
             if os.path.exists(fn):
                 admins[strip_name(nm)] = open(fn, encoding="utf-8", errors="ignore").read()
+                origin[strip_name(nm)] = "행정규칙"
     corpus = Corpus(laws, admins, live=a.live or not a.bodies, cache=a.cache)
     rows = []
-    targets = [a.law] if a.law else list(laws)
+    targets = [a.law] if a.law else list(laws) + list(admins)
     if a.law:
         corpus.law(a.law)
     for k, law in enumerate(targets):
@@ -602,7 +619,10 @@ def main() -> int:
             seen_k.add(k)
             uniq.append(r)
     rows = add_judgement([r for r in uniq if len(re.sub(r"[\s\d.\[\]]", "", r["기록(항목)"])) >= 2])
-    cols = ["법령", "조문", "항", "호", "기록(항목)", "참조 조문", "보존기간", "의무자", "조건", "근거 경로", "위임", "상태", "판정", "문장"]
+    for r in rows:
+        r["출처"] = origin.get(r["법령"], "행정규칙" if r.get("위임") == "고시" else "법령")
+        r["기관"] = orgs.get(r["법령"], "")
+    cols = ["출처", "기관", "법령", "조문", "항", "호", "기록(항목)", "참조 조문", "보존기간", "의무자", "조건", "근거 경로", "위임", "상태", "판정", "문장"]
     if a.out:
         with open(a.out, "w", encoding="utf-8-sig", newline="") as f:
             w = csv.DictWriter(f, fieldnames=cols, extrasaction="ignore")
