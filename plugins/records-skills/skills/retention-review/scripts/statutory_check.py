@@ -97,6 +97,36 @@ def catalog_hits(cat, name, limit=3, org=None, all_rows=False):
     return [c for _, c in scored[:limit]]
 
 
+ITEMS = os.path.join(os.path.dirname(ASSET), "statutory_items.csv")
+
+
+def load_items():
+    if not os.path.exists(ITEMS):
+        return []
+    with open(ITEMS, encoding="utf-8-sig") as f:
+        return list(csv.DictReader(f))
+
+
+def items_hits(items, name, limit=4, org=None):
+    """위임 추적기(retention_tree.py)가 호·항·단서 단위로 나누고 시행령·시행규칙·고시까지 따라간 행 가운데
+    단위과제명 낱말이 기록·참조 조문·조문 제목에 든 것."""
+    tk = tokens(name)
+    if not tk:
+        return []
+    scored = []
+    for c in items:
+        if not c.get("보존기간") or c.get("판정") == "의무 아님 가능성":
+            continue
+        if c.get("출처") == "자치법규" and not (org and (org in c.get("기관", "") or org in c["법령"])):
+            continue
+        hay = c["기록(항목)"] + " " + c.get("참조 조문", "") + " " + c["조문"]
+        sc = sum(len(w) for w in tk if w in hay)
+        if sc:
+            scored.append((sc, c))
+    scored.sort(key=lambda x: -x[0])
+    return [c for _, c in scored[:limit]]
+
+
 def match(rows, name, desc=""):
     """단위과제명에서 먼저, 없으면 설명에서 법정 기록 종류를 찾는다. 같은 과제에 여러 종류면 모두 준다."""
     ok = [r for r in rows if not (r.get("제외 낱말") and re.search(r["제외 낱말"], (name or "") + " " + (desc or "")))]
@@ -196,6 +226,26 @@ def main() -> int:
                     cmp = "법정 기간이 더 김 — 같은 기록인지 원문 확인" if ny and y and ny > y else "기준표가 같거나 김"
                 cand += cmp.startswith("법정")
                 cs.append([n, name, per, c["출처"], c["법령"], c.get("기관", ""), c["조문"], c["보존기간"], c.get("성격", ""), c["기록(문구)"], c["문장"][:200], c["원문"], cmp])
+    icand = 0
+    if not a.no_catalog:
+        items = load_items()
+        if items:
+            isht = wb.create_sheet("호별·위임 추적 후보")
+            isht.append(["원본 행", "단위과제명", "기준표 보존기간", "출처", "법령", "조문", "항·호", "기록(항목)", "참조 조문", "법정 기간", "조건(단서)", "의무자",
+                         "근거 경로(법률→시행령·시행규칙→고시)", "상태", "비교"])
+            for n, r in enumerate(data[hi + 1:], hi + 2):
+                name, per = cell(r, ni), re.sub(r"\s", "", cell(r, pi))
+                if not name:
+                    continue
+                for c in items_hits(items, name, org=a.org):
+                    ny, y = years(re.sub(r"\(.*\)|예외.*", "", c["보존기간"])), years(per)
+                    if "지나면 파기" in c["보존기간"]:
+                        cmp = "파기 기한(상한)보다 김 — 원문 확인" if ny and y and y > ny else "상한 안"
+                    else:
+                        cmp = "법정 기간이 더 김 — 같은 기록인지 원문 확인" if ny and y and ny > y else "기준표가 같거나 김"
+                    icand += cmp.startswith("법정")
+                    isht.append([n, name, per, c.get("출처", "법령"), c["법령"], c["조문"], c["항"] + (c["호"] + ("호" if c["호"].isdigit() else "목") if c["호"] else ""),
+                                 c["기록(항목)"], c.get("참조 조문", ""), c["보존기간"], c.get("조건", ""), c.get("의무자", ""), c["근거 경로"], c["상태"], cmp])
     tb = wb.create_sheet("법정 보존기간")
     tb.append(["법령", "조항", "시행", "기록 종류", "법정 기간", "성격", "기산", "적용 대상", "찾는 낱말", "제외 낱말", "비고"])
     for r in rows:
@@ -204,6 +254,7 @@ def main() -> int:
     s = wb.create_sheet("요약")
     for row in (["법정 보존기간 종류", len(rows)], ["법정 기록에 해당한 단위과제", checked], ["법정 최소 미달", short], ["확인 필요(설명 낱말로만 맞춤)", maybe], ["파기 기한(상한)보다 긴 과제 — 확인 필요", over],
                 ["전체 목록 후보 중 법정 기간이 더 긴 것(판정 아님)", cand],
+                ["호별·위임 추적 후보 중 법정 기간이 더 긴 것(판정 아님)", icand],
                 ["확인일", "law.go.kr 2026-11-21 원문(조문은 시행일 열 참조)"],
                 ["주의", "법정 기간은 최소다. 적용 대상·기산일을 확인한다. 공공기록물 보존기간 구분(1·3·5·10·30년·준영구·영구)으로 올려 맞추고, "
                          "법정 기간이 지나도 공공기록물법 평가·폐기 절차로만 폐기한다. 법령이 바뀌면 records-qa-gate 근거 변화 감시가 알린다."]):
