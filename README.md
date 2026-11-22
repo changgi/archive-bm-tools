@@ -9,7 +9,7 @@
 
 ![version](https://img.shields.io/badge/records--skills-v2.22.0-1f6feb)
 ![skills](https://img.shields.io/badge/스킬-44종-2da44e)
-![tests](https://img.shields.io/badge/시험-143%2F143%20통과-2da44e)
+![tests](https://img.shields.io/badge/시험-144%2F144%20통과-2da44e)
 ![python](https://img.shields.io/badge/Python-3.10%2B-3776ab?logo=python&logoColor=white)
 ![law](https://img.shields.io/badge/근거-시행령%202026.8.25.-8250df)
 ![license](https://img.shields.io/badge/코드-MIT-lightgrey)
@@ -51,7 +51,7 @@
 - 📗 **간행물 2026 송부지침**(2026. 10.): 기관 기호표·발간주기 기호·생략대상 유형과 기관·비공개 사유 점검
 - 🏺 **행정박물 관리대상 선별**(행정박물 관리지침 2021 표 4): 7개 기준 처리과·기록관 점수 → 70점 중 36점 이상 관리대상, 공직자 선물·관인 폐기공고 안내
 - 🔄 **법정 보존기간 목록 자동 갱신**(`statutory_watch.py`): 3주 감시 때 '최신법령'·'최신행정규칙'에서 목록에 있는 법령이 개정되면 그 원문만 다시 읽어 보존기간 조문 변화(🆕·➖)를 보고하고 목록을 고친 PR을 엶(시행 전 개정은 알리기만). 외부 API·비용 없이 빨라짐: 이미 읽은 판본은 건너뛰고 원문은 3개씩 동시에 받아 359초 → 22초(다시 돌릴 때)
-- 🧭 **보존 조문 위임 추적기**(`retention_tree.py`): 한 조문 안의 항·호·단서별 보존기간을 나누고 '○○령으로 정하는 서류'·'보존기간 연장 단서'·'장관이 고시하는 물질'을 법률 → 시행령·시행규칙 → 고시까지 끝까지 따라감(예: 산업안전보건법 제164조 → 시행규칙 제241조 → 작업환경측정 고시·근로자 건강진단 실시기준의 30년 물질). 현행 법령 5,632개 전부와 행정규칙·자치법규까지 9,712행, 외부 API 없음
+- 🧭 **보존 조문 위임 추적기**(`retention_tree.py`): 한 조문 안의 항·호·단서별 보존기간을 나누고 '○○령으로 정하는 서류'·'보존기간 연장 단서'·'장관이 고시하는 물질'을 법률 → 시행령·시행규칙 → 고시까지 끝까지 따라감(예: 산업안전보건법 제164조 → 시행규칙 제241조 → 작업환경측정 고시·근로자 건강진단 실시기준의 30년 물질). 현행 법령 5,632개 전부와 행정규칙·자치법규까지 9,707행, 외부 API 없음
 - 📜 **법정 보존기간 연혁**(`statutory_history.py`): 옛 기록을 평가할 때 생산 당시 법정 기간을 확인 — 점검 표 법령·고시 24개의 연혁 판본 1,414개에서 기록 종류별 기간 변화를 표로 정리(예: 재난상황의 기록 3년 → 2014년부터 5년). `--find 재난상황 --year 2010`
 - 🧠 **보존 의무 판정기**(`retention_judge.py`): 문장이 기록 보존 의무인지 확률로 답하는 작은 모형(255KB, 컴퓨터 안에서 계산·API 없음). 목록 10,084건에 '판정' 칸(의무 9,189·확인 필요 653·의무 아님 가능성 242)을 매겨 '24시간 운영체제 유지'·'3년간 고용 유지' 같은 잡음을 점검 후보에서 뺌. 처음 보는 문장 40개 시험에서 의무 문장을 하나도 놓치지 않음
 - 🧾 **생산 시점에 보존기간 법적근거 남기기**: record-by-design이 기록 패키지를 만들 때 단위과제의 법정 보존기간·근거(예: 처방전 → 「의료법 시행규칙」 제15조①3호 2년)를 `metadata.json`·RiC-O `rico:isOrWasRegulatedBy`·사건 기록에 남기고, 정한 기간이 법정 최소보다 짧거나 파기 상한보다 길면 바로 알림. 평가 작업지의 '법규상 요구' 칸도 미리 채움
@@ -306,7 +306,7 @@ flowchart LR
 python plugins/records-skills/tests/run_tests.py
 ```
 
-143개(veraPDF·ffmpeg 유무에 따라 1~2개 달라짐) — 스킬 44종의 주요 계산과, 보호 훅이 Windows처럼 `python3`가 없거나 가짜일 때도 꺼지지 않는지까지 확인합니다. 필요 패키지: `openpyxl` `pypdf` `pikepdf` `pillow` `numpy` (선택: `python-docx` `python-hwpx` `holidays`, LibreOffice). Python 3.11·3.12·3.13에서 확인했고, [GitHub Actions](.github/workflows/test.yml)로 3.10~3.13을 돌립니다.
+144개(veraPDF·ffmpeg 유무에 따라 1~2개 달라짐) — 스킬 44종의 주요 계산과, 보호 훅이 Windows처럼 `python3`가 없거나 가짜일 때도 꺼지지 않는지까지 확인합니다. 필요 패키지: `openpyxl` `pypdf` `pikepdf` `pillow` `numpy` (선택: `python-docx` `python-hwpx` `holidays`, LibreOffice). Python 3.11·3.12·3.13에서 확인했고, [GitHub Actions](.github/workflows/test.yml)로 3.10~3.13을 돌립니다.
 
 ---
 
