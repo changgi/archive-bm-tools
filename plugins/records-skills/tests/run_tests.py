@@ -787,6 +787,18 @@ def main():
           csw == 1 and "🆕 제2조(기록의 보존) 5년" in rsw and "➖ 제2조(기록의 보존) 3년" in rsw and "시행 예정" in rsw and "관계없는법" not in rsw
           and {(r["법령"], r["보존기간"]) for r in _after} == {("가상법 시행규칙", "5년"), ("가상예정법", "1년")}, osw + rsw)
 
+    with open(f"{t}/위임목록.csv", "w", encoding="utf-8-sig", newline="") as _f:
+        _w = _csv.DictWriter(_f, fieldnames=["출처", "기관", "법령", "조문", "항", "호", "기록(항목)", "참조 조문", "보존기간", "의무자", "조건", "근거 경로", "위임", "상태", "판정", "문장"])
+        _w.writeheader()
+        _w.writerow({"출처": "법령", "법령": "가상법 시행규칙", "조문": "제2조(기록의 보존)", "항": "①", "기록(항목)": "점검기록", "보존기간": "3년", "근거 경로": "가상법 시행규칙 제2조", "상태": "확정"})
+        _w.writerow({"출처": "법령", "법령": "다른법", "조문": "제9조(보존)", "기록(항목)": "장부", "보존기간": "10년", "근거 경로": "다른법 제9조", "상태": "확정"})
+    run([S("retention-review", "scripts", "statutory_watch.py"), "--catalog", f"{t}/가상목록.csv", "--offline", f"{t}/최신.json",
+         "--report", f"{t}/산출/법정변화i.md", "--apply", "--items", f"{t}/위임목록.csv", "--refresh"])
+    _it = {(r["법령"], r["보존기간"]) for r in _csv.DictReader(open(f"{t}/위임목록.csv", encoding="utf-8-sig"))}
+    _ri = open(f"{t}/산출/법정변화i.md", encoding="utf-8").read() if os.path.exists(f"{t}/산출/법정변화i.md") else ""
+    check("법정 보존기간 갱신 감시: 바뀐 법령은 위임 추적 목록도 다시 추적해 바꿈(다른 법령 행은 그대로)",
+          ("가상법 시행규칙", "5년") in _it and ("가상법 시행규칙", "3년") not in _it and ("다른법", "10년") in _it and "위임 추적" in _ri, str(_it) + _ri)
+
     # 같은 판본은 다시 받지 않음(--seen) + 보존 의무 판정기(외부 API 없음)
     _sv = f"{t}/읽은판본.json"
     run([S("retention-review", "scripts", "statutory_watch.py"), "--catalog", f"{t}/가상목록.csv", "--offline", f"{t}/최신.json", "--report", f"{t}/산출/법정변화1.md", "--seen", _sv])
