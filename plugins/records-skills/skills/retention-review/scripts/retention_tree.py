@@ -11,7 +11,7 @@
        python retention_tree.py --bodies 본문폴더 --names 이름표.json [--adm 행정규칙폴더 --adm-names 이름표.json] -o statutory_items.csv
                                                                               # 받아 둔 원문 전체에 적용(인터넷 없음)
 출력 칸: 법령·조문·항·호(목)·기록(항목)·보존기간·의무자·조건·근거 경로·위임·상태
-상태: '확정'(기간이 그 문장에 있음) · '위임 추적'(아래 법령에서 찾아 붙임) · '위임 못 찾음'(가리키는 조문을 못 찾음 — 원문 확인) · '사건 기한'(○○할 때까지)
+상태: '확정'(기간이 그 문장에 있음) · '위임 추적'(아래 법령에서 찾아 붙임 — 법률이 기간 없이 '보존하여야'만 하고 시행령·시행규칙이 기간을 정한 숨은 위임 포함) · '위임 못 찾음'(가리키는 조문을 못 찾음 — 원문 확인) · '방법만 위임(기간 없음)'(서식·장소·작성 방법만 맡김) · '사건 기한'(○○할 때까지)
 외부 API·비용 없음.
 """
 import argparse
@@ -46,6 +46,15 @@ def _builder():
 ART = re.compile(r"(?<![가-힣])(제\d+(?:-\d+)?조(?:의\d+)?)\s*\(([^)]{1,60})\)")
 
 
+def ref_prefix(src):
+    """아래 법령이 위 법령을 부르는 말: 법률·조례 → '법'·'조례', 시행령(○○령) → '영', 시행규칙 → '규칙'."""
+    if not src or src.endswith("조례") or not re.search(r"(?:령|규칙|규정)$", src):
+        return r"(?:법|조례)"
+    if src.endswith("규칙"):
+        return r"(?:규칙|시행규칙)"
+    return r"(?:영|시행령)"
+
+
 def articles(text):
     """본문 → [(조, 제목, 조문 본문)] (부칙 앞까지)."""
     t = re.sub(r"\s+", " ", text)
@@ -57,7 +66,8 @@ def articles(text):
     if cut:
         t = t[:cut.start()]
     t = re.sub(r"&lt;[^&]{0,60}&gt;|<[^>]{0,60}>", " ", t)  # <개정 2019. 1. 15.> 같은 꼬리표
-    ms = [m for m in ART.finditer(t) if not re.match(r"\s*(?:에|의|부터|까지|및|또는|에서|·)", t[m.end():m.end() + 3])]
+    # '제3조(정의)에 따라'·'제5조(…)의 규정'은 조문을 가리키는 말이라 경계가 아님 — 다만 '제20조(기록의 보존) 의료기관의 장은'처럼 본문이 '의'로 시작하는 것은 경계
+    ms = [m for m in ART.finditer(t) if not re.match(r"\s*(?:에서|에|의|부터|까지|및|또는|·)(?![가-힣])", t[m.end():m.end() + 8])]
     out = []
     for i, m in enumerate(ms):
         body = t[m.end(): ms[i + 1].start() if i + 1 < len(ms) else len(t)].strip()
@@ -268,7 +278,7 @@ class Corpus:
                 m = re.search(r"제\s*1\s*조\s*\(목적\)(.{0,400})", t[:60000])
                 if not m:
                     continue
-                for mm in list(re.finditer(r"「([^」]{2,60})」\s*(?:\([^)]{0,40}\))?\s*(?:제\s*\d+조[^.」]{0,30})?(?:에서|에\s*따라|에\s*따른|의\s*시행|및\s*같은\s*법)", m.group(1)))[:1]:  # 목적의 첫 법률만 — 그 법령의 '법'은 이것
+                for mm in list(re.finditer(r"「([^」]{2,60})」\s*(?:\([^)]{0,40}\))?\s*(?:제\s*\d+조[^.「」]{0,400}?)?(?:에서|에\s*따라|에\s*따른|의\s*시행|및\s*같은\s*법)", m.group(1)))[:1]:  # 목적의 첫 법률만 — 그 법령의 '법'은 이것
                     x = mm.group(1)
                     # 이름이 닮은 것만(소방공무원법 → 소방공무원 임용령) — 목적에 다른 법을 곁들여 든 것은 뺌
                     a_, b_ = re.sub(r"\s|법$", "", x), re.sub(r"\s", "", n)
@@ -277,15 +287,17 @@ class Corpus:
                         self._pidx.setdefault(x, []).append(n)
         return self._pidx
 
-    def source_of(self, phrase):
+    def source_of(self, phrase, prefer=()):
         """행정규칙·자치법규가 법률 문구를 그대로 옮겨 적은 경우('안전ㆍ보건상의 조치 사항으로서 고용노동부령으로 정하는 사항을 적은 서류')
         그 문구가 있는 법률 조문(법령, 조, 항, 호)을 찾음 — 위임은 그 법률에서 따라간다."""
         key = re.sub(r"[\s「」ㆍ·,]", "", phrase or "")
-        if len(key) < 20:
+        if len(key) < (16 if prefer else 20):
             return None
         if not hasattr(self, "_norm"):
             self._norm = {n: re.sub(r"[\s「」ㆍ·,]", "", t) for n, t in self.laws.items() if not re.search(r"(조례|규칙)$", n) or n.endswith("시행규칙")}
-        for n, t in self._norm.items():
+        order = [n for n in self._norm if strip_name(n) in prefer or any(n.startswith(p + " ") for p in prefer)] if prefer else []
+        for n in order + [n for n in self._norm if n not in order and len(key) >= 20]:
+            t = self._norm[n]
             if key in t:
                 for jo, title, body in self.arts(n):
                     for hn, ht in hangs(body):
@@ -294,6 +306,27 @@ class Corpus:
                             ho = next((no for no, it in items if key in re.sub(r"[\s「」ㆍ·,]", "", it)), "")
                             return n, jo, hn, ho
         return None
+
+    def source_like(self, text, per, prefer):
+        """옛 문구로 옮겨 적어 글자가 그대로 맞지 않는 경우('고시하는 발암성 확인물질' ↔ 현행 '고시하는 물질'):
+        그 규정이 근거로 든 법률 집안(법·시행령·시행규칙)에서 '고시하는'과 같은 보존기간이 함께 있는 항 가운데 낱말이 가장 많이 겹치는 것."""
+        if not prefer or not per:
+            return None
+        words = set(re.findall(r"[가-힣]{2,}", text)) - {"고용노동부장관이", "정하여", "고시하는", "가운데", "서류", "보존하여야", "한다"}
+        pn = re.sub(r"\s", "", per)
+        best, score = None, 1
+        for n in self._norm:
+            if not (strip_name(n) in prefer or any(n.startswith(p + " ") for p in prefer)):
+                continue
+            for jo, title, body in self.arts(n):
+                if "고시하는" not in body:
+                    continue
+                for hn, ht in hangs(body):
+                    if "고시하는" in ht and pn in re.sub(r"\s", "", ht):
+                        sc = len(words & set(re.findall(r"[가-힣]{2,}", ht)))
+                        if sc > score:
+                            best, score = (n, jo, hn, ""), sc
+        return best
 
     def arts(self, name):
         if name not in self._arts:
@@ -315,17 +348,18 @@ class Corpus:
             cand = [f"{b} 시행규칙", f"{b} 시행령"]
         else:
             cand = [f"{b} 시행령", f"{b} 시행규칙"]
-        out = [c for c in cand if c in self.laws or self.law(c)]
+        out = [c for c in cand if c != name and (c in self.laws or self.law(c))]
         for c in self.purpose_index().get(b, []):  # 소방공무원법 → 소방공무원 임용령·소방공무원 징계령 …
             is_decree = bool(re.search(r"(?:령|규정)$", c)) and not c.endswith("규칙")
             if c not in out and ((kind == "대통령령" and is_decree) or (kind != "대통령령" and (c.endswith("규칙") or not is_decree)) or kind == "규칙"):
                 out.append(c)
         return out
 
-    def find_refs(self, sub, jo, hang="", ho="", proviso=False):
-        """sub 법령에서 '법 제164조제1항제3호'·'법 제164조제1항 단서'를 가리키는 조문·항."""
+    def find_refs(self, sub, jo, hang="", ho="", proviso=False, src=""):
+        """sub 법령에서 '법 제164조제1항제3호'·'법 제164조제1항 단서'를 가리키는 조문·항.
+        src(위임한 법령)가 시행령이면 시행규칙은 '영 제N조', 시행규칙이면 '규칙 제N조'로 가리킨다."""
         j = jo.replace("제", "제\\s*").replace("조", "\\s*조")
-        pat = r"(?:법|조례)\s*" + j + r"(?!의)"  # 시행령·시행규칙은 '법 제N조', 조례 시행규칙은 '조례 제N조'로 가리킴
+        pat = ref_prefix(src) + r"\s*" + j + r"(?!의)"  # 시행령·시행규칙은 '법 제N조', 조례 시행규칙은 '조례 제N조'로 가리킴
         if hang:
             pat += r"\s*제\s*" + str(CIRC.index(hang) + 1) + r"\s*항"
         if ho:
@@ -429,6 +463,12 @@ def analyze(corpus, law, jo, title, body, depth=0, path=None, seen=None, hang=No
             permissive = re.search(r"초과하여|(?:보유|보존|보관)할\s*수\s*있다|연장할\s*수", pro_txt)
             pro_per = main_period(pro_txt) if pro_txt and not EXTEND.search("다만, " + pro_txt) and not permissive else ""
             if items and re.search(r"다음\s*각\s*호", cl):
+                hidden = False
+                if not per and not deleg_of(cl) and depth < 3 and HIDDEN_KEEP.search(cl) and not EVENT.search(cl) and not re.search(r"(?:령|규칙|규정)$", law) and not any(item_period(it) for _, it in items):
+                    hid = implied(corpus, law, jo, hn, obj, depth, path + [f"{hn}"], seen)  # '다음 각 호의 사항을 기록 및 보존' — 기간은 하위 법령에
+                    if hid:
+                        per, hidden = hid[0]["보존기간"], True
+                        rows += hid
                 if not per and not deleg_of(cl) and not any(item_period(it) or deleg_of(it) for _, it in items):
                     continue  # 기간도 위임도 없는 '다음 각 호의 장부를 비치' 따위
                 in_pro = bool(pro_txt and re.search(r"다음\s*각\s*호", pro_txt) and pro_per)
@@ -437,13 +477,23 @@ def analyze(corpus, law, jo, title, body, depth=0, path=None, seen=None, hang=No
                     rows.append(row(law, jo, title, hn, "", obj, per, cl, path + [f"{hn}"], "", "확정"))
                 for n, it in items:
                     p = ov.get(n, pro_per if in_pro else per)
+                    k0 = len(rows)
                     rows += item_rows(corpus, law, jo, title, hn, n, it, p, cl, depth, path, seen)
+                    if hidden and len(rows) > k0:
+                        rows[k0]["조건"] = "법률은 기간을 정하지 않음 — 하위 법령이 정함"
+                        if rows[k0]["상태"] == "확정":
+                            rows[k0]["상태"] = "위임 추적"
                     if in_pro:
                         rows[-1]["조건"] = "단서: " + it[:120]
                         rows[-1]["기록(항목)"] = f"{obj} — 해당하는 경우: {it[:150]}"
             else:
                 d = deleg_of(obj)
                 if not per and not d:
+                    if depth < 3 and HIDDEN_KEEP.search(cl) and RECW.search(cl) and not EVENT.search(cl) and not re.search(r"(?:령|규칙|규정)$", law):
+                        hid = implied(corpus, law, jo, hn, obj, depth, path, seen)
+                        if hid:
+                            rows.append(dict(row(law, jo, title, hn, "", obj, hid[0]["보존기간"], cl, path, "", "위임 추적"), 조건="법률은 기간을 정하지 않음 — 하위 법령이 정함"))
+                            rows += hid
                     continue
                 rows.append(row(law, jo, title, hn, "", obj, per, cl, path, d, "확정" if per and not d else ("사건 기한" if per and not PERIOD.search(per) else "")))
                 if d and depth < 4:
@@ -467,7 +517,7 @@ def analyze(corpus, law, jo, title, body, depth=0, path=None, seen=None, hang=No
                     main = re.split(r"다만,?", htext)[0]
                     rows += follow_gosi(corpus, law, jo, hn, g.group(1), cl, depth, path, seen, title, parent_obj=subject_object(main))
     # 기간이 없는 행은 버림(보존 의무와 무관한 위임 조문을 따라간 것) — 위임을 못 찾은 보존 조문만 남겨 사람 확인
-    rows = [r for r in rows if r["보존기간"] or r["상태"] == "위임 못 찾음"]
+    rows = [r for r in rows if r["보존기간"] or r["상태"] in ("위임 못 찾음", "방법만 위임(기간 없음)")]
     for r in rows:
         if "참조 조문" not in r:
             r["참조 조문"] = cross_refs(corpus, r["법령"], r["기록(항목)"])
@@ -510,7 +560,10 @@ def row(law, jo, title, hn, ho, rec, per, sent, path, deleg, status):
 
 def item_period(it):
     """호 안에 제 기간이 있으면('보관물 관리부: 10년', '…의 경우: 5년')."""
-    m = re.search(r"[:：]\s*(" + PERIOD.pattern + r")", it) or re.search(r"(" + PERIOD.pattern + r")\s*(?:간|동안)?\s*(?:보존|보관)", it)
+    m = re.search(r"[:：]\s*(?:([^:：.]{1,20}?(?:부터|이후|후))\s*)?(" + PERIOD.pattern + r")", it)  # '원본: 발급일부터 5년'
+    if m:
+        return norm_period(m.group(2)) + (f"({m.group(1).strip()})" if m.group(1) else "")
+    m = re.search(r"(" + PERIOD.pattern + r")\s*(?:간|동안)?\s*(?:보존|보관)", it)
     return norm_period(m.group(1)) if m else ""
 
 
@@ -528,18 +581,63 @@ def item_rows(corpus, law, jo, title, hn, n, it, per, head, depth, path, seen):
     return out
 
 
+HIDDEN_KEEP = re.compile(r"(?:보존|보관)(?:\s*[ㆍ·]\s*(?:관리|유지))?\s*(?:하여야|해야)|(?:기록|작성)\s*및\s*보존")
+
+
+def implied(corpus, law, jo, hn, obj, depth, path, seen):
+    """법률은 '…을 기록ㆍ보존하여야 한다'고만 하고 기간도 위임 문구도 없는데, 시행령·시행규칙이 '법 제N조제M항에 따른 … 기록을 3년간 보존'처럼
+    기간을 정한 경우(숨은 위임). 같은 조의 다른 항이 '제1항에 따른 …'으로 이어받아 기간을 정한 것도 찾는다."""
+    out, b = [], corpus.base(law)
+    subs_ = []
+    for k in ("대통령령", "총리령"):
+        for x in corpus.subs(law, k):
+            if x not in subs_ and x != law:
+                subs_.append(x)
+    for sub in subs_:
+        refs = corpus.find_refs(sub, jo, hn, src=law) or (corpus.find_refs(sub, jo, src=law) if hn else [])
+        for ajo, title, ahn, atext in refs:
+            cands = [(ahn, atext)]
+            body = next((bb for j, t, bb in corpus.arts(sub) if j == ajo), "")
+            if ahn:  # 같은 조에서 '제1항에 따른 …'으로 이 항을 이어받는 항
+                k = CIRC.index(ahn) + 1
+                cands += [(h2, t2) for h2, t2 in hangs(body) if h2 != ahn and re.search(r"(?<![조\d])제\s*" + str(k) + r"\s*항(?:\s*각\s*호)?에\s*따(?:른|라)", t2)]
+            for h2, t2 in cands:
+                if not (PERIOD.search(t2) and KEEPV.search(t2)):
+                    continue
+                key = (sub, ajo, h2, "implied")
+                if key in seen:
+                    continue
+                seen.add(key)
+                got = analyze(corpus, sub, ajo, title, t2, depth + 1, path + [f"{sub} {ajo}{h2}"], seen, hang=h2)
+                for r in got:
+                    if r["보존기간"]:
+                        r["조건"] = (r.get("조건", "") + " · " if r.get("조건") else "") + "법률은 기간을 정하지 않음 — 하위 법령이 정함"
+                out += [r for r in got if r["보존기간"]]
+    return out
+
+
 def follow(corpus, law, jo, hn, ho, kind, per, depth, path, seen, parent, proviso=False):
     """위임 따라가기: 아래 법령에서 '법 {jo}{항}{호|단서}'를 가리키는 조문을 찾아 분석."""
     out = []
     subs = corpus.subs(law, kind)
     found = False
     for sub in subs:
-        refs = corpus.find_refs(sub, jo, hn, ho, proviso)
+        if found and (kind.endswith("부령") or kind == "총리령") and not sub.endswith("규칙"):
+            continue  # 부령 위임은 시행규칙에서 찾았으면 시행령까지 가지 않음(다른 문장의 대통령령 위임을 가로채지 않게)
+        refs = corpus.find_refs(sub, jo, hn, ho, proviso, src=law)
         if not refs and hn:  # 항이 하나뿐인 조문은 '법 제30조'처럼 항 없이 가리키기도 함
-            refs = corpus.find_refs(sub, jo, "", ho, proviso)
+            refs = corpus.find_refs(sub, jo, "", ho, proviso, src=law)
+        whole = False
+        if not refs and ho:  # 호를 따로 가리키지 않고 항 단위로 받은 경우('법 제23조의2제1항에 따라 … 정보는 별표 3의8과 같다')
+            j = jo.replace("제", "제\\s*").replace("조", "\\s*조")
+            refs = [x for x in corpus.find_refs(sub, jo, hn, "", proviso, src=law)
+                    if not re.search(ref_prefix(law) + r"\s*" + j + r"(?!의)\s*(?:제\s*\d+\s*항\s*)?(?:제\s*\d+\s*호|각\s*호\s*외의\s*부분)", x[3])
+                    and re.search(r"기록|보존|보관|대장|장부|서식|별표|사항", x[3])]
+            whole = bool(refs)
         for ajo, title, ahn, atext in refs:
             key = (sub, ajo, ahn)
             if key in seen:
+                found = found or proviso  # 단서(보존기간 연장)가 가리키는 조문을 다른 길(각 호·본문)로 이미 따라감
                 continue
             seen.add(key)
             found = True
@@ -547,8 +645,11 @@ def follow(corpus, law, jo, hn, ho, kind, per, depth, path, seen, parent, provis
             if not sub_rows:  # 위임받은 조문이 기간 없이 '…란 다음 각 호의 서류를 말한다'만 정함 → 위 기간을 그대로
                 head, items = hos(atext)
                 for n, it in (items or [("", re.sub(r"^.*?(?:란|이란)\s*", "", atext)[:200])]):
-                    out.append(row(sub, ajo, title, ahn, n, it, per, atext, path + [f"{sub} {ajo}{ahn}{n + '호' if n else ''}"], "",
-                                   "위임 추적" if per else "확인 필요"))
+                    ip = item_period(it) if items else ""  # '"○○령으로 정하는 기간"이란 … 1. 원본: 발급일부터 5년'
+                    out.append(row(sub, ajo, title, ahn, n, it, ip or per, atext, path + [f"{sub} {ajo}{ahn}{n + '호' if n else ''}"], "",
+                                   "위임 추적" if (ip or per) else "확인 필요"))
+                    if whole:
+                        out[-1]["조건"] = f"{ho}호를 따로 가리키지 않고 항 전체로 정함 — 별표·서식 확인"
                     out[-1]["의무자"] = parent["의무자"] if parent else ""
                     out[-1]["_via"] = "inherit"
             else:
@@ -557,7 +658,13 @@ def follow(corpus, law, jo, hn, ho, kind, per, depth, path, seen, parent, provis
     if not found and parent is not None and copied and not subs_from_source(parent):  # 법률을 옮겨 적은 행정규칙·자치법규만
         ph = parent.get("기록(항목)", "")
         dm = DELEG.search(ph)
-        src = corpus.source_of(ph[max(0, dm.start() - 8):] if dm else ph)  # 법률과 앞부분 표현이 달라도('안전ㆍ보건상의 조치 사항') 위임 문구부터 맞춤
+        own = corpus.admins.get(law) or corpus.laws.get(law) or ""
+        prefer = set(re.findall(r"「([^」]{2,60})」", own))  # 그 규정이 근거로 든 법률을 먼저 — 옛 문구('안전ㆍ보건상의 조치 사항')는 위임 문구부터만 맞춤
+        src = None
+        for back in ((8, 5, 2, 0) if dm else (0,)):
+            src = corpus.source_of(ph[max(0, dm.start() - back):] if dm else ph, prefer)
+            if src:
+                break
         if src and src[0] != law:  # 법률 문구를 옮겨 적은 행정규칙·자치법규 → 그 법률에서 위임을 따라감
             s_law, s_jo, s_hn, s_ho = src
             sub_out = follow(corpus, s_law, s_jo, s_hn, s_ho, kind, per, depth + 1,
@@ -581,7 +688,11 @@ def follow(corpus, law, jo, hn, ho, kind, per, depth, path, seen, parent, provis
                         found = found or bool(guess)
     if parent is not None:
         manner = re.search(r"정하는\s*바에\s*따라", parent.get("기록(항목)", ""))
-        parent["상태"] = ("위임 추정" if any(r.get("상태") == "위임 추정" for r in out) else "위임 추적") if found else ("확정(방법만 위임)" if manner and parent["보존기간"] else "위임 못 찾음")
+        rec = parent.get("기록(항목)", "")
+        # '규칙으로 정하는 서식에 따라 장부를 비치'·'대법원규칙으로 정하는 장소에 보관'·'○○령으로 정하는 바에 따라 기록' — 기간이 아니라 서식·장소·방법만 맡김
+        form_only = not parent["보존기간"] and re.search(r"정하는\s*(?:서식|양식|장소|관리대장|신청서|신고서|요청서|입찰에\s*관한\s*서류|소득공제신청서|지원\s*신청서)|정하는\s*바에\s*따라\s*(?:[^.]{0,40}?)(?:작성|기록|비치|복사|발급|첨부|유지|관리)", rec) \
+            and not re.search(r"정하는\s*기간|보존기간", rec)
+        parent["상태"] = ("위임 추정" if any(r.get("상태") == "위임 추정" for r in out) else "위임 추적") if found else ("확정(방법만 위임)" if manner and parent["보존기간"] else ("방법만 위임(기간 없음)" if form_only else "위임 못 찾음"))
         if found and not parent["보존기간"]:  # '○○령으로 정하는 기간 동안 보존' → 아래 법령이 정한 기간을 위로
             pp = next((r["보존기간"] for r in out if r["보존기간"]), "")
             parent["보존기간"] = pp
@@ -597,12 +708,18 @@ def subs_from_source(parent):
 def follow_gosi(corpus, law, jo, hn, org, text, depth, path, seen, title="", parent_obj=""):
     refs = [f"{law} {jo}"]
     hits = corpus.find_gosi(org, refs, hn)
+    seg_jo = jo
     if not hits:  # 행정규칙이 법령 문구를 옮겨 적은 경우 → 그 법령 조문을 근거로 든 고시
         g = re.search(r"[가-힣]{1,12}(?:부|처|청|위원회)\s*(?:장관|장|위원장)?(?:이|가)\s*(?:정하여\s*)?고시하는[^.]{0,24}", text)
         src = corpus.source_of(g.group(0)) if g else None
+        if not src and g:
+            own = corpus.admins.get(law) or corpus.laws.get(law) or ""
+            pm = re.search(r"고시하는[^.]{0,80}?" + PERIOD.pattern, text)
+            src = corpus.source_like(text, norm_period(pm.group(1)) if pm else "", set(re.findall(r"「([^」]{2,60})」", own)))
         if src and src[0] != law:
             hits = corpus.find_gosi(org, [f"{src[0]} {src[1]}"], src[2])
             if hits:
+                seg_jo = src[1]  # 고시 안에서 찾을 조문 번호는 옮겨 적은 법령의 것(규칙 제241조)
                 path = path + [f"(옮겨 적은 법령) {src[0]} {src[1]}{src[2]}"]
     out = []
     m = re.search(r"(?:정하여\s*)?고시하는\s*([^.,]{1,30}?)(?:에|을|를|이|의|은|는)", text)
@@ -619,7 +736,7 @@ def follow_gosi(corpus, law, jo, hn, org, text, depth, path, seen, title="", par
         seen.add(key)
         # 고시 조문에서 그 법령 조문을 가리키는 호·목만 떼어 '고시하는 물질' 목록으로
         seg = abody
-        jm = re.search(jo.replace("제", "제\\s*").replace("조", "\\s*조"), abody)
+        jm = re.search(seg_jo.replace("제", "제\\s*").replace("조", "\\s*조"), abody)
         if jm:
             seg = abody[jm.start():]
         head, items = hos(seg)
@@ -666,6 +783,7 @@ def main() -> int:
     ap.add_argument("--adm-names")
     ap.add_argument("--law")
     ap.add_argument("--jo")
+    ap.add_argument("--only", help="이 파일(한 줄에 하나)에 적힌 법령만 분석 — 원문 묶음은 그대로 둔 채 일부만 다시 돌릴 때")
     ap.add_argument("-o", "--out")
     ap.add_argument("--live", action="store_true", help="없는 법령·고시를 국가법령정보센터에서 받아 옴(--law만 주면 자동)")
     ap.add_argument("--cache", default="산출/위임추적원문", help="받은 원문을 두는 폴더")
@@ -698,6 +816,9 @@ def main() -> int:
     corpus = Corpus(laws, admins, live=a.live or not a.bodies, cache=a.cache)
     rows = []
     targets = [a.law] if a.law else list(laws) + list(admins)
+    if a.only:
+        want = {strip_name(x.strip()) for x in open(a.only, encoding="utf-8") if x.strip()}
+        targets = [t for t in targets if t in want]
     if a.law:
         corpus.law(a.law)
     for k, law in enumerate(targets):
