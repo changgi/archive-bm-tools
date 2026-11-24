@@ -874,7 +874,7 @@ def main() -> int:
     for r in rows:
         r["출처"] = origin.get(r["법령"], "행정규칙" if r.get("위임") == "고시" else "법령")
         r["기관"] = orgs.get(r["법령"], "")
-    cols = ["출처", "기관", "법령", "조문", "항", "호", "기록(항목)", "참조 조문", "보존기간", "의무자", "조건", "근거 경로", "위임", "상태", "판정", "문장"]
+    cols = ["출처", "기관", "법령", "조문", "항", "호", "기록(항목)", "참조 조문", "보존기간", "의무자", "조건", "근거 경로", "위임", "상태", "판정", "별표", "문장"]
     if a.out:
         with open(a.out, "w", encoding="utf-8-sig", newline="") as f:
             w = csv.DictWriter(f, fieldnames=cols, extrasaction="ignore")

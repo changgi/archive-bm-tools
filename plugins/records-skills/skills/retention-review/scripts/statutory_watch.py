@@ -292,6 +292,10 @@ def main() -> int:
                         if ik(r) not in have:
                             have.add(ik(r))
                             keep_i.append(r)
+            old_byl = {ik(r): r.get("별표", "") for r in items_rows if r.get("별표")}  # 다시 추적한 행도 붙여 둔 별표(statutory_byl.py)는 이어받음
+            for r in keep_i:
+                if not r.get("별표") and ik(r) in old_byl:
+                    r["별표"] = old_byl[ik(r)]
             icols = list(items_rows[0].keys())
             with open(a.items, "w", encoding="utf-8-sig", newline="") as f:
                 w = csv.DictWriter(f, fieldnames=icols, extrasaction="ignore")
