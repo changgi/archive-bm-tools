@@ -349,6 +349,8 @@ def main():
             lv = {r["원본"]: r for r in csv.DictReader(open(f"{t}/산출/보존포맷_vera/변환이력.csv", encoding="utf-8-sig"))}
             check("보존포맷 veraPDF: 영문 회의록 적합·한글 파일명도 검증됨(검증 오류 아님)",
                   lv["회의록.txt"]["veraPDF"] == "적합" and not lv["한글회의록.txt"]["veraPDF"].startswith("검증 오류"), str({k: v["veraPDF"] for k, v in lv.items()}))
+    elif os.environ.get("RECORDS_SOFFICE_ELSEWHERE"):  # CI: 변환 시험은 한 실행기(3.12)에서만 — 여기선 세지 않음(통과도 실패도 아님)
+        print(f"안 함  보존포맷 변환: 이 실행기에선 돌리지 않음({os.environ['RECORDS_SOFFICE_ELSEWHERE']}에서 시험)")
     else:
         check("보존포맷: LibreOffice 없음 — 건너뜀(통과로 치지 않음)", False, "LibreOffice 미설치")
 
