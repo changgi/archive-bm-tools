@@ -560,14 +560,39 @@ def row(law, jo, title, hn, ho, rec, per, sent, path, deleg, status):
 
 def item_period(it):
     """호 안에 제 기간이 있으면('보관물 관리부: 10년', '…의 경우: 5년')."""
-    m = re.search(r"[:：]\s*(?:([^:：.]{1,20}?(?:부터|이후|후))\s*)?(" + PERIOD.pattern + r")", it)  # '원본: 발급일부터 5년'
+    m = re.search(r"[:：]\s*(?:([^:：.]{1,20}?(?:부터|이후|후))\s*)?(" + PERIOD.pattern + r")" + NOTCYCLE, it)  # '원본: 발급일부터 5년'
     if m:
         return norm_period(m.group(2)) + (f"({m.group(1).strip()})" if m.group(1) else "")
     m = re.search(r"(" + PERIOD.pattern + r")\s*(?:간|동안)?\s*(?:보존|보관)", it)
     return norm_period(m.group(1)) if m else ""
 
 
+NOTCYCLE = r"(?!\s*(?:마다|에\s*(?:1|한)\s*(?:회|번)|(?:이|가)\s*(?:지난|경과)(?!\s*(?:한\s*)?(?:날|때)\s*까지)|주기|이상\s*경과|이내에))"  # '2년마다 점검'·'5년이 지난'은 보존기간 아님
+
+
+MOK = "가나다라마바사아자차카타파하"
+
+
+def moks(it):
+    """호 본문 → (호 제목, [(목, 목 본문)]); 목은 가. 나. 다. 가 차례대로 나와야 함('1. 영업에 관한 자료 가. 투자권유 관련 자료: 10년 나. …')."""
+    cands = list(re.finditer(r"(?:(?<=\s)|^)([" + MOK + r"])\.\s", it))
+    seq, k = [], 0
+    for m in cands:
+        if k < len(MOK) and m.group(1) == MOK[k]:
+            seq.append(m)
+            k += 1
+    if len(seq) < 2:
+        return it, []
+    return it[:seq[0].start()].strip(), [(m.group(1), it[m.end(): seq[i + 1].start() if i + 1 < len(seq) else len(it)].strip()) for i, m in enumerate(seq)]
+
+
 def item_rows(corpus, law, jo, title, hn, n, it, per, head, depth, path, seen):
+    ttl, mk = moks(it)
+    if mk and any(item_period(x) for _, x in mk):  # 목마다 기간 → 목별 행
+        out = []
+        for g, x in mk:
+            out += item_rows(corpus, law, jo, title, hn, f"{n}{g}", (f"{ttl} — " if ttl else "") + x, per, head, depth, path, seen)
+        return out
     own = item_period(it)
     per = own or per
     if own:  # '환자 명부 : 5년' → 기록은 '환자 명부'
@@ -705,6 +730,15 @@ def subs_from_source(parent):
     return parent.get("_src")
 
 
+def org_head(org):
+    """'고용노동부' → '고용노동부장관이', '식품의약품안전처' → '식품의약품안전처장이', '금융위원회' → '금융위원회가'."""
+    if org.endswith("부"):
+        return org + "장관이"
+    if org.endswith(("처", "청")):
+        return org + "장이"
+    return org + "가"
+
+
 def follow_gosi(corpus, law, jo, hn, org, text, depth, path, seen, title="", parent_obj=""):
     refs = [f"{law} {jo}"]
     hits = corpus.find_gosi(org, refs, hn)
@@ -727,7 +761,7 @@ def follow_gosi(corpus, law, jo, hn, org, text, depth, path, seen, title="", par
     per_m = re.search(r"고시하는[^.]{0,80}?" + PERIOD.pattern, text)
     per = norm_period(per_m.group(1)) if per_m else ""
     if not hits:
-        out.append(dict(row(law, jo, title, hn, "", (f"{parent_obj} 가운데 " if parent_obj else "") + f"{org}장관이 정하여 고시하는 {what}", per, text,
+        out.append(dict(row(law, jo, title, hn, "", (f"{parent_obj} 가운데 " if parent_obj else "") + f"{org_head(org)} 정하여 고시하는 {what}", per, text,
                             path + [f"{org} 고시(못 찾음)"], "고시", "위임 못 찾음"), 조건="단서: " + re.sub(r"^다만,?\s*", "", text)[:160]))
     for name, ajo, title, abody in hits[:3]:
         key = (name, ajo)
@@ -742,7 +776,7 @@ def follow_gosi(corpus, law, jo, hn, org, text, depth, path, seen, title="", par
         head, items = hos(seg)
         if not items:  # '3. 규칙 제241조제2항의 … 물질이란 다음 각 목' 처럼 목(가. 나.)으로 나열
             items = [(m.group(1), m.group(2).strip()) for m in re.finditer(r"(?:(?<=\s)|^)([가나다라마바사아자차카타파하])\.\s(.{2,150}?)(?=\s[가나다라마바사아자차카타파하]\.\s|\s\d{1,2}\.\s|\s제\s*\d+\s*조|$)", seg[:900])]
-        base = subject_object(text) or f"{org}장관이 정하여 고시하는 {what}"
+        base = subject_object(text) or f"{org_head(org)} 정하여 고시하는 {what}"
         if parent_obj and parent_obj not in base:  # '작업환경측정 결과를 기록한 서류' 가운데 '고시하는 물질에 대한 기록이 포함된 서류'
             base = f"{parent_obj} 가운데 {base}"
         if items:
