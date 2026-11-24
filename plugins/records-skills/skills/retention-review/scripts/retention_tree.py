@@ -594,7 +594,7 @@ def analyze(corpus, law, jo, title, body, depth=0, path=None, seen=None, hang=No
             for r in follow(corpus, law, jo, hn, "", re.sub(r"\s+", "", exc.group(1)), exc_label(exc.group(0)), depth, path + ["단서"], seen, None, proviso=True):
                 own = re.search(r"최대\s*(\d+\s*(?:년|개월|일))\s*까지", r.get("문장", ""))
                 if own and r["보존기간"].startswith("예외"):  # 아래 법령이 예외 기간의 상한을 정함('최대 1년까지')
-                    r["보존기간"] = f"최대 {re.sub(r'\s', '', own.group(1))}"
+                    r["보존기간"] = "최대 " + re.sub(r"\s", "", own.group(1))
                 rows.append(r)
         ext = EXTEND.search(htext)
         if ext and depth < 4:
@@ -713,7 +713,7 @@ def exc_label(txt):
     until = re.search(r"((?:[가-힣]+\s+){0,3}?[가-힣]*(?:때|기한|날))\s*까지", txt[m.end():] if m else txt)
     tail = f"({until.group(1).strip()}까지)" if until else ""
     if m:
-        return f"예외 — {re.sub(r'\s', '', m.group(1))} 넘게 보유 가능{tail}"
+        return "예외 — " + re.sub(r"\s", "", m.group(1)) + " 넘게 보유 가능" + tail
     return f"예외 — 법정 기간 뒤에도 보유 가능{tail}"
 
 
