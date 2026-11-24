@@ -238,7 +238,10 @@ class Corpus:
             return self.laws.get(name, "")
         h = _hist()
         if re.search(r"(조례|규칙)(?:\s*시행규칙)?$", name) and re.match(r"\S+(?:특별시|광역시|특별자치시|도|특별자치도)\b", name):
-            t = self._cached("자치법규_" + name, lambda: self._fetch_ordin(name))
+            try:
+                t = self._cached("자치법규_" + name, lambda: self._fetch_ordin(name))
+            except Exception:  # noqa: BLE001 — 연결이 끊기면 그 법규만 없는 것으로(캐시에 남기지 않아 다음에 다시 받음)
+                t = ""
             if t:
                 self.laws[name] = t
             else:
@@ -251,7 +254,11 @@ class Corpus:
                 return ""
             vs = [v for v in h.versions(seq, lsid) if v["시행"] <= self.date]
             return h.body(vs[-1]) if vs else ""
-        t = self._cached("법령_" + name + "_" + self.date, fetch)
+        try:
+            t = self._cached("법령_" + name + "_" + self.date, fetch)
+        except Exception:  # noqa: BLE001
+            print(f"  ⚠ {name}: 원문을 받지 못함(연결 오류) — 이번엔 건너뜀", file=sys.stderr)
+            t = ""
         if t:
             self.laws[name] = t
         else:
@@ -359,7 +366,7 @@ class Corpus:
         """sub 법령에서 '법 제164조제1항제3호'·'법 제164조제1항 단서'를 가리키는 조문·항.
         src(위임한 법령)가 시행령이면 시행규칙은 '영 제N조', 시행규칙이면 '규칙 제N조'로 가리킨다."""
         j = jo.replace("제", "제\\s*").replace("조", "\\s*조")
-        pat = ref_prefix(src) + r"\s*" + j + r"(?!의)"  # 시행령·시행규칙은 '법 제N조', 조례 시행규칙은 '조례 제N조'로 가리킴
+        pat = ref_prefix(src) + r"\s*" + j + r"(?!의\s*\d)"  # 시행령·시행규칙은 '법 제N조', 조례 시행규칙은 '조례 제N조'로 가리킴
         if hang:
             pat += r"\s*제\s*" + str(CIRC.index(hang) + 1) + r"\s*항"
         if ho:
@@ -409,12 +416,15 @@ class Corpus:
                 name = strip_name(nm)
                 if not seq or name in self.admins:
                     continue
-                t = self._cached("행정규칙_" + seq, lambda: re.sub(r"\s+", " ", re.sub(r"<[^>]+>", " ", b.get(f"{b.BASE}admRulLsInfoR.do?admRulSeq={seq}"))))
+                try:
+                    t = self._cached("행정규칙_" + seq, lambda: re.sub(r"\s+", " ", re.sub(r"<[^>]+>", " ", b.get(f"{b.BASE}admRulLsInfoR.do?admRulSeq={seq}"))))
+                except Exception:  # noqa: BLE001
+                    continue
                 self.admins[name] = t
             if any(org in n for n in self.admins):
                 break
 
-    def find_gosi(self, org, refs, hang=""):
+    def find_gosi(self, org, refs, hang="", what=""):
         """'고용노동부장관이 정하여 고시하는 물질' → 그 법령 조문(refs: ['산업안전보건법 시행규칙 제241조', …])을 근거로 든 행정규칙.
         고시는 법령 이름을 줄여 씀('「산업안전보건법 시행규칙」(이하 "규칙"이라 한다)') → 줄임말도 봄."""
         for r in refs:
@@ -427,11 +437,17 @@ class Corpus:
             for r in refs:
                 law, jo = r.rsplit(" ", 1)
                 aliases = [law] + [m.group(2) for m in re.finditer(r"「([^」]+)」\s*\(이하\s*[\"“]([^\"”]{1,10})[\"”]", body) if m.group(1).replace(" ", "") == law.replace(" ", "")]
+                # 옛 고시: 「」 없이 '동법시행규칙(이하 "규칙"이라 한다)'·'같은 법 시행령(이하 "영")'
+                for m in re.finditer(r"(시행규칙|시행령)\s*\(이하\s*[\"“]([^\"”]{1,10})[\"”]", body):
+                    if law.endswith(m.group(1)) and m.group(2) not in aliases:
+                        aliases.append(m.group(2))
                 jp = jo.replace("제", "제\\s*").replace("조", "\\s*조")
                 hp = (r"\s*제\s*" + str(CIRC.index(hang) + 1) + r"\s*항") if hang else ""
-                rx = re.compile(r"(?:" + "|".join(re.escape(x).replace("\\ ", "\\s*") for x in aliases) + r")[」\s]*(?:[^.「」]{0,80}?[,·ㆍ및]\s*)?" + jp + hp + r"(?!의)")  # '규칙 제186조제1항제2호, …, 제241조제1항 단서' 
+                rx = re.compile(r"(?:" + "|".join(re.escape(x).replace("\\ ", "\\s*") for x in aliases) + r")[」\s]*(?:[^.「」]{0,80}?[,·ㆍ및]\s*)?" + jp + hp + r"(?!의\s*\d)")  # '규칙 제186조제1항제2호, …, 제241조제1항 단서' 
                 for ajo, title, abody in articles(body):
-                    if rx.search(abody) and re.search(r"고시하는", abody):
+                    wn = re.sub(r"\s", "", what or "")
+                    # '고시하는 물질이란' — 옛 고시는 '“발암성확인물질”이란 규칙 제107조에 따라 30년간 보존하여야 하는'처럼 위 법령이 맡긴 낱말을 그대로 정의
+                    if rx.search(abody) and (re.search(r"고시하는", abody) or (len(wn) >= 4 and wn in re.sub(r"\s", "", abody))):
                         hits.append((name, ajo, title, abody[:600]))
             
             if org and org[:2] not in name and org not in body[:400]:
@@ -741,7 +757,8 @@ def org_head(org):
 
 def follow_gosi(corpus, law, jo, hn, org, text, depth, path, seen, title="", parent_obj=""):
     refs = [f"{law} {jo}"]
-    hits = corpus.find_gosi(org, refs, hn)
+    wm = re.search(r"(?:정하여\s*)?고시하는\s*([^.,]{1,30}?)(?:에|을|를|이|의|은|는)", text)
+    hits = corpus.find_gosi(org, refs, hn, wm.group(1) if wm else "")
     seg_jo = jo
     if not hits:  # 행정규칙이 법령 문구를 옮겨 적은 경우 → 그 법령 조문을 근거로 든 고시
         g = re.search(r"[가-힣]{1,12}(?:부|처|청|위원회)\s*(?:장관|장|위원장)?(?:이|가)\s*(?:정하여\s*)?고시하는[^.]{0,24}", text)
@@ -751,7 +768,7 @@ def follow_gosi(corpus, law, jo, hn, org, text, depth, path, seen, title="", par
             pm = re.search(r"고시하는[^.]{0,80}?" + PERIOD.pattern, text)
             src = corpus.source_like(text, norm_period(pm.group(1)) if pm else "", set(re.findall(r"「([^」]{2,60})」", own)))
         if src and src[0] != law:
-            hits = corpus.find_gosi(org, [f"{src[0]} {src[1]}"], src[2])
+            hits = corpus.find_gosi(org, [f"{src[0]} {src[1]}"], src[2], wm.group(1) if wm else "")
             if hits:
                 seg_jo = src[1]  # 고시 안에서 찾을 조문 번호는 옮겨 적은 법령의 것(규칙 제241조)
                 path = path + [f"(옮겨 적은 법령) {src[0]} {src[1]}{src[2]}"]
@@ -784,6 +801,7 @@ def follow_gosi(corpus, law, jo, hn, org, text, depth, path, seen, title="", par
                 if re.search(r"고시하는|이란|란\s", it) and len(it) > 120:
                     continue
                 it = re.sub(r"\s제\s*\d+\s*조(?:의\d+)?\s*$", "", re.split(r"\s제\s*\d+\s*조(?:의\d+)?\s*(?:\(|<|&lt;)", it)[0])
+                it = re.split(r"\s제\s*\d+\s*(?:장|절)\s", it)[0]  # 다음 장·절 제목('제4장 수첩소지자의 건강진단')은 뺌
                 out.append(dict(row(name, ajo, title, "", n, f"{base} — 고시 대상: {it[:150]}", per, seg[:300], path + [f"「{name}」 {ajo} {n}"], "고시", "위임 추적"), 조건="단서: " + re.sub(r"^다만,?\s*", "", text)[:120] + " — 고시 대상: " + it[:80], _via="gosi"))
         else:
             out.append(dict(row(name, ajo, title, "", "", f"{base} — 「{name}」 {ajo}({title})", per, abody, path + [f"「{name}」 {ajo}"], "고시", "위임 추적"), 조건="단서: " + re.sub(r"^다만,?\s*", "", text)[:160], _via="gosi"))
