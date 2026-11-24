@@ -26,9 +26,9 @@ import urllib.parse
 HERE = os.path.dirname(os.path.abspath(__file__))
 CIRC = "①②③④⑤⑥⑦⑧⑨⑩⑪⑫⑬⑭⑮⑯⑰⑱⑲⑳"
 NUM = r"\d+"
-PERIOD = re.compile(r"(영구(?:히)?(?!\s*(?:기록|적|성|물관리|보존시설|보존기록물관리))|준영구|(?<!\d)(?:\d{1,3}\s*(?:년|개월)|\d{1,4}\s*일)(?!\s*\d+\s*월)(?:\s*(?:간|동안|이상|이내))?)")  # '2019년'·'1월 1일' 같은 날짜는 뺌
+PERIOD = re.compile(r"(영구(?:히)?(?!\s*(?:기록|적|성|물관리|보존시설|보존기록물관리))|준영구|(?<!\d)(?:\d{1,3}\s*(?:년|개월)|(?<!월\s)(?<!월)\d{1,4}\s*일)(?!\s*\d+\s*월)(?:\s*(?:간|동안|이상|이내))?)")  # '2019년'·'1월 1일' 같은 날짜는 뺌
 LAPSE = re.compile(r"(\d+\s*(?:년|개월|일))\s*(?:(?:이|가)\s*(?:지나면|지난|경과하면|경과한)[^.]{0,40}?(?:파기|삭제|폐기)|(?:을|를)\s*초과하여\s*(?:보유|보존|보관)할\s*수\s*없)")
-KEEPV = re.compile(r"(?:파기|삭제)하여야|(보존|보관|비치|보유|유지|저장)(?:\s*[ㆍ·]\s*(?:관리|유지|보관|보존|활용))?(?:하여야|해야|하여야만|하고|한다|할 수|할 것|하도록|하여 두어야|해 두어야|하며|하게|기간)|보존기간")
+KEEPV = re.compile(r"(?:파기|삭제)하여야|(?:보존|보관)\s*관리(?:하여야|해야|한다|하고|하며|하되)|(?:보존|보관)하되|(보존|보관|비치|보유|유지|저장)(?:\s*[ㆍ·]\s*(?:관리|유지|보관|보존|활용))?(?:하여야|해야|하여야만|하고|한다|할 수|할 것|하도록|하여 두어야|해 두어야|하며|하게|기간)|보존기간")
 EVENT = re.compile(r"(?:을|를)\s*((?:그\s)?[^,.()을를]{2,50}?(?:때|날|시점)\s*까지)\s*(?:보존|보관)")
 DELEG = re.compile(r"(대통령령|총리령|[가-힣]{1,12}부령|[가-힣]{1,12}(?:부|처|청|위원회)\s*(?:장관|장|위원장)?(?:이|가)\s*정하여\s*고시하는|[가-힣]{1,12}(?:부|처|청|위원회)의?\s*고시|조례|규칙)\s*(?:으로|로)?\s*정하는")
 RECW = re.compile(r"기록|서류|장부|자료|대장|문서|정보|명부|일지|영상|파일|사본|증빙|결과표|회의록|내역|데이터|원부|카드|전표|계약서|신청서|보고서|대장|부본|필름|녹음|녹화|로그|설계도")
@@ -127,8 +127,23 @@ def norm_period(p):
 def overrides(head):
     """'3년(제2호의 경우 2년을 말한다)', '다만, 제3호 및 제4호의 서류는 5년' → {호: 기간}."""
     out = {}
-    for m in re.finditer(r"\(([^()]{0,80})\)|다만,?([^.]{0,200})", head):
+    for m in re.finditer(r"\(([^()]{0,120})\)|다만,?([^.]{0,200})", head):
         seg = m.group(1) or m.group(2) or ""
+        pieces = [x for x in re.split(r",\s*", seg) if PERIOD.search(x)]
+        if len(pieces) >= 2:  # '3년(제3호, 8호의 경우 2년, 제6호 5년, 제6호의 발암성 확인물질 30년)' — 조각마다(기간 없는 호 번호는 다음 기간까지 모음)
+            pending = []
+            for x in re.split(r",\s*", seg):
+                pm = PERIOD.search(x)
+                nums = re.findall(r"(?:제\s*)?(\d+)\s*호", x[:pm.start()] if pm else x)
+                if not pm:
+                    pending += nums
+                    continue
+                lead = re.match(r"\s*(?:(?:제\s*)?\d+\s*호(?:\s*(?:및|ㆍ|·|와|과)\s*)?)+(?:의\s*경우|의\s*서류는|는|은)?\s*$", x[:pm.start()])
+                if lead:  # '제6호의 발암성 확인물질 30년'처럼 호 뒤에 다른 대상이 붙으면 호 전체 기간이 아님
+                    for n in pending + nums:
+                        out.setdefault(n, norm_period(pm.group(1)))
+                pending = []
+            continue
         per = PERIOD.search(seg)
         if not per:
             continue
@@ -143,14 +158,22 @@ def overrides(head):
 
 def clauses(text):
     """'…3년 동안 보존하여야 하고, …2년 동안 보존하여야 하며, …' → 보존 의무별 마디."""
-    parts = re.split(r"(?:(?<=하여야\s하고)|(?<=하여야\s하며)|(?<=해야\s하고)|(?<=해야\s하며)|(?<=보존하고)|(?<=보관하고)|(?<=보존하며)|(?<=보관하며)),?\s", text)
-    return [p.strip() for p in parts if p.strip()]
+    parts = re.split(r"(?:(?<=하여야\s하고)|(?<=하여야\s하며)|(?<=해야\s하고)|(?<=해야\s하며)|(?<=보존하고)|(?<=보관하고)|(?<=보존하며)|(?<=보관하며)|(?<=으로\s하되)|(?<=로\s하되)|(?<=보관하되)|(?<=보존하되)),?\s", text)
+    parts = [p.strip() for p in parts if p.strip()]
+    out = []
+    for p in parts:  # '…하되'에서 자른 것은 양쪽 모두 기간이 있을 때만('…방법으로 하되, … 5년간 관리'는 한 마디)
+        if out and re.search(r"하되,?$", out[-1]) and not (PERIOD.search(out[-1]) and PERIOD.search(p)):
+            out[-1] = out[-1] + " " + p
+        else:
+            out.append(p)
+    return out
 
 
 def main_period(clause):
     """괄호 속 예외를 뺀 마디의 대표 기간(보존 동사 바로 앞의 기간을 우선)."""
     bare = re.sub(r"\([^()]{0,80}\)", " ", clause)
-    bare = re.split(r"다만,?", bare)[0]
+    bare = re.sub(r"^\s*(?:다만,?|단\s*,)\s*", "", bare)  # 따로 떨어진 단서 문장('… 10년간 보존한다. 다만, 서면 인계인수서는 5년간') — 그 문장 자체의 기간
+    bare = re.split(r"다만,?|(?:^|\s)단\s*,", bare)[0]
     # '보존기간이 30년 이상인 기록물'처럼 보존기간 구분을 가리키는 말은 의무 기간이 아님
     bare = re.sub(r"보존\s*기간(?:이|은)?\s*(?:영구|준영구|\d+\s*년)\s*(?:이상|이하|미만|초과)?\s*(?:인|으로\s*정하여진|으로\s*분류된|에\s*해당하는)", " ", bare)
     lp = LAPSE.search(bare)
@@ -487,7 +510,7 @@ def analyze(corpus, law, jo, title, body, depth=0, path=None, seen=None, hang=No
             per = main_period(cl)
             obj = subject_object(cl)
             here = path + [f"{hn}" if hn else ""]
-            pro = re.split(r"\s다만,?\s", " " + cl, maxsplit=1)
+            pro = re.split(r"\s(?:다만|단)\s*,\s*|\s다만\s", " " + cl, maxsplit=1)  # '다만,'·'단,'(행정규칙에 흔함)
             pro_txt = pro[1] if len(pro) > 1 else ""
             permissive = re.search(r"초과하여|(?:보유|보존|보관)할\s*수\s*있다|연장할\s*수", pro_txt)
             pro_per = main_period(pro_txt) if pro_txt and not EXTEND.search("다만, " + pro_txt) and not permissive else ""
@@ -517,6 +540,9 @@ def analyze(corpus, law, jo, title, body, depth=0, path=None, seen=None, hang=No
                         rows[-1]["기록(항목)"] = f"{obj} — 해당하는 경우: {it[:150]}"
             else:
                 d = deleg_of(obj)
+                if not per and not d and pro_per:  # 본문엔 기간이 없고 단서에만('… 작성ㆍ관리한다. 다만, 서면 인계인수서는 5년간 보존')
+                    rows.append(dict(row(law, jo, title, hn, "", subject_object(pro_txt) or obj, pro_per, cl, path + ["단서"], "", "확정"), 조건="단서: " + pro_txt[:160]))
+                    continue
                 if not per and not d:
                     if depth < 3 and HIDDEN_KEEP.search(cl) and RECW.search(cl) and not EVENT.search(cl) and not re.search(r"(?:령|규칙|규정)$", law):
                         hid = implied(corpus, law, jo, hn, obj, depth, path, seen)
@@ -525,14 +551,38 @@ def analyze(corpus, law, jo, title, body, depth=0, path=None, seen=None, hang=No
                             rows += hid
                     continue
                 rows.append(row(law, jo, title, hn, "", obj, per, cl, path, d, "확정" if per and not d else ("사건 기한" if per and not PERIOD.search(per) else "")))
+                if re.match(r"\s*다만", cl) and per:
+                    rows[-1]["조건"] = "단서: " + re.sub(r"^\s*다만,?\s*", "", cl)[:160]
                 if d and depth < 4:
                     rows += follow(corpus, law, jo, hn, "", d, per, depth, path, seen, rows[-1])
-                for pm in re.finditer(r"\(\s*([^()]{2,40}?)의?\s*경우(?:에는)?\s*(" + PERIOD.pattern + r")\s*(?:간|동안)?\s*\)", cl):  # '5년간(역외거래의 경우 7년간)'
-                    pp = norm_period(pm.group(2))
-                    if pp and pp != per:
-                        rows.append(dict(row(law, jo, title, hn, "", obj, pp, cl, path + [f"{hn}"], "", "확정"), 조건=f"괄호: {pm.group(1).strip()}의 경우"))
+                # '검사 결과를 원수는 5년간, 정수는 3년간 보존' — 대상마다 기간(단서 앞 본문에서만, 쉼표로 끊은 마디의 주어 전체)
+                subj = []
+                for sg in re.split(r",\s*", re.sub(r"\([^()]*\)", "", pro[0])):  # 괄호 속 쉼표('(전자문서를 포함한다)')에서 자르지 않게
+                    sm = re.match(r"\s*(?:[①-⑳]\s*)?(.{1,60}?)(?:은|는|을|를)\s*(?:최소|최대|적어도)?\s*(" + PERIOD.pattern + r")\s*(?:간|동안|적으로|으로|로)?\s*(?:.{0,40}?(?:보존|보관|비치|기록|관리).*)?$", sg)
+                    if sm:
+                        subj.append((sm.group(1).strip(), norm_period(sm.group(2))))
+                if len({pp for _, pp in subj}) >= 2 and not d:
+                    base_r = rows.pop()
+                    head_txt = re.split(r"(?:을|를)\s", subj[0][0])[0] if re.search(r"(?:을|를)\s", subj[0][0]) else ""
+                    for sb, pp in subj:
+                        sb2 = re.sub(r"^.*?(?:을|를)\s+", "", sb) if head_txt else sb
+                        rows.append(dict(base_r, **{"기록(항목)": (f"{head_txt} — {sb2}" if head_txt else sb2), "보존기간": pp, "조건": f"구분: {sb2}"}))
+                for pm in re.finditer(r"\(\s*([^()]{2,40}?)(의?\s*경우(?:에는)?|은|는)\s*(" + PERIOD.pattern + r")\s*(?:간|동안|까지)?\s*\)", cl):  # '5년간(역외거래의 경우 7년간)'·'3년(묘목에 관련된 검사서류는 5년)'
+                    pp = norm_period(pm.group(3))
+                    if pp and pp != per and not re.match(r"\s*제\s*\d+\s*호", pm.group(1)):
+                        what = pm.group(1).strip() + ("의 경우" if "경우" in pm.group(2) else "")
+                        rows.append(dict(row(law, jo, title, hn, "", obj, pp, cl, path + [f"{hn}"], "", "확정"), 조건=f"괄호: {what}"))
                 if pro_per and pro_per != per and not DELEG_GOSI.search(pro_txt):  # 단서가 다른 기간(고시 단서는 아래에서 따로)
-                    rows.append(dict(row(law, jo, title, hn, "", obj, pro_per, cl, path + ["단서"], "", "확정"), 조건="단서: " + pro_txt[:160]))
+                    psub = []
+                    for sg in re.split(r",\s*", re.sub(r"\([^()]*\)", "", pro_txt)):  # '단, 제6호의 서류는 5년, … 관련 서류는 30년간'
+                        sm = re.match(r"\s*(.{1,60}?)(?:은|는)\s*(?:최소|최대)?\s*(" + PERIOD.pattern + r")\s*(?:간|동안)?\s*(?:.{0,40}?(?:보존|보관|비치|기록|관리).*)?$", sg)
+                        if sm:
+                            psub.append((sm.group(1).strip(), norm_period(sm.group(2))))
+                    if len({pp for _, pp in psub}) >= 2:
+                        for sb, pp in psub:
+                            rows.append(dict(row(law, jo, title, hn, "", sb, pp, cl, path + ["단서"], "", "확정"), 조건="단서: " + sb[:120]))
+                    else:
+                        rows.append(dict(row(law, jo, title, hn, "", obj, pro_per, cl, path + ["단서"], "", "확정"), 조건="단서: " + pro_txt[:160]))
         exc = re.search(r"다만,?[^.]{0,80}?(대통령령|총리령|[가-힣]{1,12}부령)\s*(?:으로|로)\s*정하는\s*([^.]{0,60}?)(?:은|는)\s*([^.]{0,80}?)(?:보유|보존|보관)할\s*수\s*있다", htext)
         if exc and depth < 4:  # '다만, 대통령령으로 정하는 자료는 5년을 초과하여 … 보유할 수 있다' → 그 자료와 예외 기간
             rows += follow(corpus, law, jo, hn, "", re.sub(r"\s+", "", exc.group(1)), f"예외 — {exc.group(3).strip()}", depth, path + ["단서"], seen, None, proviso=True)
