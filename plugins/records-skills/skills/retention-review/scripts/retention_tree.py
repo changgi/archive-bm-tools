@@ -203,6 +203,10 @@ def subject_object(clause):
 
 
 def deleg_of(text):
+    # '대통령령 또는 대법원규칙으로 정하는 기간' — 뒤쪽 '규칙'만 잡으면 조례 시행규칙으로 잘못 감 → 앞쪽 대통령령·부령
+    two = re.search(r"(대통령령|총리령|[가-힣]{1,12}부령)\s*(?:또는|이나|및|ㆍ|·)\s*[가-힣]{0,10}규칙\s*(?:으로|로)\s*정하는", text)
+    if two:
+        return two.group(1)
     m = DELEG.search(text)
     if not m:
         return ""
@@ -523,6 +527,10 @@ def analyze(corpus, law, jo, title, body, depth=0, path=None, seen=None, hang=No
                 rows.append(row(law, jo, title, hn, "", obj, per, cl, path, d, "확정" if per and not d else ("사건 기한" if per and not PERIOD.search(per) else "")))
                 if d and depth < 4:
                     rows += follow(corpus, law, jo, hn, "", d, per, depth, path, seen, rows[-1])
+                for pm in re.finditer(r"\(\s*([^()]{2,40}?)의?\s*경우(?:에는)?\s*(" + PERIOD.pattern + r")\s*(?:간|동안)?\s*\)", cl):  # '5년간(역외거래의 경우 7년간)'
+                    pp = norm_period(pm.group(2))
+                    if pp and pp != per:
+                        rows.append(dict(row(law, jo, title, hn, "", obj, pp, cl, path + [f"{hn}"], "", "확정"), 조건=f"괄호: {pm.group(1).strip()}의 경우"))
                 if pro_per and pro_per != per and not DELEG_GOSI.search(pro_txt):  # 단서가 다른 기간(고시 단서는 아래에서 따로)
                     rows.append(dict(row(law, jo, title, hn, "", obj, pro_per, cl, path + ["단서"], "", "확정"), 조건="단서: " + pro_txt[:160]))
         exc = re.search(r"다만,?[^.]{0,80}?(대통령령|총리령|[가-힣]{1,12}부령)\s*(?:으로|로)\s*정하는\s*([^.]{0,60}?)(?:은|는)\s*([^.]{0,80}?)(?:보유|보존|보관)할\s*수\s*있다", htext)
@@ -589,7 +597,12 @@ def item_period(it):
     if m:
         return norm_period(m.group(2)) + (f"({m.group(1).strip()})" if m.group(1) else "")
     m = re.search(r"(" + PERIOD.pattern + r")\s*(?:간|동안)?\s*(?:보존|보관)", it)
-    return norm_period(m.group(1)) if m else ""
+    if m:
+        return norm_period(m.group(1))
+    m = re.search(r"(?<=[가-힣)\]])\s+(" + PERIOD.pattern + r")\s*(?:(?:<|&lt;)[^>&]{0,40}(?:>|&gt;)\s*)?$", it)  # 옛 법령 '1. 환자의 명부 5년 2. 진료기록부 10년' — 호 끝에 기간만
+    if m and not re.search(r"(?:최근|직전|과거|지난|이전|\d\s*월)\s*$", it[:m.start()]):  # '12월 31일'은 날짜
+        return norm_period(m.group(1))
+    return ""
 
 
 NOTCYCLE = r"(?!\s*(?:마다|에\s*(?:1|한)\s*(?:회|번)|(?:이|가)\s*(?:지난|경과)(?!\s*(?:한\s*)?(?:날|때)\s*까지)|주기|이상\s*경과|이내에))"  # '2년마다 점검'·'5년이 지난'은 보존기간 아님
@@ -696,8 +709,9 @@ def follow(corpus, law, jo, hn, ho, kind, per, depth, path, seen, parent, provis
                 head, items = hos(atext)
                 for n, it in (items or [("", re.sub(r"^.*?(?:란|이란)\s*", "", atext)[:200])]):
                     ip = item_period(it) if items else ""  # '"○○령으로 정하는 기간"이란 … 1. 원본: 발급일부터 5년'
-                    out.append(row(sub, ajo, title, ahn, n, it, ip or per, atext, path + [f"{sub} {ajo}{ahn}{n + '호' if n else ''}"], "",
-                                   "위임 추적" if (ip or per) else "확인 필요"))
+                    ev = "" if (ip or per) else re.search(r"보관기간은\s*([^.]{4,80}?(?:때|날)까지)", atext)  # '보관기간은 법 제20조제1항 각 호의 구분에 따라 정해진 때까지로 한다'
+                    out.append(row(sub, ajo, title, ahn, n, it, ip or per or (ev.group(1) if ev else ""), atext, path + [f"{sub} {ajo}{ahn}{n + '호' if n else ''}"], "",
+                                   "위임 추적" if (ip or per) else ("사건 기한" if ev else "확인 필요")))
                     if whole:
                         out[-1]["조건"] = f"{ho}호를 따로 가리키지 않고 항 전체로 정함 — 별표·서식 확인"
                     out[-1]["의무자"] = parent["의무자"] if parent else ""
