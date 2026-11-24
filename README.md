@@ -9,7 +9,7 @@
 
 ![version](https://img.shields.io/badge/records--skills-v2.22.0-1f6feb)
 ![skills](https://img.shields.io/badge/스킬-44종-2da44e)
-![tests](https://img.shields.io/badge/시험-152%2F152%20통과-2da44e)
+![tests](https://img.shields.io/badge/시험-153%2F153%20통과-2da44e)
 ![python](https://img.shields.io/badge/Python-3.10%2B-3776ab?logo=python&logoColor=white)
 ![law](https://img.shields.io/badge/근거-시행령%202026.8.25.-8250df)
 ![license](https://img.shields.io/badge/코드-MIT-lightgrey)
@@ -306,7 +306,7 @@ flowchart LR
 python plugins/records-skills/tests/run_tests.py
 ```
 
-152개(veraPDF·ffmpeg 유무에 따라 1~2개 달라짐) — 스킬 44종의 주요 계산과, 보호 훅이 Windows처럼 `python3`가 없거나 가짜일 때도 꺼지지 않는지까지 확인합니다. 필요 패키지: `openpyxl` `pypdf` `pikepdf` `pillow` `numpy` (선택: `python-docx` `python-hwpx` `holidays`, LibreOffice). Python 3.11·3.12·3.13에서 확인했고, [GitHub Actions](.github/workflows/test.yml)로 3.10~3.13을 돌립니다.
+153개(veraPDF·ffmpeg 유무에 따라 1~2개 달라짐) — 스킬 44종의 주요 계산과, 보호 훅이 Windows처럼 `python3`가 없거나 가짜일 때도 꺼지지 않는지까지 확인합니다. 필요 패키지: `openpyxl` `pypdf` `pikepdf` `pillow` `numpy` (선택: `python-docx` `python-hwpx` `holidays`, LibreOffice). Python 3.11·3.12·3.13에서 확인했고, [GitHub Actions](.github/workflows/test.yml)로 3.10~3.13을 돌립니다.
 
 ---
 

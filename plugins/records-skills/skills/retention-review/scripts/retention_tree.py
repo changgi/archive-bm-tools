@@ -46,6 +46,15 @@ def _builder():
 ART = re.compile(r"(?<![가-힣])(제\d+(?:-\d+)?조(?:의\d+)?)\s*\(([^)]{1,60})\)")
 
 
+def same_org(org, body):
+    """정부조직 개편으로 이름이 바뀐 기관: 위 법령은 '고용노동부장관', 그때 고시 머리말은 '[노동부고시 …]' → 같은 기관으로.
+    고시 머리말('[시행 …] [노동부고시 제2009-38호')의 기관 이름이 org 안에 들어 있거나 org가 그 안에 들어 있으면."""
+    for k in re.findall(r"\[\s*([가-힣]{2,15}?)(?:고시|훈령|예규|공고|지침)\b", body[:5000])[:3]:
+        if len(k) >= 3 and (k in org or org in k):
+            return True
+    return False
+
+
 def ref_prefix(src):
     """아래 법령이 위 법령을 부르는 말: 법률·조례 → '법'·'조례', 시행령(○○령) → '영', 시행규칙 → '규칙'."""
     if not src or src.endswith("조례") or not re.search(r"(?:령|규칙|규정)$", src):
@@ -432,7 +441,7 @@ class Corpus:
             self.live_gosi(org, law, jo, hang)
         hits = []
         for name, body in self.admins.items():
-            if org and org not in name and org not in body[:600]:
+            if org and org not in name and org not in body[:600] and not same_org(org, body):
                 continue
             for r in refs:
                 law, jo = r.rsplit(" ", 1)
@@ -450,7 +459,7 @@ class Corpus:
                     if rx.search(abody) and (re.search(r"고시하는", abody) or (len(wn) >= 4 and wn in re.sub(r"\s", "", abody))):
                         hits.append((name, ajo, title, abody[:600]))
             
-            if org and org[:2] not in name and org not in body[:400]:
+            if org and org[:2] not in name and org not in body[:400] and not same_org(org, body):
                 continue
         return hits
 
