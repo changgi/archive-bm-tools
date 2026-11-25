@@ -730,6 +730,17 @@ def main():
           and not any(r["조문"].startswith(("제13조", "제17조")) and r["보존기간"] in ("7일이내", "3일이내", "1년") or r["기록(항목)"] == "한" for r in _trd)
           and not any(r["조문"].startswith("제10조") and ("LSW" in r["문장"] or r["보존기간"] == "3년") for r in _trd)
           and not any(r["조문"].startswith("제7조") and r["기록(항목)"] == "이" for r in _trd), str(sorted(_kd)))
+    _cpe = _rt.Corpus({"가상법": "가상법 제1조(목적) 목적. "
+                              "제2조(기록) 회사는 다음 각 호의 구분에 따라 처리에 대한 기록을 3년간 보존하여야 한다. 1. 수집한 경우 2. 제공한 경우 3. 그 밖에 대통령령으로 정하는 사항 "
+                              "제3조(자료) 사용하는 장소에는 물질안전보건자료를 다음 각 호의 사항을 포함하여 작성ㆍ비치하여야 한다. 1. 제품명 2. 그 밖에 고용노동부령으로 정하는 사항 "
+                              "제4조(대장) 세무서장은 그 내용을 재정경제부령으로 정하는 미분양주택확인대장에 작성하여 보관하여야 한다."}, {}, live=False)
+    _tre = []
+    for _jo, _ti, _bd in _cpe.arts("가상법"):
+        _tre += _rt.analyze(_cpe, "가상법", _jo, _ti, _bd)
+    _se = {(r["조문"].split("(")[0], r["호"]): r["상태"] for r in _tre}
+    check("보존 조문 위임 추적: 기간이 아니라 '무엇을'만 맡긴 위임 — '3년간 보존 … 3. 그 밖에 대통령령으로 정하는 사항'은 확정(방법만 위임), 물질안전보건자료 '그 밖에 고용노동부령으로 정하는 사항'은 버림, '부령으로 정하는 확인대장에 작성하여 보관'은 방법만 위임(기간 없음)",
+          _se.get(("제2조", "3")) == "확정(방법만 위임)" and not any(k[0] == "제3조" for k in _se)
+          and _se.get(("제4조", "")) == "방법만 위임(기간 없음)" and "위임 못 찾음" not in _se.values(), str(_se))
     _spc = _ilu.spec_from_file_location("scc", S("retention-review", "scripts", "statutory_crosscheck.py"))
     _cc = _ilu.module_from_spec(_spc)
     _spc.loader.exec_module(_cc)

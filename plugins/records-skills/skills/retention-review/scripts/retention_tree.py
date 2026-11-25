@@ -677,8 +677,9 @@ def analyze(corpus, law, jo, title, body, depth=0, path=None, seen=None, hang=No
                 if PERIOD.search(cl) and KEEPV.search(cl) and RECW.search(cl):
                     main = re.split(r"다만,?", htext)[0]
                     rows += follow_gosi(corpus, law, jo, hn, g.group(1), cl, depth, path, seen, title, parent_obj=subject_object(main))
+    settle_unfound(rows)
     # 기간이 없는 행은 버림(보존 의무와 무관한 위임 조문을 따라간 것) — 위임을 못 찾은 보존 조문만 남겨 사람 확인
-    rows = [r for r in rows if r["보존기간"] or r["상태"] in ("위임 못 찾음", "방법만 위임(기간 없음)")]
+    rows = [r for r in rows if not r.get("_drop") and (r["보존기간"] or r["상태"] in ("위임 못 찾음", "방법만 위임(기간 없음)"))]
     last = {}
     for i, r in enumerate(rows):  # 같은 단서 기간이 두 길로 잡히면(본문 단서 줄 + 고시 단서 줄) 뒤의 것(더 자세한 대상)만
         if r.get("조건", "").startswith("단서"):
@@ -758,6 +759,29 @@ def moks(it):
     if len(seq) < 2:
         return it, []
     return it[:seq[0].start()].strip(), [(m.group(1), it[m.end(): seq[i + 1].start() if i + 1 < len(seq) else len(it)].strip()) for i, m in enumerate(seq)]
+
+
+def settle_unfound(rows):
+    """'위임 못 찾음' 가운데 기간이 아니라 '무엇을'만 맡긴 것을 바로잡음(상태 고침, 버릴 행은 _drop)."""
+    for r in rows:  # 기간이 아니라 '무엇을'만 맡긴 위임은 못 찾아도 기간 문제가 아님
+        if r["상태"] != "위임 못 찾음":
+            continue
+        if re.search(r"정하는\s*기간\s*이내에\s*[^.]{0,40}이관하여야", r["기록(항목)"]):
+            r["_drop"] = 1  # '대통령령으로 정하는 기간 이내에 영구기록물관리기관으로 이관' — 보존기간이 아니라 이관 시기
+            continue
+        if re.search(r"정하는\s*기간|보존기간", r["기록(항목)"]):
+            continue
+        wm = re.search(r"(?:령|규칙|고시|조례)\s*(?:으로|로)\s*정하(?:는|여\s*고시하는)\s*([가-힣ㆍ·\s]{1,40})", r["기록(항목)"])
+        noun = wm.group(1) if wm else ""
+        if r["보존기간"]:
+            r["상태"] = "확정(방법만 위임)"  # '…3년간 보존 … 1~3. … 4. 그 밖에 대통령령으로 정하는 사항' — 기간은 이 문장에 있음
+        elif re.match(r"\s*[가-힣ㆍ·\s]{0,16}?(?:대장|서식|양식|서류|신고서|신청서|장부목록|장부)", noun) \
+                or re.search(r"(?:보관|보존)(?:하여야|해야)|기록하고\s*보관|작성하여\s*보관", r["기록(항목)"] + " " + r.get("문장", "")[:300]):
+            r["상태"] = "방법만 위임(기간 없음)"  # '재정경제부령으로 정하는 미분양주택확인대장에 작성하여 보관'
+        elif re.match(r"\s*(?:[가-힣]{0,10}\s)?[가-힣]{0,8}(?:사항|정보|자료|부동산|요건|경우|상품|기준|대상|업무|내용)|\s*(?:보장성|투자성)", noun) \
+                or re.search(r"(?:사항|정보|자료)\s*$", noun):  # '…으로 정하는 학생맞춤통합지원 관련 업무 수행에 필요한 정보' 
+            r["_drop"] = 1  # '그 밖에 고용노동부령으로 정하는 사항'(물질안전보건자료 적을 내용)·'…으로 정하는 부동산'(세율)
+    return rows
 
 
 def item_rows(corpus, law, jo, title, hn, n, it, per, head, depth, path, seen):
