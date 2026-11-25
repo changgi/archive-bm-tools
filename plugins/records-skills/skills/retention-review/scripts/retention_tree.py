@@ -209,11 +209,24 @@ def main_period(clause):
     lp = LAPSE.search(bare)
     if lp:  # 'N년이 지나면 파기' — 그보다 오래 두면 안 되는 상한
         return norm_period(lp.group(1)) + "(지나면 파기)"
+    dm0 = re.search(r"(?:보존|보관)\s*기간\s*(?:은|는)\s*(?:각각\s*)?(" + PERIOD.pattern + r")\s*(?:으로|로)\s*(?:하고|하며|한다|하되|정한다)", bare)
+    if dm0:  # '근무일지의 보존기간은 3년으로 하고, … 1년간 구조대에 보관 후 이관' — 보존기간을 바로 정한 말이 먼저
+        return norm_period(dm0.group(1))
     cands = []
     for pm in PERIOD.finditer(bare):
         tail = bare[pm.end(): pm.end() + 25]
+        if pm.group(0).rstrip().endswith("이내") and re.match(r"\s*에\s", tail):
+            continue  # '대출한 날로부터 7일 이내에 회수'·'10일 이내에 게시' — 기한
         if re.search(r"(보존|보관|비치|보유|유지|저장|관리하여야|관리해야)", tail) and not re.match(r"\s*(?:간|동안)?\s*(?:보존|보관)\s*(?:하는|된)\s+\S*(?:" + RECW.pattern + r")", bare[pm.end():pm.end() + 60]):
             cands.append(pm)  # '준영구 보존하는 생활기록부를 졸업 후 5년 동안 보관' — 앞은 꾸밈말
+    if not cands:  # '…기록부를 비치하고 채택 결정일부터 5년간 제안의 실시상황, … 등을 기록·관리하여야' — 동사가 멀리 있음
+        for pm in PERIOD.finditer(bare):
+            if re.search(r"(?:최근|과거|지난|직전|이전)\s*$", bare[max(0, pm.start() - 6):pm.start()]):
+                continue  # '과거 3년간 발생한 교통사고'
+            if re.match(r"\s*(?:간|동안)", bare[pm.end():pm.end() + 3]) or pm.group(0).rstrip().endswith(("간", "동안")):
+                if re.search(r"(?:기록\s*[ㆍ·]\s*관리|보존\s*[ㆍ·]\s*관리|보관\s*[ㆍ·]\s*관리)(?:하여야|해야)", bare[pm.end(): pm.end() + 80]):
+                    cands.append(pm)
+                    break
     if not cands:
         for m in re.finditer(r"(?:보존|보관)\s*(?:\([^)]*\))?\s*기간\s*(?:은|을|는|이)?\s*(?:각각\s*)?", bare):
             pm = PERIOD.search(bare, m.end(), m.end() + 12)
@@ -606,11 +619,20 @@ def analyze(corpus, law, jo, title, body, depth=0, path=None, seen=None, hang=No
                 subj = []
                 for sg in re.split(r",\s*", re.sub(r"\([^()]*\)", "", pro[0])):  # 괄호 속 쉼표('(전자문서를 포함한다)')에서 자르지 않게
                     sm = re.match(r"\s*(?:[①-⑳]\s*)?(.{1,200})(?:은|는|을|를|의\s*경우(?:에는|에)?)\s*(?:[^,]{0,30}?(?:부터|로부터|이후|경과\s*후)\s*)?(?:[가-힣]{1,8}에\s*)?(?:최소|최대|적어도)?\s*(" + PERIOD.pattern + r")\s*(?:간|동안|적으로|으로|로)?\s*(?:.{0,40}?(?:보존|보관|비치|기록|관리|유지|저장).*)?$", sg)
+                    if not sm and subj is not None and not re.search(r"보존\s*기간|보관\s*기간", sg):  # '…상품권을 실물 1년간, 복사본은 5년간'·'원수는 5년간, 정수 3년간' — 조사 없이 기간만 붙은 조각
+                        sm = re.match(r"\s*(?:[①-⑳]\s*)?(.{1,200}?)\s+(" + PERIOD.pattern + r")\s*(?:간|동안)?\s*(?:.{0,40}?(?:보존|보관|비치|기록|관리|유지|저장).*)?$", sg)
+                        tok = sm.group(1).split()[-1] if sm and sm.group(1).split() else ""
+                        if not sm or len(tok) < 2 or re.search(r"(?:한|는|은|을|를|면|고|며|서|에|로|여|터|의|과|와)$", tok):
+                            sm = None  # '특별한 사유가 없는 한 3년간'은 대상이 아님
+                        else:
+                            subj.append((re.sub(r"\s+\S+$", "", sm.group(1).strip()) + "을 " + tok if re.search(r"(?:을|를)\s", sm.group(1)) else tok, norm_period(sm.group(2))))
+                            continue
                     if sm:  # 기간에 가장 가까운 '은/는' 앞이 대상('감정평가법인등은 검증결과보고서의 원본은 … 5년' → '검증결과보고서의 원본')
                         subj.append((re.split(r"(?<=[가-힣])(?:은|는)\s+", sm.group(1).strip())[-1], norm_period(sm.group(2))))
                 if len({pp for _, pp in subj}) >= 2 and not d:
                     base_r = rows.pop()
                     head_txt = re.split(r"(?:을|를)\s", subj[0][0])[0] if re.search(r"(?:을|를)\s", subj[0][0]) else ""
+                    head_txt = re.split(r"(?<=[가-힣])(?:은|는)\s+", head_txt)[-1]  # '판매대행점은 환전된 상품권' → 환전된 상품권
                     for sb, pp in subj:
                         sb2 = re.sub(r"^.*(?:을|를)\s+", "", sb) if head_txt else sb
                         sb2 = re.sub(r"^.*\s(?:\S*부터|후|이후)\s+", "", sb2) or sb2  # '…보고서를 제출한 후 육안조사 보고서' → 육안조사 보고서
@@ -705,9 +727,12 @@ def row(law, jo, title, hn, ho, rec, per, sent, path, deleg, status):
 def item_period(it):
     """호 안에 제 기간이 있으면('보관물 관리부: 10년', '…의 경우: 5년')."""
     m = re.search(r"[:：]\s*(?:([^:：.]{1,20}?(?:부터|이후|후))\s*)?(" + PERIOD.pattern + r")" + NOTCYCLE, it)  # '원본: 발급일부터 5년'
+    if m and re.search(r"(?:연장|대출)\s*(?:기간|횟수)|횟수|처리\s*기간|주기|소요\s*시간", it[:m.start()].strip()[-8:]):
+        return ""  # '연장기간 : 3일 이내'·'처리기간: 7일'은 보존기간 아님
     if m:
         return norm_period(m.group(2)) + (f"({m.group(1).strip()})" if m.group(1) else "")
-    m = re.search(r"(" + PERIOD.pattern + r")\s*(?:간|동안)?\s*(?:보존|보관)", it)
+    m = re.search(r"(" + PERIOD.pattern + r")\s*(?:간|동안)?\s*(?:보존|보관)", it) \
+        or re.search(r"(?:서류|기록|자료|대장|장부)(?:은|는)\s*(?:[^,.]{0,20}?(?:부터|이후|후)\s*)?(" + PERIOD.pattern + r")\s*(?:간|동안)?\s*(?:\.|$)", it)  # '…서류는 환급신청일부터 5년. 다만 …'
     if m:
         return norm_period(m.group(1))
     m = re.search(r"(?<=[가-힣)\]])\s+(" + PERIOD.pattern + r")\s*(?:(?:<|&lt;)[^>&]{0,40}(?:>|&gt;)\s*)?$", it)  # 옛 법령 '1. 환자의 명부 5년 2. 진료기록부 10년' — 호 끝에 기간만
