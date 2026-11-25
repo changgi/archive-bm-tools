@@ -26,9 +26,9 @@ import urllib.parse
 HERE = os.path.dirname(os.path.abspath(__file__))
 CIRC = "①②③④⑤⑥⑦⑧⑨⑩⑪⑫⑬⑭⑮⑯⑰⑱⑲⑳"
 NUM = r"\d+"
-PERIOD = re.compile(r"((?<!수)영구(?:히)?(?!\s*(?:기록|적|성|물관리|보존시설|보존기록물관리))|준영구|(?<!\d)(?:\d{1,3}\s*년\s*\d{1,2}\s*개월|\d{1,3}\s*(?:년|개월)|(?<!월\s)(?<!월)(?<!달\s)(?<!달)(?<!날\s)\d{1,4}\s*일)(?!\s*\d+\s*월)(?:\s*(?:간|동안|이상|이내))?)")  # '2019년'·'1월 1일' 같은 날짜는 뺌
+PERIOD = re.compile(r"((?<!수)영구(?:히)?(?!\s*(?:기록|적|성|물관리|보존시설|보존기록물관리))|준영구|(?<!\d)(?:\d{1,3}\s*년\s*\d{1,2}\s*개월|\d{1,3}\s*(?:년|개월)|(?<!월\s)(?<!월)(?<!달\s)(?<!달)(?<!날\s)\d{1,4}\s*일(?!분))(?!\s*\d+\s*월)(?:\s*(?:간|동안|이상|이내))?)")  # '2019년'·'1월 1일' 같은 날짜는 뺌
 LAPSE = re.compile(r"(\d+\s*(?:년|개월|일))\s*(?:(?:이|가)\s*(?:지나면|지난|경과하면|경과한)[^.]{0,40}?(?:파기|삭제|폐기)|(?:을|를)\s*초과하여\s*(?:보유|보존|보관)할\s*수\s*없)")
-KEEPV = re.compile(r"(?:파기|삭제)하여야|(?:보존|보관)\s*관리(?:하여야|해야|한다|하고|하며|하되)|(?:보존|보관)하되|(보존|보관|비치|보유|유지|저장)(?:\s*[ㆍ·]\s*(?:관리|유지|보관|보존|활용))?(?:하여야|해야|하여야만|하고|한다|할 수|할 것|하도록|하여 두어야|해 두어야|하며|하게|기간)|보존기간|(?:보존|보관)\s*및\s*[가-힣]{2,4}\s*기간")
+KEEPV = re.compile(r"(?:파기|삭제)하여야|(?:보존|보관)\s*관리(?:하여야|해야|한다|하고|하며|하되)|(?:보존|보관)하되|(보존|보관|비치|보유|유지|저장)(?:\s*[ㆍ·]\s*(?:관리|유지|보관|보존|활용))?(?:하여야|해야|하여야만|하고|한다|할 수|할 것|하도록|하여 두어야|해 두어야|하며|하게|기간)|보존기간|(?:보존|보관)\s*및\s*[가-힣]{2,4}\s*기간|보유\s*기간\s*(?:은|는)\s*[^.]{0,20}?(?:으로|로)\s*(?:하고|하며|한다|하되)")
 EVENT = re.compile(r"(?:을|를)\s*((?:그\s)?[^,.()을를]{2,50}?(?:때|날|시점)\s*까지)\s*(?:보존|보관)")
 DELEG = re.compile(r"(대통령령|총리령|[가-힣]{1,12}부령|[가-힣]{1,12}(?:부|처|청|위원회)\s*(?:장관|장|위원장)?(?:이|가)\s*정하여\s*고시하는|[가-힣]{1,12}(?:부|처|청|위원회)의?\s*고시|조례|규칙)\s*(?:으로|로)?\s*정하는")
 RECW = re.compile(r"기록|결과|답안지|시험지|서류|도면|등록부|(?:(?<![가-힣])|(?<=계정)|(?<=토지))원장|통계표|조사표|증서|장부|자료|대장|문서|정보|명부|일지|영상|파일|사본|증빙|결과표|회의록|내역|데이터|원부|카드|전표|계약서|신청서|보고서|대장|부본|필름|녹음|녹화|로그|설계도")
@@ -209,12 +209,15 @@ def main_period(clause):
     lp = LAPSE.search(bare)
     if lp:  # 'N년이 지나면 파기' — 그보다 오래 두면 안 되는 상한
         return norm_period(lp.group(1)) + "(지나면 파기)"
-    dm0 = re.search(r"(?:보존|보관)\s*기간\s*(?:은|는)\s*(?:각각\s*)?(" + PERIOD.pattern + r")\s*(?:으로|로)\s*(?:하고|하며|한다|하되|정한다)", bare)
+    dm0 = re.search(r"(?:보존|보관|보유)\s*기간\s*(?:은|는)\s*(?:각각\s*)?(" + PERIOD.pattern + r")\s*(?:으로|로)\s*(?:하고|하며|한다|하되|정한다)", bare)
     if dm0:  # '근무일지의 보존기간은 3년으로 하고, … 1년간 구조대에 보관 후 이관' — 보존기간을 바로 정한 말이 먼저
         return norm_period(dm0.group(1))
     cands = []
     for pm in PERIOD.finditer(bare):
         tail = bare[pm.end(): pm.end() + 25]
+        if re.search(r"(?:보유|거주|임대|소유|운영|경력)\s*기간\s*이\s*[^.]{0,30}$", bare[max(0, pm.start() - 40):pm.start()]) \
+                and re.match(r"[^.]{0,40}?이상(?:인|일|이어야)", bare[pm.end():pm.end() + 45]):
+            continue  # '해당 주택의 보유기간이 2년(… 3년) 이상인 것' — 요건
         if pm.group(0).rstrip().endswith("이내") and re.match(r"\s*에\s", tail):
             continue  # '대출한 날로부터 7일 이내에 회수'·'10일 이내에 게시' — 기한
         if re.search(r"(보유|유지)", tail) and not re.search(r"(보존|보관|비치|저장|관리하여야|관리해야)", tail) \
@@ -558,6 +561,8 @@ def analyze(corpus, law, jo, title, body, depth=0, path=None, seen=None, hang=No
                 and (re.search(r"(?:이를|그\s*(?:서류|기록|장부)를)\s*(?:" + PERIOD.pattern + r")", cl) or re.match(r"\s*(?:다만,?|그\s*(?:이후|후|다음)|이후)\s", cl))
             if not strong and not back and not RECW.search(cl) and not (items and any(RECW.search(it) for _, it in items)):
                 continue  # '사내유보금을 보유' 같은 기록 아닌 '보유·유지'
+            if items and not RECW.search(cl) and not re.search(r"보존|보관|비치|저장|기록", cl) and not any(re.search(r"보존|보관|비치|기록", it) for _, it in items):
+                continue  # '1주택자가 보유하고 있는 … 다음 각 호의 구분에 따른 기간이 경과하지 않은 경우' — 각 호에 기록 낱말이 있어도 보존 아님
             per = main_period(cl)
             bm = back and re.search(r"((?:[^\s,]+\s){0,3}[^\s,]*(?:" + RECW.pattern + r")[^\s,]*?(?:\s(?:일체|전부|일습))?)\s*(?:을|를)\s", cls[ci - 1])
             obj = re.sub(r"^.*?(?:은|는|이|가)\s+", "", bm.group(1)) if bm else subject_object(cl)  # '…장부 및 서류일체를 군수에게 인계하여야 하며 군수는 이를 10년간 보존' → 앞 마디의 기록
@@ -1021,8 +1026,8 @@ def add_judgement(rows):
         p = jd.prob(s)
         num = re.match(r"\s*(\d+\s*(?:년|개월|일)|준영구|영구)", r["보존기간"])
         if num and not re.search(r"이관", s):  # 긴 문장은 조각이 묽어짐(처리과 보관·이관 시기 문장은 빼고) → 기간 둘레('…서류를 3년간 보존하여야 한다')도 재어 큰 쪽
-            k = s.find(num.group(1)) if num.group(1) in s else s.find(re.sub(r"\s", "", num.group(1)))
-            if k >= 0:
+            for mk in re.finditer(re.escape(re.sub(r"\s", "", num.group(1))).replace("년", r"\s*년").replace("개월", r"\s*개월"), s):
+                k = mk.start()  # 같은 기간이 여러 번 나오면('…증축 후 30일 이내 … 관련 서류를 3년간 비치') 둘레마다 재어 큰 쪽
                 p = max(p, jd.prob(s[max(0, k - 60): k + 40]))
         r["판정"] = jd.decide(p, "상한" if "지나면 파기" in r["보존기간"] else "", s)
         if r["상태"] == "위임 추적" and r["판정"] == "의무 아님 가능성":
