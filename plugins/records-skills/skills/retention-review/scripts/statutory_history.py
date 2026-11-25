@@ -23,6 +23,7 @@ from concurrent.futures import ThreadPoolExecutor
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 MINIMUM = os.path.join(HERE, "..", "assets", "law", "statutory_minimum.csv")
+ITEMS = os.path.join(HERE, "..", "assets", "law", "statutory_items.csv")  # 위임 추적 목록 — 사슬에 걸린 고시 이름
 OUT = os.path.join(HERE, "..", "assets", "law", "statutory_history.csv")
 BASE = "https://www.law.go.kr/LSW/"
 COLS = ["기록 종류", "법령", "판본 시행일", "다음 판본 시행일", "조문", "보존기간", "조건", "성격", "공포", "비고", "근거 경로", "문장"]
@@ -37,13 +38,13 @@ def _mod(name):
 
 def get(url):
     err = None
-    for i in range(5):
+    for i in range(6):
         try:
             with urllib.request.urlopen(urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0"}), timeout=90) as r:
                 return r.read().decode("utf-8", "ignore")
         except Exception as e:  # noqa: BLE001
             err = e
-            time.sleep(4 + 3 * i)
+            time.sleep(5 + 6 * i)  # 연결을 끊으면 점점 길게 쉼(최대 약 1분)
     raise err
 
 
@@ -126,6 +127,12 @@ def _jk(jo):
     return re.sub(r"①$", "", k)
 
 
+def _ck(c):
+    """조건 비교: 판본마다 바뀐 띄어쓰기·가운뎃점(·ㆍ)·꼬리 글자는 같은 것으로."""
+    c = re.sub(r"[가-힣]{2,10}(?:부장관|처장|청장|위원장)", "", c)  # 정부조직 개편으로 바뀐 부처 이름('노동부장관'→'고용노동부장관')
+    return re.sub(r"[\s·ㆍ,.]", "", c)[:80]
+
+
 def ymd(s):
     return f"{s[:4]}-{s[4:6]}-{s[6:]}" if s and len(s) == 8 else ""
 
@@ -142,20 +149,56 @@ def build(a):
             fams.setdefault(n, []).append(r)
     rows, log, got = [], [], {}
     for name in fams:
-        if name.endswith(")"):  # '개인정보의 안전성 확보조치 기준(개인정보보호위원회고시)' — 행정규칙 연혁
-            seq = find_admin(re.sub(r"\([^)]*\)$", "", name).strip())
-            vs = admin_versions(seq) if seq else []
-        else:
-            seq, lsid = find_current(name)
-            vs = versions(seq, lsid) if seq else []
-        if not vs:
-            log.append(f"못 찾음: {name}")
+        try:  # 연결이 끊겨도 그 법령만 '못 받음'으로 남기고 계속(받은 판본은 캐시에 있어 다시 돌리면 이어 받음)
+            if name.endswith(")"):  # '개인정보의 안전성 확보조치 기준(개인정보보호위원회고시)' — 행정규칙 연혁
+                seq = find_admin(re.sub(r"\([^)]*\)$", "", name).strip())
+                vs = admin_versions(seq) if seq else []
+            else:
+                seq, lsid = find_current(name)
+                vs = versions(seq, lsid) if seq else []
+            if not vs:
+                log.append(f"못 찾음: {name}")
+                continue
+            with ThreadPoolExecutor(max_workers=max(1, min(a.workers, 4))) as ex:
+                got[name] = list(ex.map(lambda v: (v, body(v)), vs))
+        except Exception as e:  # noqa: BLE001
+            log.append(f"못 받음(연결 오류 — 다시 돌리면 캐시부터 이어 받음): {name} — {e}")
+            print(f"  ⚠ {name}: {e}", flush=True)
             continue
-        with ThreadPoolExecutor(max_workers=max(1, min(a.workers, 4))) as ex:
-            got[name] = list(ex.map(lambda v: (v, body(v)), vs))
         print(f"  {name}: 판본 {len(vs)}개 받음", flush=True)
         log.append(f"{name}: 판본 {len(vs)}개")
 
+    # 위임 사슬에 걸린 고시(위임 추적 목록에서 그 법령부터 이어진 고시) — 고시도 판본마다 받아 그날 시행 중인 판본으로 잇는다
+    gosi_of, ggot = {}, {}
+    if os.path.exists(ITEMS) and not a.no_gosi_history:
+        with open(ITEMS, encoding="utf-8-sig") as f:
+            for r in csv.DictReader(f):
+                if r.get("위임") == "고시" and r.get("상태") == "위임 추적":
+                    root = re.sub(r"\s*(?:시행령|시행규칙)$", "", r["근거 경로"].split(" → ")[0].rsplit(" ", 1)[0])
+                    gosi_of.setdefault(root, set()).add(r["법령"])
+    for name in fams:
+        for g in sorted(gosi_of.get(re.sub(r"\s*(?:시행령|시행규칙)$", "", name), ())):
+            if g in ggot:
+                continue
+            try:
+                gseq = find_admin(g)
+                gvs = admin_versions(gseq) if gseq else []
+            except Exception as e:  # noqa: BLE001
+                log.append(f"고시 못 받음(연결 오류): {g} — {e}")
+                gvs = []
+            if not gvs:
+                log.append(f"고시 못 찾음: {g}")
+                ggot[g] = []
+                continue
+            try:
+                with ThreadPoolExecutor(max_workers=max(1, min(a.workers, 4))) as ex:
+                    ggot[g] = list(ex.map(lambda v: (v, body(v)), gvs))
+            except Exception as e:  # noqa: BLE001
+                log.append(f"고시 못 받음(연결 오류): {g} — {e}")
+                ggot[g] = []
+                continue
+            print(f"  {g}(고시): 판본 {len(gvs)}개 받음", flush=True)
+            log.append(f"{g}(고시): 판본 {len(gvs)}개 — {', '.join(sorted({v['이름'] for v in gvs}))}")
     rt = _mod("retention_tree")
     admins = {}
     if a.gosi_cache and os.path.isdir(a.gosi_cache):  # 위임 추적기가 받아 둔 현행 고시(고시 연혁은 아직 따라가지 않음)
@@ -163,20 +206,43 @@ def build(a):
             if fn.startswith("행정규칙_"):
                 t = open(os.path.join(a.gosi_cache, fn), encoding="utf-8").read()
                 nm = re.search(r"([^\[\]{};]{2,80}?)\s*\[시행[^\]]*\]\s*\[([^\]\s]+)", t)
-                if nm:
+                if nm and nm.group(1).strip() not in ggot:
                     admins[nm.group(1).strip()] = f"[{nm.group(2)}] " + t
     for name, recs in fams.items():
-        vs = [v for v, _ in got.get(name, [])]
-        for i, (v, t) in enumerate(got.get(name, [])):
+        seqs = list(got.get(name, []))
+        mine = [g for g in sorted(gosi_of.get(re.sub(r"\s*(?:시행령|시행규칙)$", "", name), ())) if ggot.get(g)]
+        if seqs and mine:  # 고시가 바뀐 날도 판본 경계로(그날 시행 중인 법령 판본과 함께)
+            base_seqs = list(seqs)  # 법령 판본만(덧붙인 고시 날짜 항목은 고르지 않음)
+            have = {v["시행"] for v, _ in seqs}
+            for g in mine:
+                for gv, _ in ggot[g]:
+                    d = gv["시행"]
+                    if d in have or d < seqs[0][0]["시행"]:
+                        continue
+                    lv, lt = [x for x in base_seqs if x[0]["시행"] <= d][-1]
+                    seqs.append((dict(lv, 시행=d, 공포=gv["공포"], _gosi=g), lt))
+                    have.add(d)
+            seqs.sort(key=lambda x: x[0]["시행"])
+        vs = [v for v, _ in seqs]
+        for i, (v, t) in enumerate(seqs):
             nxt = vs[i + 1]["시행"] if i + 1 < len(vs) else ""
             date = v["시행"]
+            # 시행일 역전: 앞 판본보다 먼저 공포됐는데 늦게 시행되는 판본 — 본문에 그 사이 개정이 빠졌을 수 있음
+            rev = not v.get("_gosi") and any(p["공포"] > v["공포"] for p in vs[:i] if not p.get("_gosi") and p.get("공포"))
             laws_d = {}
             for n, lst in got.items():  # 그 날 시행 중이던 법률·시행령·시행규칙 판본끼리 위임을 잇는다
                 sub = [tt for vv, tt in lst if vv["시행"] <= date]
                 if sub:
                     laws_d[n] = sub[-1]
             laws_d[name] = t
-            corpus = rt.Corpus(laws_d, admins, live=False, live_laws=False)
+            adm_d = dict(admins)
+            for g in mine:
+                cur = [(gv, gt) for gv, gt in ggot[g] if gv["시행"] <= date]
+                if cur:
+                    gt = cur[-1][1]
+                    kd = re.search(r"\[시행[^\]]*\]\s*\[([^\]\s]+)", gt)  # '[고용노동부고시 제2021-…호' — 고시 찾기가 기관을 앞머리에서 봄
+                    adm_d[cur[-1][0]["이름"]] = (f"[{kd.group(1)}] " if kd else "") + gt
+            corpus = rt.Corpus(laws_d, adm_d, live=False, live_laws=False)
             items = []
             for jo, title, abody in corpus.arts(name):
                 if rt.KEEPV.search(abody) or rt.EVENT.search(abody):
@@ -194,13 +260,13 @@ def build(a):
                     jo_lbl = x["조문"] + (x["항"] or "") + (x["호"] + "호" if x["호"] and x["호"].isdigit() else (x["호"] + "목" if x["호"] else ""))
                     rows.append({"기록 종류": rec["기록 종류"], "법령": x["법령"], "판본 시행일": ymd(v["시행"]), "다음 판본 시행일": ymd(nxt),
                                  "조문": jo_lbl, "보존기간": x["보존기간"], "성격": "", "공포": ymd(v["공포"]),
-                                 "근거 경로": x["근거 경로"], "조건": x.get("조건", ""), "문장": (x["기록(항목)"] + " ⟵ " + x["문장"])[:300]})
+                                 "근거 경로": x["근거 경로"], "조건": x.get("조건", ""), "문장": (x["기록(항목)"] + " ⟵ " + x["문장"])[:300], "_rev": rev})
     # 같은 기록 종류·법령·조문·기간이 이어지는 판본은 한 줄로 합침(언제부터 언제까지)
     rows.sort(key=lambda r: (r["기록 종류"], r["법령"], r["판본 시행일"]))
     merged = []
     for r in rows:
         last = next((m for m in reversed(merged) if m["기록 종류"] == r["기록 종류"] and m["법령"] == r["법령"]
-                     and _jk(m["조문"]) == _jk(r["조문"]) and m["보존기간"] == r["보존기간"] and m.get("조건", "") == r.get("조건", "")), None)
+                     and _jk(m["조문"]) == _jk(r["조문"]) and m["보존기간"] == r["보존기간"] and _ck(m.get("조건", "")) == _ck(r.get("조건", ""))), None)
         if last and last["_end"] == "":  # 이미 '현행'까지 이어진 줄
             continue
         if last and last["다음 판본 시행일"] >= r["판본 시행일"] or (last and last["_end"] == r["판본 시행일"]):
@@ -223,6 +289,8 @@ def build(a):
             notes.append("같은 때 같은 조문·항·호에 기간이 여럿 — 단서·조건 확인")
         if m["판본 시행일"] > today:
             notes.append("시행 예정")
+        if m.get("_rev") and m["다음 판본 시행일"]:  # 현행까지 이어지는 전부개정(2020 공포·2021 시행 등)은 빼고, 끼었다 끝난 줄만
+            notes.append("시행일 역전 판본(앞 판본보다 먼저 공포) — 그 사이 개정이 본문에 빠졌을 수 있어 앞뒤 판본과 대조")
         m["비고"] = "; ".join(notes)
     os.makedirs(os.path.dirname(os.path.abspath(a.out)), exist_ok=True)
     with open(a.out, "w", encoding="utf-8-sig", newline="") as f:
@@ -256,6 +324,7 @@ def main() -> int:
     ap.add_argument("--law", help="쉼표로 나눈 법령 이름 일부(--build 범위)")
     ap.add_argument("--workers", type=int, default=3)
     ap.add_argument("--cache", default="산출/법령연혁원문", help="받은 판본 원문을 두는 폴더(다시 만들 때 재사용)")
+    ap.add_argument("--no-gosi-history", action="store_true", help="고시 판본은 받지 않고 현행 고시만(예전 방식)")
     ap.add_argument("--gosi-cache", default="산출/위임추적원문", help="위임 추적기(retention_tree.py)가 받아 둔 고시 원문 폴더")
     ap.add_argument("-o", "--out", default=OUT)
     a = ap.parse_args()
