@@ -2,9 +2,16 @@ name: records-skills 시험
 
 on:
   pull_request:
+    paths-ignore: ['docs/**', '**/*.md']
   push:
     branches: [main]
+    paths-ignore: ['docs/**', '**/*.md']
   workflow_dispatch:
+
+# 같은 브랜치에 연달아 올리면 앞 실행은 취소(4판 × 매트릭스가 겹쳐 돌지 않게)
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 permissions:
   contents: read
